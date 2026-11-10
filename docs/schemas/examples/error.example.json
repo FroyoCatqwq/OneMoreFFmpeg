@@ -1,0 +1,9 @@
+{
+  "schema": "onemoreffmpeg.error/v1",
+  "ok": false,
+  "code": "OMF-E1001",
+  "message": "directory does not exist",
+  "details": {
+    "path": "C:/Tools/FFmpeg"
+  }
+}

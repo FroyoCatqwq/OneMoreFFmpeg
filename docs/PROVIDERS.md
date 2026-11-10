@@ -3,6 +3,7 @@
 > 状态：Phase 0 设计
 > 目标：支持内置来源、自定义 URL、daily / stable，同时保证可复现
 > 当前外部集成：其他项目只通过调用 CLI 可执行文件读取产物文件；不通过 Go API / 插件
+> 解析细则：[`PROVIDER_RESOLVER.md`](PROVIDER_RESOLVER.md)；CLI 输出见 [`CLI_SCHEMA.md`](CLI_SCHEMA.md)；错误码见 [`ERROR_CODES.md`](ERROR_CODES.md)
 
 ---
 
@@ -16,7 +17,7 @@
 重要：
 
 - 用户提到的 `bnqdzj/nonfree` 不是有效 GitHub 仓库路径；实际仓库是 `BnqDzj/FFmpeg-Builds-nonfree`。
-- BtbN 当前公开 release 不提供 nonfree 资产；nonfree 来源由 BnqDzj 提供。
+- 截至 2026-11-10，BtbN 当前公开 release 不提供 nonfree 资产；nonfree 来源由 BnqDzj 提供。实际以 resolver 查询为准。
 - OneMoreFFmpeg 只保存仓库 URL、release 元数据、资产名与 SHA-256；不把 FFmpeg 二进制提交到 Git。
 - public GitHub Release 不得包含 BnqDzj nonfree 二进制。
 
@@ -37,6 +38,16 @@ daily
 |---|---|---|
 | `stable` | 稳定 release line，例如 BtbN `n9.0` | 必须解析为具体 release tag |
 | `daily` | 每日/最新浮动 release，例如 `latest` / autobuild | 必须解析为具体 release tag，不允许记录 `latest` |
+
+支持矩阵：
+
+| provider | stable | daily | 说明 |
+|---|---|---|---|
+| `btbn` | 支持 | 支持 | stable 为当前 stable line（示例 `n9.0`）；daily 为 `latest` / autobuild |
+| `bnqdzj-nonfree` | 视上游 | 支持 | 若上游无稳定 release line，`stable` 返回 `OMF-E3004` |
+| `custom` | 由 manifest 声明 | 由 manifest 声明 | direct URL 无 channel 概念，可标 `pinned` |
+
+GitHub API、限流、重试、资产匹配、checksums 与 pin 细则见 [`PROVIDER_RESOLVER.md`](PROVIDER_RESOLVER.md)。
 
 禁止：
 
@@ -69,6 +80,7 @@ Variant
 Linkage
 Target
 LicenseHint
+Redistributable
 ```
 
 安装记录必须包含以上字段；缺一不可。
@@ -96,7 +108,7 @@ https://github.com/FFmpeg-Builds/FFmpeg-Builds
 解析规则：
 
 - 通过 GitHub Releases API 获取 release；
-- `stable` 优先匹配 `n9.0` release line 与稳定资产；
+- `stable` 匹配当前解析到的 stable line（示例 `n9.0`）与稳定资产；
 - `daily` 匹配 `latest` / autobuild 资产；
 - 资产按 `GOOS`/`GOARCH` 过滤：
   - `windows/amd64` → `win64`
@@ -250,7 +262,7 @@ ffmpeg-trio.lock
 
 ```text
 provider = "btbn"
-release_line = "n9.0"
+release_line = "<resolver 解析到的 stable line>"  # 当前示例为 n9.0
 channel = "stable"
 variant = "gpl"
 linkage = "static"

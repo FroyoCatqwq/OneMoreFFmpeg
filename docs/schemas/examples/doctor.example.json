@@ -1,0 +1,33 @@
+{
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "doctor",
+  "data": {
+    "schema": "onemoreffmpeg.doctor/v1",
+    "healthy": true,
+    "checks": [
+      {
+        "name": "current_exists",
+        "ok": true,
+        "detail": "directory_junction"
+      },
+      {
+        "name": "trio_valid",
+        "ok": true,
+        "detail": "ffmpeg, ffprobe, ffplay healthy"
+      },
+      {
+        "name": "path_contains_current",
+        "ok": true,
+        "detail": "current/bin found in user PATH"
+      },
+      {
+        "name": "no_pending_journal",
+        "ok": true,
+        "detail": "0 pending journals"
+      }
+    ],
+    "warnings": [],
+    "journal_pending": []
+  }
+}

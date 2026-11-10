@@ -1,0 +1,16 @@
+{
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "download",
+  "data": {
+    "schema": "onemoreffmpeg.artifact/v1",
+    "artifact_id": "art-0123456789abcdef",
+    "provider": "btbn",
+    "release_tag": "autobuild-2026-11-09-12-42",
+    "asset_name": "ffmpeg-n9.0-latest-win64-gpl-9.0.zip",
+    "asset_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "local_path": "D:/OneMoreFFmpeg/downloads/ffmpeg-n9.0-latest-win64-gpl-9.0.zip",
+    "verified": true,
+    "downloaded_at": "2026-11-10T00:00:00Z"
+  }
+}

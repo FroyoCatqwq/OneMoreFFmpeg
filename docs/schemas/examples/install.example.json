@@ -1,0 +1,25 @@
+{
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "install",
+  "data": {
+    "schema": "onemoreffmpeg.install/v1",
+    "installation_id": "inst-0123456789abcdef",
+    "root_dir": "D:/OneMoreFFmpeg/apps/btbn/autobuild-2026-11-09-12-42/0123456789abcdef",
+    "current_pointer": "directory_junction",
+    "provider": "btbn",
+    "repository": "FFmpeg-Builds/FFmpeg-Builds",
+    "release_tag": "autobuild-2026-11-09-12-42",
+    "asset_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "license_hint": "gpl",
+    "redistributable": true,
+    "binaries": {
+      "ffmpeg_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "ffprobe_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "ffplay_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    },
+    "lock_path": "D:/OneMoreFFmpeg/apps/btbn/autobuild-2026-11-09-12-42/0123456789abcdef/ffmpeg-trio.lock",
+    "journal_id": "journal-0123456789abcdef",
+    "dry_run": false
+  }
+}

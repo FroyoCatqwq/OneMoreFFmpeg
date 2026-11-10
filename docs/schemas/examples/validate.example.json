@@ -1,0 +1,23 @@
+{
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "validate",
+  "data": {
+    "schema": "onemoreffmpeg.validate/v1",
+    "installation_id": "inst-0123456789abcdef",
+    "status": "healthy",
+    "checks": [
+      {
+        "name": "ffmpeg_version",
+        "ok": true,
+        "detail": "n9.0.2"
+      },
+      {
+        "name": "trio_same_directory",
+        "ok": true,
+        "detail": "ffmpeg, ffprobe and ffplay share root_dir"
+      }
+    ],
+    "warnings": []
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "version",
+  "data": {
+    "schema": "onemoreffmpeg.version/v1",
+    "name": "OneMoreFFmpeg",
+    "version": "0.1.0",
+    "go_version": "go1.27.3",
+    "git_commit": "0000000000000000000000000000000000000000",
+    "build_time": "2026-11-10T00:00:00Z",
+    "os": "windows",
+    "arch": "amd64"
+  }
+}

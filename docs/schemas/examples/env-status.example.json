@@ -1,0 +1,18 @@
+{
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "env.status",
+  "data": {
+    "schema": "onemoreffmpeg.env-status/v1",
+    "current_type": "directory_junction",
+    "current_target": "D:/OneMoreFFmpeg/apps/btbn/autobuild-2026-11-09-12-42/0123456789abcdef",
+    "path_contains_current": true,
+    "resolved_ffmpeg": "D:/OneMoreFFmpeg/current/bin/ffmpeg.exe",
+    "variables": {
+      "ONE_MORE_FFMPEG_DIR": "D:/OneMoreFFmpeg/current",
+      "FFMPEG_DIR": "D:/OneMoreFFmpeg/current",
+      "LAE_FFMPEG_DIR": null
+    },
+    "warnings": []
+  }
+}

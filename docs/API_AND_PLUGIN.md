@@ -32,11 +32,13 @@ one-more-ffmpeg <command> --json
 - 进程内插件；
 - 包管理器识别 API。
 
-本文件以下内容仅为未来重新开放时的设计储备，**不是当前实施依据**。
+本文件以下内容仅为未来重新开放时的设计储备，**不是当前实施依据，也不进入 Phase 1**。
 
 ---
 
 ## 1. 未来可能的调用形态
+
+> 未来清单以 [`docs/README.md`](README.md) 的“未来，明确不属于当前 Phase”为权威；本节只保留设计视图。
 
 | 形态 | 未来优先级 | 说明 |
 |---|---|---|
@@ -79,6 +81,8 @@ type Manager interface {
 
 ## 3. 当前 CLI 契约才是外部契约
 
+正式字段、示例与版本规则见 [`CLI_SCHEMA.md`](CLI_SCHEMA.md)、[`schemas/`](schemas/)；错误码见 [`ERROR_CODES.md`](ERROR_CODES.md)。
+
 当前 CLI：
 
 ```text
@@ -102,7 +106,7 @@ one-more-ffmpeg provider list
 one-more-ffmpeg provider add --id --url --sha256
 one-more-ffmpeg resolve --provider btbn|bnqdzj-nonfree|custom --channel stable|daily --json
 one-more-ffmpeg download --release <id> --json
-one-more-ffmpeg install --artifact <id> --dry-run|--yes
+one-more-ffmpeg install --artifact <id> [--emit-trio-lock] --dry-run|--yes
 one-more-ffmpeg env status|set|unset|rollback --json
 one-more-ffmpeg doctor --json
 ```

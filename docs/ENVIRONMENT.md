@@ -27,8 +27,8 @@
 
 ```text
 <data-root>/
-├─ apps/<provider>/<release-tag>/<asset-hash>/
-└─ current -> apps/<...>
+├─ apps/<provider>/<release-tag>/<sha256-16hex>/
+└─ current（symlink / Windows junction / directory pointer） -> apps/<...>
 ```
 
 PATH 只加入一次：
@@ -149,6 +149,18 @@ one-more-ffmpeg doctor --json
 ```
 
 `env set` 默认 dry-run；没有 `--yes` 不写。
+
+| 参数 | 作用 |
+|---|---|
+| `--dry-run` | 只打印将执行的变更 |
+| `--yes` | 实际写入 |
+| `--overwrite` | 允许覆盖已有变量 |
+| `--prepend` | 将 `current/bin` 放到 PATH 前面 |
+| `--system` | Windows machine scope；需要提权与 `--yes` |
+| `--shell-rc <PATH>` | Linux 下显式指定要修改的 shell rc |
+| `--lae-compat` | 额外写入 `LAE_FFMPEG_DIR` |
+
+Windows 注册表、UAC、`REG_EXPAND_SZ`、`WM_SETTINGCHANGE`、junction / pointer_file、Linux shim / shell rc 与 journal 细则见 [`PLATFORM_ENVIRONMENT.md`](PLATFORM_ENVIRONMENT.md)。错误码见 [`ERROR_CODES.md`](ERROR_CODES.md)，`env status` / `doctor` 输出形状见 [`CLI_SCHEMA.md`](CLI_SCHEMA.md)。
 
 `doctor` 检查：
 

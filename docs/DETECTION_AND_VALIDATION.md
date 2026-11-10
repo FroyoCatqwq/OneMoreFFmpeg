@@ -237,23 +237,31 @@ canonical(root_dir) + ffmpeg_sha256 + ffprobe_sha256 + ffplay_sha256
 
 ## 9. 输出示例
 
+正式 CLI JSON 形状见 [`CLI_SCHEMA.md`](CLI_SCHEMA.md) 与 [`schemas/examples/detect.example.json`](schemas/examples/detect.example.json)。
+
 ```json
 {
-  "schema": "onemoreffmpeg.detect/v1",
-  "installations": [
-    {
-      "id": "inst-...",
-      "root_dir": "C:/Tools/FFmpeg/bin",
-      "ffmpeg": "C:/Tools/FFmpeg/bin/ffmpeg.exe",
-      "ffprobe": "C:/Tools/FFmpeg/bin/ffprobe.exe",
-      "ffplay": "C:/Tools/FFmpeg/bin/ffplay.exe",
-      "sources": ["explicit_dir", "PATH"],
-      "status": "healthy",
-      "version": "n9.0.2",
-      "warnings": []
-    }
-  ],
-  "errors": []
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "detect",
+  "data": {
+    "schema": "onemoreffmpeg.detect/v1",
+    "installations": [
+      {
+        "id": "inst-...",
+        "root_dir": "C:/Tools/FFmpeg/bin",
+        "ffmpeg": "C:/Tools/FFmpeg/bin/ffmpeg.exe",
+        "ffprobe": "C:/Tools/FFmpeg/bin/ffprobe.exe",
+        "ffplay": "C:/Tools/FFmpeg/bin/ffplay.exe",
+        "sources": ["explicit_dir", "PATH"],
+        "status": "healthy",
+        "version": "n9.0.2",
+        "fingerprint": "...",
+        "warnings": []
+      }
+    ],
+    "errors": []
+  }
 }
 ```
 

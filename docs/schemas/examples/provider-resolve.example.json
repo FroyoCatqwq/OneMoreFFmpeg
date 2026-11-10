@@ -1,0 +1,23 @@
+{
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "resolve",
+  "data": {
+    "schema": "onemoreffmpeg.release/v1",
+    "provider": "btbn",
+    "repository": "FFmpeg-Builds/FFmpeg-Builds",
+    "channel": "stable",
+    "release_tag": "autobuild-2026-11-09-12-42",
+    "published_at": "2026-11-09T12:43:45Z",
+    "asset_name": "ffmpeg-n9.0-latest-win64-gpl-9.0.zip",
+    "asset_url": "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/autobuild-2026-11-09-12-42/ffmpeg-n9.0-latest-win64-gpl-9.0.zip",
+    "asset_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "checksums_url": "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/autobuild-2026-11-09-12-42/checksums.sha256",
+    "checksums_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "variant": "gpl",
+    "linkage": "static",
+    "target": "win64",
+    "license_hint": "gpl",
+    "redistributable": true
+  }
+}

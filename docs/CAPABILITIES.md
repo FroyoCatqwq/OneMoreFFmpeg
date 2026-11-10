@@ -1,8 +1,9 @@
 # FFmpeg 能力检查契约
 
 > 状态：Phase 0 设计
-> 范围：v1 只支持用户列出的 13 类命令
+> 范围：v1 只支持用户列出的 13 个 FFmpeg 参数 / 能力入口
 > 原则：原样调用 FFmpeg、结构化解析、保留原文哈希
+> 输出契约：[`CLI_SCHEMA.md`](CLI_SCHEMA.md)、[`schemas/examples/capabilities.example.json`](schemas/examples/capabilities.example.json)
 
 ---
 
@@ -10,8 +11,8 @@
 
 | 参数 | 输出主题 | 结构化字段 | 说明 |
 |---|---|---|---|
-| `-L` | license | `license.raw` / `license.summary` | 短 license |
-| `-license` | license | `license.raw` / `license.summary` | 完整 license |
+| `-L` | license | `license.raw` | show license |
+| `-license` | license | `license.raw` | show license |
 | `-h <topic>` | help topic | `help[topic].raw` | topic 必须 allowlist |
 | `-version` | version | `version.*` | 版本与 build 信息 |
 | `-muxers` | muxers | `muxers[]` | 可用封装器 |
@@ -24,7 +25,7 @@
 | `-layouts` | layouts | `channel_layouts[]` | 标准声道布局 |
 | `-sample_fmts` | sample_fmts | `sample_formats[]` | 音频采样格式 |
 
-注意：表里是 13 行，因为 `-L` 与 `-license` 是两个独立命令；用户列出的能力组共 13 类，v1 按 13 个可调用参数实现。
+注意：表里是 13 行，因为 `-L` 与 `-license` 是两个独立命令；用户列出的能力入口共 13 个，v1 按 13 个可调用参数实现。
 
 ---
 
@@ -52,35 +53,40 @@
 
 ## 3. 公开输出模型
 
-`capabilities --json` 顶层：
+`capabilities --json` 使用 `CLI_SCHEMA.md` 的统一成功信封，以下对象位于 `data` 字段：
 
 ```json
 {
-  "schema": "onemoreffmpeg.capabilities/v1",
-  "installation_id": "...",
-  "fingerprint": "...",
-  "commands": {
-    "-decoders": {
-      "ok": true,
-      "exit_code": 0,
-      "stdout_sha256": "...",
-      "stderr_sha256": "...",
-      "duration_ms": 42
-    }
-  },
-  "version": {},
-  "license": {},
-  "muxers": [],
-  "demuxers": [],
-  "devices": [],
-  "decoders": [],
-  "encoders": [],
-  "filters": [],
-  "pixel_formats": [],
-  "channel_layouts": [],
-  "sample_formats": [],
-  "help": {},
-  "warnings": []
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "capabilities",
+  "data": {
+    "schema": "onemoreffmpeg.capabilities/v1",
+    "installation_id": "...",
+    "fingerprint": "...",
+    "commands": {
+      "-decoders": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_sha256": "...",
+        "stderr_sha256": "...",
+        "duration_ms": 42
+      }
+    },
+    "version": {},
+    "license": {},
+    "muxers": [],
+    "demuxers": [],
+    "devices": [],
+    "decoders": [],
+    "encoders": [],
+    "filters": [],
+    "pixel_formats": [],
+    "channel_layouts": [],
+    "sample_formats": [],
+    "help": {},
+    "warnings": []
+  }
 }
 ```
 
@@ -149,7 +155,7 @@ v1 公开能力集合以本文件第 1 节为准。
 ffmpeg -hide_banner -buildconf
 ```
 
-但它不进入公开 `capabilities` 输出，也不算入用户要求的 13 类能力命令；后续若要开放，需要提升 `onemoreffmpeg.capabilities` schema 版本。
+但它不进入公开 `capabilities` 输出，也不算入用户要求的 13 个能力入口；后续若要开放，需要提升 `onemoreffmpeg.capabilities` schema 版本。
 
 ---
 

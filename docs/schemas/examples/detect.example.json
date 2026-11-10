@@ -1,0 +1,23 @@
+{
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "detect",
+  "data": {
+    "schema": "onemoreffmpeg.detect/v1",
+    "installations": [
+      {
+        "id": "inst-0123456789abcdef",
+        "root_dir": "C:/Tools/FFmpeg/bin",
+        "ffmpeg": "C:/Tools/FFmpeg/bin/ffmpeg.exe",
+        "ffprobe": "C:/Tools/FFmpeg/bin/ffprobe.exe",
+        "ffplay": "C:/Tools/FFmpeg/bin/ffplay.exe",
+        "sources": ["explicit_dir", "PATH"],
+        "status": "healthy",
+        "version": "n9.0.2",
+        "fingerprint": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "warnings": []
+      }
+    ],
+    "errors": []
+  }
+}

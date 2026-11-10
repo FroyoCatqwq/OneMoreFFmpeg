@@ -19,6 +19,8 @@
 2026-05-10
 ```
 
+版本表是 2026-11-10 的时点快照；Phase 1 执行 `go get` 时仍以实际 `@latest` 与 6 个月规则重新校验。
+
 第三方库必须满足：
 
 1. Go module proxy `@latest` 的 `Time` 不早于 `2026-05-10`；
@@ -80,7 +82,7 @@ Go SDK + 进程插件框架 + gRPC 服务 + 包管理器集成 + GUI/TUI
 
 ## 3. 结论摘要
 
-### 3.1 当前采用
+### 3.1 建议采用（Phase 1 写入 go.mod）
 
 | 类别 | 库 | 最新版本 | 发布时间 | 结论 |
 |---|---|---:|---|---|
@@ -91,7 +93,7 @@ Go SDK + 进程插件框架 + gRPC 服务 + 包管理器集成 + GUI/TUI
 | 系统 API | `golang.org/x/sys` | v0.50.0 | 2026-11-06 | 采用 |
 | 终端/系统 API | `golang.org/x/term` | v0.48.0 | 2026-11-09 | 采用 |
 | 终端检测 | `github.com/mattn/go-isatty` | v0.0.24 | 2026-07-23 | 采用 |
-| 压缩/解压 | `github.com/klauspost/compress` | v1.20.4 | 2026-11-09 | 采用 |
+| 压缩/解压 | `archive/zip` + `github.com/klauspost/compress` | v1.20.4 | 2026-11-09 | 采用 |
 | xz 解压 | `github.com/ulikunitz/xz` | v0.5.17 | 2026-09-19 | 采用 |
 | HTTP 重试 | `net/http` + `github.com/sethvargo/go-retry` | v0.5.0 | 2026-10-05 | 采用 |
 | 测试 | `github.com/stretchr/testify` | v1.12.1 | 2026-08-17 | 采用 |
@@ -155,7 +157,6 @@ Go SDK + 进程插件框架 + gRPC 服务 + 包管理器集成 + GUI/TUI
 | `github.com/eclipse/paho.mqtt.golang` | v1.5.1 | 2025-09-16 | 超过 6 个月；当前不需要 MQTT |
 | `github.com/nats-io/nats.go` | v1.55.0 | 2026-10-23 | 版本新，但当前 CLI-first 范围不需要消息系统 |
 | `github.com/redis/go-redis/v9` | v9.23.0 | 2026-10-05 | 版本新，但当前不需要 Redis |
-| `github.com/mholt/archiver/v4` | alpha | 2024-11-08 | 重复列出：明确拒绝 |
 
 ---
 
@@ -166,7 +167,8 @@ Go SDK + 进程插件框架 + gRPC 服务 + 包管理器集成 + GUI/TUI
 采用：
 
 - 标准库：`os`、`io`、`fs`、`filepath`、`bufio`、`crypto/sha256`；
-- `github.com/klauspost/compress`：zip / zstd 等高性能压缩；
+- `archive/zip`：zip 容器；
+- `github.com/klauspost/compress`：deflate / gzip / zstd 等高性能压缩；
 - `github.com/ulikunitz/xz`：`.tar.xz` 解压；
 - `github.com/dustin/go-humanize`：日志中的人类可读大小；
 - `github.com/bmatcuk/doublestar/v4`：未来 glob 扫描候选。
@@ -398,7 +400,7 @@ github.com/sethvargo/go-retry
 - `go test ./...`；
 - `go vet ./...`；
 - `govulncheck` 评估；
-- 许可证清单生成；
+- 许可证清单生成；项目许可证已确定为 GPL-3.0-only，见 [`LICENSE_DECISION.md`](LICENSE_DECISION.md)；
 - Windows/Linux 双平台编译；
 - 对 `urfave/cli/v3` / `go-toml/v2` / `tint` 做 API smoke test；
 - 若未来重新开放 API/插件，再重新评估 RPC / 插件框架，不直接引入当前依赖。
@@ -407,7 +409,7 @@ github.com/sethvargo/go-retry
 
 ## 7. 结论
 
-> 当前采用“标准库为主 + 少量 6 个月内活跃第三方库”的策略。
+> 建议采用“标准库为主 + 少量 6 个月内活跃第三方库”的策略。
 >
 > 核心第三方库：CLI 用 `urfave/cli/v3`，TOML 1.1 用 `go-toml/v2`，日志用 `slog+tint`，并发用 `x/sync`，压缩包用 `klauspost/compress` + `ulikunitz/xz`，测试用 `testify`。
 >

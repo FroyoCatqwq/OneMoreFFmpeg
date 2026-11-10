@@ -1,0 +1,43 @@
+{
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "capabilities",
+  "data": {
+    "schema": "onemoreffmpeg.capabilities/v1",
+    "installation_id": "inst-0123456789abcdef",
+    "fingerprint": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "commands": {
+      "-decoders": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "stderr_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "duration_ms": 42
+      }
+    },
+    "version": {
+      "raw": "ffmpeg version n9.0.2"
+    },
+    "license": {
+      "raw": "GPL version 3 or later"
+    },
+    "muxers": [],
+    "demuxers": [],
+    "devices": [],
+    "decoders": [
+      {
+        "name": "h264",
+        "flags": "V....D",
+        "description": "H.264 / AVC",
+        "raw": " V....D h264 ..."
+      }
+    ],
+    "encoders": [],
+    "filters": [],
+    "pixel_formats": [],
+    "channel_layouts": [],
+    "sample_formats": [],
+    "help": {},
+    "warnings": []
+  }
+}

@@ -114,14 +114,20 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 - `go.mod`；
 - 项目计划；
 - Go 依赖库评估；
+- [`CLI_SCHEMA.md`](CLI_SCHEMA.md) 与 [`schemas/`](schemas/)；
+- [`ERROR_CODES.md`](ERROR_CODES.md)；
 - 架构；
 - 能力命令；
-- provider；
+- provider 总原则；
+- [`PROVIDER_RESOLVER.md`](PROVIDER_RESOLVER.md)；
 - 发现/校验；
-- 环境变量；
+- 环境变量总原则；
+- [`PLATFORM_ENVIRONMENT.md`](PLATFORM_ENVIRONMENT.md)；
+- [`LICENSE_DECISION.md`](LICENSE_DECISION.md)；
 - 未来 API/插件设计；
 - 路线图；
-- 技术注意点。
+- 技术注意点；
+- 文档审查报告。
 
 DoD：
 
@@ -130,7 +136,17 @@ DoD：
 - 决策已记录；
 - Go 版本已锁定；
 - 依赖库版本新鲜度已核对；
+- CLI JSON 契约、错误码、平台环境细节、provider resolver 细节已补齐；
+- 许可证已确定为 GPL-3.0-only；
 - 代码尚未开始。
+
+### Phase 0 契约引用
+
+- CLI 输出：[`CLI_SCHEMA.md`](CLI_SCHEMA.md) 与 [`schemas/`](schemas/)；
+- 错误码：[`ERROR_CODES.md`](ERROR_CODES.md)；
+- 平台环境：[`PLATFORM_ENVIRONMENT.md`](PLATFORM_ENVIRONMENT.md)；
+- Provider resolver：[`PROVIDER_RESOLVER.md`](PROVIDER_RESOLVER.md)；
+- 许可证决策：[`LICENSE_DECISION.md`](LICENSE_DECISION.md)。
 
 ---
 
@@ -142,15 +158,16 @@ DoD：
 
 1. `cmd/one-more-ffmpeg` 空 CLI；
 2. `internal/model` 内部数据模型；
-3. `internal/config`：`pelletier/go-toml/v2` strict mode + TOML 1.1 schema；
+3. `internal/config`：`pelletier/go-toml/v2` strict mode + TOML 1.1 schema；`internal/errors`：错误码注册表 v1；
 4. `internal/log`：`log/slog` + `lmittmann/tint`；
 5. CLI 框架：`urfave/cli/v3`；
 6. `internal/ffexec`：统一 `exec.CommandContext`、超时、stdout/stderr 限制；
 7. `one-more-ffmpeg version`；
-8. `one-more-ffmpeg detect --json --dry-run` 占位；
+8. `one-more-ffmpeg detect --json` 占位（detect 默认只读，不需要额外 dry-run）；
 9. fake ffmpeg 测试框架；
 10. `stretchr/testify` + `golang.org/x/sync`；
-11. Windows/Linux 交叉编译验证。
+11. Windows/Linux 交叉编译验证；
+12. `THIRD_PARTY_NOTICES` 与依赖许可证清单初稿。
 
 DoD：
 
@@ -158,13 +175,15 @@ DoD：
 - CLI `--help` / `version` 可用；
 - `detect` 不写磁盘、不改 PATH；
 - 错误码稳定；
-- Go 1.27.3 CI 跑通。
+- 本地 Go 1.27.3 构建/测试通过；CI 在 Phase 7 建立。
 
 ---
 
 ### Phase 2：发现与可用性校验
 
 目标：找到系统已有 FFmpeg，并判断能不能用。
+
+> 下列是实现顺序，不是发现优先级；优先级以 [`DETECTION_AND_VALIDATION.md`](DETECTION_AND_VALIDATION.md) 为准。
 
 步骤：
 
@@ -338,8 +357,10 @@ DoD：
 M0 定义为：
 
 ```text
-只读发现 + 可用性校验 + 13 项能力检查 + provider resolve（不下载/不安装/不改环境）
+只读发现 + 可用性校验 + 13 项能力检查（不下载/不安装/不改环境）
 ```
+
+> provider resolve / download 属于 Phase 4，不属于 M0；M0 不依赖 provider 实现。
 
 通过条件：
 
@@ -403,11 +424,16 @@ M0 不通过，不进入下载/安装/环境变量写入实现。
 
 - Phase 0 文档完成；
 - Go 依赖评估完成；
+- CLI JSON 契约与示例完成；
+- 错误码注册表完成；
+- 平台环境变量细则完成；
+- Provider resolver 细则完成；
+- 许可证已确定为 GPL-3.0-only，根目录 `LICENSE` 已添加；
 - 未写 Go 代码；
+- 未生成 `go.sum`；
 - 未下载任何 FFmpeg；
 - 未安装任何 FFmpeg；
 - 未修改 PATH；
 - 未实现包管理器识别；
 - 未实现 Go API / 插件；
-- 未选择 LICENSE；
 - 未提交 CI。

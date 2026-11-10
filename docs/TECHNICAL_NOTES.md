@@ -21,7 +21,7 @@ go1.27.3
 当前文档与 `go.mod` 锁定 `go1.27.3`。
 若后续发布 1.27.4+，需要写 ADR 后更新，不静默升级。
 
-本机当前没有安装 Go 命令；本阶段只提交文档和 `go.mod`，不编译。
+本阶段只提交文档和 `go.mod`，不提交 Go 代码；编译验证在 Phase 1 进行。
 
 ---
 
@@ -65,7 +65,7 @@ Windows/Linux 可用
 许可证清晰
 ```
 
-当前采用：
+Phase 1 建议采用：
 
 | 类别 | 库 |
 |---|---|
@@ -78,6 +78,7 @@ Windows/Linux 可用
 | 压缩 | `github.com/klauspost/compress` |
 | xz | `github.com/ulikunitz/xz` |
 | HTTP retry | `github.com/sethvargo/go-retry` |
+| 限流 | `golang.org/x/time/rate` |
 | 可读大小 | `github.com/dustin/go-humanize` |
 | 测试 | `github.com/stretchr/testify` |
 
@@ -231,6 +232,8 @@ Windows/Linux 可用
 
 当前 CLI 是唯一对外接口：
 
+- CLI JSON 契约见 [`CLI_SCHEMA.md`](CLI_SCHEMA.md) 与 [`schemas/`](schemas/)；
+- 错误码见 [`ERROR_CODES.md`](ERROR_CODES.md)；
 - stdout 只能是机器结果；
 - stderr 才能写日志/进度/错误；
 - JSON 顶层必须有 `schema`；
@@ -246,7 +249,7 @@ Windows/Linux 可用
 
 ## 13. 许可证注意点
 
-- 本项目 LICENSE 待定；
+- 本项目采用 GPL-3.0-only，见根目录 `LICENSE` 与 [`LICENSE_DECISION.md`](LICENSE_DECISION.md)；
 - BtbN GPL/LGPL 与 BnqDzj nonfree 不是同一合规模型；
 - BnqDzj nonfree 二进制不得进入 public GitHub Release；
 - 不随源码仓库提交任何 FFmpeg 二进制；

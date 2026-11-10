@@ -1,0 +1,12 @@
+{
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "provider.add",
+  "data": {
+    "schema": "onemoreffmpeg.provider-add/v1",
+    "id": "my-ffmpeg",
+    "url": "https://example.com/ffmpeg.zip",
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "status": "added"
+  }
+}

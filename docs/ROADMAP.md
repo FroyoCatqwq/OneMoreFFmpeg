@@ -11,11 +11,25 @@
 
 内容：
 
-- 新建 GitHub repo；
+- 仓库已建立；
 - 写 README / 项目计划 / 架构 / 能力 / provider / 检测 / 环境 / 未来 API/插件 / 技术注意点；
 - 新增 Go 依赖库评估；
+- 新增 CLI JSON 契约与 `docs/schemas/` 示例；
+- 新增错误码注册表；
+- 新增平台环境变量细则；
+- 新增 provider resolver 细则；
+- 新增许可证决策记录；
+- 新增文档审查报告；
 - `go.mod` 锁定 Go 1.27.3；
 - 不写 Go 业务代码。
+
+### 贯穿 Phase 1–7 的契约引用
+
+- CLI 输出：[`CLI_SCHEMA.md`](CLI_SCHEMA.md) 与 [`schemas/`](schemas/)；
+- 错误码：[`ERROR_CODES.md`](ERROR_CODES.md)；
+- 平台环境：[`PLATFORM_ENVIRONMENT.md`](PLATFORM_ENVIRONMENT.md)；
+- Provider resolver：[`PROVIDER_RESOLVER.md`](PROVIDER_RESOLVER.md)；
+- 许可证决策：[`LICENSE_DECISION.md`](LICENSE_DECISION.md)。
 
 ---
 
@@ -31,11 +45,14 @@
 - `urfave/cli/v3`；
 - `pelletier/go-toml/v2` strict mode；
 - `log/slog` + `lmittmann/tint`；
+- `CLI_SCHEMA.md` / `ERROR_CODES.md` golden 与 validator；
 - `version` 命令；
 - `--help`；
-- `detect --dry-run` 占位；
+- `detect --json` 占位（默认只读）；
 - fake ffmpeg 测试框架；
 - `stretchr/testify`；
+- `go mod tidy` 与 `go.sum`；
+- `THIRD_PARTY_NOTICES` 与依赖许可证清单初稿；
 - Windows/Linux 交叉编译。
 
 退出条件：
@@ -95,8 +112,10 @@ snap / flatpak 专门适配
 ## M0：只读硬门禁
 
 ```text
-发现 + 校验 + 能力检查 + provider resolve（不下载）
+发现 + 校验 + 能力检查（不下载）
 ```
+
+> provider resolve / download 属于 Phase 4，不属于 M0。
 
 通过前不做：
 
@@ -195,6 +214,8 @@ snap / flatpak 专门适配
 ---
 
 ## 未来能力，明确不属于当前 Phase
+
+> 未来清单以 [`docs/README.md`](README.md) 的“未来，明确不属于当前 Phase”为权威；本节只保留阶段视图。
 
 - 包管理器识别：Scoop / Homebrew / winget / choco / apt / dnf / pacman；
 - 对外开放 Go API；

@@ -1,0 +1,26 @@
+{
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "provider.list",
+  "data": {
+    "schema": "onemoreffmpeg.provider-list/v1",
+    "providers": [
+      {
+        "id": "btbn",
+        "repository": "FFmpeg-Builds/FFmpeg-Builds",
+        "channels": ["stable", "daily"],
+        "variants": ["gpl", "lgpl", "gpl-shared", "lgpl-shared"],
+        "linkages": ["static", "shared"],
+        "redistributable": true
+      },
+      {
+        "id": "bnqdzj-nonfree",
+        "repository": "BnqDzj/FFmpeg-Builds-nonfree",
+        "channels": ["daily"],
+        "variants": ["nonfree", "nonfree-shared"],
+        "linkages": ["static", "shared"],
+        "redistributable": false
+      }
+    ]
+  }
+}

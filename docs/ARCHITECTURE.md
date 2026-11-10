@@ -99,6 +99,7 @@ stderr：日志 / 进度 / 错误
 | tty | `mattn/go-isatty` |
 | archive | `klauspost/compress` / `ulikunitz/xz` |
 | HTTP retry | `net/http` + `sethvargo/go-retry` |
+| rate limit | `golang.org/x/time/rate` |
 | human size | `dustin/go-humanize` |
 | test | `stretchr/testify` |
 
@@ -172,7 +173,7 @@ type Release struct {
 | 类型 | 格式 | 说明 |
 |---|---|---|
 | 用户配置 | TOML 1.1 | `pelletier/go-toml/v2`，strict mode |
-| CLI 输出 | JSON | `--json` 机器可读 |
+| CLI 输出 | JSON | `--json` 机器可读；正式契约见 [`CLI_SCHEMA.md`](CLI_SCHEMA.md) 与 [`schemas/`](schemas/) |
 | 文件产物 | JSON + SHA-256 | artifact / install / journal |
 | 能力缓存 | JSON | 按 installation fingerprint |
 | 日志 | `log/slog` JSON/text | stderr，不污染 stdout |
@@ -214,12 +215,12 @@ TOML 解析要求：
 ├─ apps/
 │  └─ <provider>/
 │     └─ <release-tag>/
-│        └─ <asset-sha256-prefix>/
+│        └─ <sha256-16hex>/
 │           ├─ ffmpeg
 │           ├─ ffprobe
 │           ├─ ffplay
 │           └─ install.json
-├─ current -> apps/<...>
+├─ current（symlink / Windows junction / directory pointer） -> apps/<...>
 ├─ downloads/
 ├─ cache/
 ├─ journal/
@@ -246,7 +247,7 @@ journal rollback → remove temp → restore current/env → report
 
 ## 8. 错误模型
 
-- 稳定字符串错误码，例如 `OMF-E1001`；
+- 稳定字符串错误码见 [`ERROR_CODES.md`](ERROR_CODES.md)；Phase 1 用 golden test 锁定；
 - 错误对象：`code` / `message` / `details` / `cause`；
 - stdout JSON 永不混入日志；
 - CLI 退出码：`0` 成功、`1` 运行错误、`2` 用法/配置错误、`130` 取消；
@@ -286,7 +287,7 @@ one-more-ffmpeg <command> --json
 - 不链接 Go runtime；
 - 不调用 JSON-RPC / gRPC / C ABI；
 - 不依赖 OneMoreFFmpeg 内部结构体；
-- 只依赖 CLI schema 与退出码；
+- 只依赖 [`CLI_SCHEMA.md`](CLI_SCHEMA.md)、[`ERROR_CODES.md`](ERROR_CODES.md) 与退出码；
 - OneMoreFFmpeg 不读取 LAE 业务配置；
 - VideoDamage core 默认不调用 install/env；这些属于部署/Extension Pack 场景；
 - 未来若重新开放 API/插件，必须另写 ADR 并升版本。
