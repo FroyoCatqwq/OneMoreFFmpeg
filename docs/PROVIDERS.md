@@ -2,6 +2,7 @@
 
 > 状态：Phase 0 设计
 > 目标：支持内置来源、自定义 URL、daily / stable，同时保证可复现
+> 当前外部集成：其他项目只通过调用 CLI 可执行文件读取产物文件；不通过 Go API / 插件
 
 ---
 
@@ -166,10 +167,10 @@ one-more-ffmpeg provider add \
 
 支持两类 URL：
 
-1. **直接资产 URL**  
+1. **直接资产 URL**
    必须提供 `--sha256`；可附带 `--checksums-url`。
 
-2. **GitHub Release 仓库 URL**  
+2. **GitHub Release 仓库 URL**
    走 GitHub API；仍要求 release tag + asset SHA-256；不允许只写 `latest`。
 
 约束：
@@ -236,6 +237,8 @@ SHA-256 校验
 ---
 
 ## 9. 与 VideoDamage C1 的关系
+
+当前只通过 CLI 产物文件集成，不通过 Go API / 插件：
 
 OneMoreFFmpeg 可生成：
 

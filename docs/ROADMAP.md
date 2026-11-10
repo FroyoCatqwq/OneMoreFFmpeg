@@ -1,7 +1,7 @@
 # 路线图
 
 > 状态：Phase 0 计划
-> 原则：先只读、后写入；先简单闭环、后扩展生态
+> 原则：先只读、后写入；先 CLI-first，后考虑 API/插件/包管理器
 
 ---
 
@@ -12,7 +12,8 @@
 内容：
 
 - 新建 GitHub repo；
-- 写 README / 项目计划 / 架构 / 能力 / provider / 检测 / 环境 / API / 技术注意点；
+- 写 README / 项目计划 / 架构 / 能力 / provider / 检测 / 环境 / 未来 API/插件 / 技术注意点；
+- 新增 Go 依赖库评估；
 - `go.mod` 锁定 Go 1.27.3；
 - 不写 Go 业务代码。
 
@@ -23,14 +24,18 @@
 内容：
 
 - `cmd/one-more-ffmpeg`；
-- `pkg/onemore`；
-- `internal/core`；
+- `internal/cli`；
 - `internal/app`；
+- `internal/core`；
 - `internal/platform`；
+- `urfave/cli/v3`；
+- `pelletier/go-toml/v2` strict mode；
+- `log/slog` + `lmittmann/tint`；
 - `version` 命令；
 - `--help`；
 - `detect --dry-run` 占位；
 - fake ffmpeg 测试框架；
+- `stretchr/testify`；
 - Windows/Linux 交叉编译。
 
 退出条件：
@@ -38,7 +43,9 @@
 - `go test ./...`；
 - `go vet ./...`；
 - `CGO_ENABLED=0` 双平台编译；
-- 不写 PATH / 不下载 / 不安装。
+- 不写 PATH / 不下载 / 不安装；
+- 不引入包管理器适配；
+- 不引入 Go API / 插件依赖。
 
 ---
 
@@ -48,13 +55,23 @@
 
 - PATH；
 - 环境变量；
-- Scoop；
-- Homebrew；
 - 指定目录；
+- 常见目录；
 - 显式全盘扫描；
 - 三件套校验；
 - `detect --json`；
 - `validate --json`。
+
+当前不做：
+
+```text
+Scoop
+Homebrew
+winget
+Chocolatey
+apt / dnf / pacman
+snap / flatpak 专门适配
+```
 
 退出条件：M0 前半通过。
 
@@ -87,7 +104,9 @@
 - install；
 - PATH 写入；
 - 环境变量写入；
-- C ABI；
+- 包管理器识别；
+- Go API；
+- JSON-RPC / gRPC / C ABI；
 - 公开 Release。
 
 ---
@@ -102,8 +121,8 @@
 - stable / daily；
 - release pin；
 - checksums；
-- 安全下载；
-- `artifact` 记录。
+- `net/http` + `sethvargo/go-retry`；
+- `artifact.json` 记录。
 
 退出条件：
 
@@ -118,7 +137,7 @@
 
 内容：
 
-- zip / tar.xz 安全解压；
+- `klauspost/compress` + `ulikunitz/xz` 安全解压；
 - 版本化目录；
 - `current`；
 - Windows user PATH；
@@ -136,23 +155,26 @@
 
 ---
 
-## Phase 6：API / Plugin
+## Phase 6：CLI 外部调用契约
 
 内容：
 
-- Go API v1；
-- CLI JSON v1；
-- JSON-RPC stdio；
-- plugin manifest；
-- 权限；
-- LAE / VideoDamage 集成示例；
-- C ABI ADR。
+- CLI 子命令稳定化；
+- `--json` schema 稳定化；
+- stdout/stderr 分离；
+- 退出码稳定化；
+- 文件产物稳定化；
+- `version --json`；
+- `doctor --json`；
+- LAE / VideoDamage 调用 CLI 的示例；
+- 明确不提供 Go API / JSON-RPC / C ABI。
 
 退出条件：
 
-- 跨语言调用不依赖 Go 内部类型；
-- 插件能力/权限可审计；
-- C ABI 明确采用或拒绝。
+- 外部项目不需要 import OneMoreFFmpeg；
+- 外部项目不需要链接 Go runtime；
+- 所有机器结果在 stdout JSON 或明确文件中；
+- CLI schema 主版本变化即拒绝。
 
 ---
 
@@ -164,6 +186,7 @@
 - Windows + Linux；
 - Go 1.27.3；
 - `gofmt` / `go vet` / `go test`；
+- `govulncheck`；
 - fuzz URL / parser；
 - 真实资产集成测试；
 - checksum / provenance；
@@ -171,13 +194,15 @@
 
 ---
 
-## 未来能力
+## 未来能力，明确不属于当前 Phase
 
+- 包管理器识别：Scoop / Homebrew / winget / choco / apt / dnf / pacman；
+- 对外开放 Go API；
+- `pkg/onemore` 公共 SDK；
+- JSON-RPC / gRPC / Connect RPC 插件；
 - C ABI / c-shared；
-- GUI/TUI 明确不做；
-- FFmpeg 自构建明确不做；
-- 自动更新服务；
 - 私有制品库；
-- 更多包管理器：winget、choco、apt、dnf、pacman；
-- 生成 VideoDamage C1 锁文件的正式适配器；
-- 生成 LAE v8 provider 配置。
+- 自动更新服务；
+- GUI / TUI / CUI；
+- FFmpeg 自构建；
+- 生成 VideoDamage C1 锁文件的正式适配器可作为 CLI 产物扩展，但不是插件 API。

@@ -2,12 +2,13 @@
 
 > 状态：Phase 0 设计
 > 原则：先只读、显式扫描、结果可审计、不误删
+> 当前不做包管理器识别
 
 ---
 
 ## 1. 发现来源优先级
 
-默认顺序：
+当前默认顺序：
 
 ```text
 1. 显式 --dir
@@ -15,12 +16,31 @@
 3. FFMPEG_DIR
 4. LAE_FFMPEG_DIR
 5. PATH
-6. 包管理器：Scoop / Homebrew
-7. 常见目录
-8. 全盘扫描（仅 --scan 显式触发）
+6. 常见目录
+7. 全盘扫描（仅 --scan 显式触发）
 ```
 
-结果按“可信度 + 路径 + 二进制 hash”排序；不自动选择最高优先级安装，除非 API/CLI 明确要求 `--select`。
+结果按“可信度 + 路径 + 二进制 hash”排序；不自动选择最高优先级安装，除非 CLI 明确要求 `--select`。
+
+### 1.1 当前不做的发现源
+
+以下能力纳入未来考虑，当前不实现：
+
+```text
+Scoop
+Homebrew
+winget
+Chocolatey
+apt / dnf / pacman
+snap / flatpak 专门适配
+```
+
+原因：
+
+- 不同平台差异大；
+- 需要理解包管理器 shim / prefix / link；
+- 会引入额外进程调用和权限边界；
+- 当前功能还不完善，先保证通用路径发现可靠。
 
 ---
 
@@ -66,63 +86,50 @@ LAE_FFMPEG_DIR
 
 ---
 
-## 4. Windows / Scoop
+## 4. 常见目录：Windows
 
-识别路径：
-
-```text
-%USERPROFILE%\scoop\apps\ffmpeg\current\bin
-%USERPROFILE%\scoop\shims\ffmpeg.exe
-```
-
-策略：
-
-- 先检查 `scoop` 命令是否存在；存在则调用 `scoop prefix ffmpeg`；
-- 不解析 Scoop 内部 JSON 作为唯一依据；
-- shim 需要解析到真实 current 目录；
-- 记录 `source = "scoop"`；
-- 不调用 `scoop update` / `scoop install`；
-- 不修改 Scoop 管理的目录。
-
-其他 Windows 常见目录：
+当前只检查常见目录，不专门解析包管理器：
 
 ```text
 C:\ffmpeg\bin
 C:\Program Files\ffmpeg\bin
 %LOCALAPPDATA%\Programs\ffmpeg\bin
-%LOCALAPPDATA%\Microsoft\WinGet\Packages\
+%USERPROFILE%\bin
 ```
+
+规则：
+
+- 不调用 `scoop`；
+- 不解析 Scoop shim；
+- 不写包管理器目录；
+- 未来若开放包管理器识别，再单独加 adapter。
+
+其他 Windows 风险：
+
+- 路径可能有空格、UNC、长路径；
+- 不默认扫描网络盘；
+- 不默认扫描可移动盘。
 
 ---
 
-## 5. Linux / Homebrew
+## 5. 常见目录：Linux
 
-识别路径：
-
-```text
-/home/linuxbrew/.linuxbrew/bin/ffmpeg
-/home/linuxbrew/.linuxbrew/opt/ffmpeg/bin/ffmpeg
-~/.linuxbrew/bin/ffmpeg
-/opt/homebrew/bin/ffmpeg
-```
-
-策略：
-
-- 若 `brew` 存在，调用 `brew --prefix ffmpeg`；
-- 不执行 `brew install` / `brew upgrade`；
-- 不修改 Homebrew prefix；
-- 记录 `source = "homebrew"`。
-
-其他常见目录：
+当前只检查常见目录，不专门解析包管理器：
 
 ```text
 /usr/bin
 /usr/local/bin
 /opt/ffmpeg/bin
-/snap/bin
-/var/lib/flatpak/exports/bin
 ~/.local/bin
 ```
+
+规则：
+
+- 不调用 `brew`；
+- 不解析 Homebrew prefix；
+- 不执行 `brew install` / `brew upgrade`；
+- 不修改 `/usr/bin`；
+- 未来若开放包管理器识别，再单独加 adapter。
 
 ---
 
@@ -149,7 +156,6 @@ one-more-ffmpeg detect --scan --roots /,/home,/opt --json
 /home
 /opt
 /usr/local
-/snap
 ```
 
 排除：
@@ -237,11 +243,11 @@ canonical(root_dir) + ffmpeg_sha256 + ffprobe_sha256 + ffplay_sha256
   "installations": [
     {
       "id": "inst-...",
-      "root_dir": "C:/Users/.../scoop/apps/ffmpeg/current/bin",
-      "ffmpeg": "C:/.../ffmpeg.exe",
-      "ffprobe": "C:/.../ffprobe.exe",
-      "ffplay": "C:/.../ffplay.exe",
-      "sources": ["scoop", "PATH"],
+      "root_dir": "C:/Tools/FFmpeg/bin",
+      "ffmpeg": "C:/Tools/FFmpeg/bin/ffmpeg.exe",
+      "ffprobe": "C:/Tools/FFmpeg/bin/ffprobe.exe",
+      "ffplay": "C:/Tools/FFmpeg/bin/ffplay.exe",
+      "sources": ["explicit_dir", "PATH"],
       "status": "healthy",
       "version": "n9.0.2",
       "warnings": []
@@ -250,6 +256,18 @@ canonical(root_dir) + ffmpeg_sha256 + ffprobe_sha256 + ffplay_sha256
   "errors": []
 }
 ```
+
+`sources` 当前只包含：
+
+```text
+explicit_dir
+env
+PATH
+common_dir
+scan
+```
+
+不包含包管理器 source。
 
 ---
 
@@ -266,4 +284,5 @@ canonical(root_dir) + ffmpeg_sha256 + ffprobe_sha256 + ffplay_sha256
 - 不执行任意用户传入命令；
 - 全盘扫描只读且有超时；
 - 日志不打印 token / 凭据；
-- 对 UNC、网络盘、符号链接保持显式警告。
+- 对 UNC、网络盘、符号链接保持显式警告；
+- 不因缺少包管理器路径而失败。

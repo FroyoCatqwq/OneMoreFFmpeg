@@ -1,32 +1,56 @@
-# 对外 API 与插件接口
+# 对外 API 与插件接口（未来设计）
 
-> 状态：Phase 0 设计
-> 目标：让 LiveArchiveEncoder、lae-videodamage 与其他语言调用 OneMoreFFmpeg
+> 状态：**DEFERRED / 当前不实现**
+> 日期：2026-11-10
+> 原因：程序功能尚不完善，过早开放 API/插件会冻结不成熟接口并增加复杂度
 
 ---
 
-## 1. 三种调用形态
+## 0. 当前对外方式
 
-| 形态 | 版本 | 优先实现 |
+当前其他项目只能通过**调用本项目产物可执行文件**集成：
+
+```text
+LiveArchiveEncoder / lae-videodamage / 脚本
+        │
+        ▼
+one-more-ffmpeg <command> --json
+        │
+        ├─ stdout：JSON / 文件路径
+        ├─ stderr：结构化日志 / 进度 / 错误
+        ├─ 退出码：0 / 1 / 2 / 130
+        └─ 文件产物：artifact.json / install.json / 可选 ffmpeg-trio.lock
+```
+
+当前明确不提供：
+
+- Go public API；
+- `pkg/onemore` 公共 SDK；
+- JSON-RPC 插件；
+- gRPC / Connect RPC 服务；
+- C ABI / c-shared；
+- 进程内插件；
+- 包管理器识别 API。
+
+本文件以下内容仅为未来重新开放时的设计储备，**不是当前实施依据**。
+
+---
+
+## 1. 未来可能的调用形态
+
+| 形态 | 未来优先级 | 说明 |
 |---|---|---|
-| Go library `pkg/onemore` | `api/v1` | 是 |
-| CLI `one-more-ffmpeg --json` | `cli/v1` | 是 |
-| 进程插件 JSON-RPC 2.0 over stdio | `plugin/v1` | 是 |
-| C ABI / `-buildmode=c-shared` | 未来 | 否 |
+| Go library | 中 | 功能稳定后再评估 `pkg/onemore` |
+| JSON-RPC 2.0 over stdio | 中 | 跨语言进程插件 |
+| gRPC / Connect RPC | 低 | 需要长期服务或远程调用时再评估 |
+| C ABI / c-shared | 低 | Rust/C++ 宿主 in-process 调用，风险最高 |
+| Go `plugin` 包 | 不使用 | Windows 不支持，ABI 脆弱 |
 
 不使用 Go `plugin` 包；Windows 不支持，且 Go 插件要求主程序与插件完全同版本同构建，部署脆弱。
 
 ---
 
-## 2. Go API v1
-
-模块：
-
-```text
-github.com/FroyoCatqwq/OneMoreFFmpeg/pkg/onemore
-```
-
-概念接口：
+## 2. 未来 Go API 草案
 
 ```go
 type Manager interface {
@@ -42,20 +66,20 @@ type Manager interface {
 }
 ```
 
-规则：
+未来规则：
 
 - 所有方法第一参数是 `context.Context`；
 - 不暴露 `internal/*`；
-- 返回稳定结构体；
 - 错误实现 `Code() string`；
 - 不返回未文档化的 Go-only 类型；
-- 破坏性变更必须提升 `api/v2`。
+- 破坏性变更必须提升 `api/v2`；
+- 重新开放前必须写 ADR 并冻结 schema。
 
 ---
 
-## 3. CLI v1
+## 3. 当前 CLI 契约才是外部契约
 
-二进制：
+当前 CLI：
 
 ```text
 one-more-ffmpeg
@@ -93,7 +117,7 @@ one-more-ffmpeg doctor --json
 
 ---
 
-## 4. JSON-RPC 插件 v1
+## 4. 未来 JSON-RPC 插件草案
 
 传输：
 
@@ -103,7 +127,7 @@ UTF-8
 一行一个 JSON object
 ```
 
-方法：
+候选方法：
 
 ```text
 initialize
@@ -119,7 +143,7 @@ rollback
 doctor
 ```
 
-通知：
+候选通知：
 
 ```text
 progress
@@ -127,47 +151,19 @@ log
 warning
 ```
 
-请求示例：
+如果未来实现，候选库按 [`GO_LIBRARY_EVALUATION.md`](GO_LIBRARY_EVALUATION.md) 选择：
 
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "capabilities",
-  "params": {
-    "installation_id": "inst-...",
-    "refresh": false
-  }
-}
-```
+- `creachadair/jrpc2`
+- `sourcegraph/jsonrpc2`
+- `google.golang.org/grpc`
+- `connectrpc.com/connect`
+- `Microsoft/go-winio`（Windows named pipe）
 
-错误示例：
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "error": {
-    "code": "OMF-E2001",
-    "message": "installation not found",
-    "data": {}
-  }
-}
-```
-
-规则：
-
-- 不用 Go 类型名作为协议字段；
-- 不把 `error` 文本当稳定机器接口；
-- `code` 才是稳定接口；
-- 二进制不直接走 JSON base64，走文件路径；
-- 下载/安装权限必须显式授予；
-- 支持 `cancel` 通知；
-- 超时由宿主与插件双方共同限制。
+当前不引入这些依赖。
 
 ---
 
-## 5. 插件 manifest
+## 5. 未来插件 manifest 草案
 
 ```toml
 schema = "onemoreffmpeg.plugin/v1"
@@ -192,21 +188,11 @@ permissions = [
 ]
 ```
 
-权限说明：
-
-| 权限 | 默认 |
-|---|---|
-| `fs.read` | 允许 |
-| `fs.write` | 仅 install/env 方法 |
-| `net` | 仅 resolve/download |
-| `env.write` | 仅 configure_env |
-| `process.spawn` | 调用 ffmpeg / scoop / brew 时 |
-
-宿主应拒绝未授权方法，不依赖插件自律。
+当前不实现，也不要求宿主解析该 manifest。
 
 ---
 
-## 6. C ABI 后续评估
+## 6. 未来 C ABI 评估点
 
 Go 可以用 `-buildmode=c-shared` 导出 C ABI，但注意：
 
@@ -220,29 +206,28 @@ Go 可以用 `-buildmode=c-shared` 导出 C ABI，但注意：
 
 结论：
 
-> v1 用 JSON-RPC 进程插件；C ABI 只在 LAE/VideoDamage 明确需要 in-process 性能时再开 ADR 评估。
+> 当前不使用 C ABI；未来只有 LAE/VideoDamage 明确需要 in-process 性能时再开 ADR。
 
 ---
 
-## 7. LAE / VideoDamage 集成
+## 7. 当前与 LAE / VideoDamage 的集成
 
 ### 7.1 只读集成
 
 ```text
 LAE / VideoDamage
-  → OneMoreFFmpeg detect
-  → OneMoreFFmpeg capabilities
+  → 执行 one-more-ffmpeg detect --json
+  → 执行 one-more-ffmpeg capabilities --json
+  → 解析 stdout JSON
   → 得到 trio_dir + capabilities + fingerprint
-  → 自己决定是否使用
 ```
 
 ### 7.2 生成锁文件
 
 ```text
-OneMoreFFmpeg install --provider btbn --channel stable --variant gpl --linkage static
+one-more-ffmpeg install ... --emit-trio-lock
   → 写 install.json
-  → 可选：--emit-trio-lock
-  → 生成 VideoDamage C1 ffmpeg-trio.lock
+  → 写符合 VideoDamage C1 的 ffmpeg-trio.lock
 ```
 
 约束：
@@ -254,26 +239,29 @@ OneMoreFFmpeg install --provider btbn --channel stable --variant gpl --linkage s
 
 ### 7.3 安装/环境变更
 
-需要显式权限：
+需要显式 CLI 参数：
 
 ```text
-install / configure_env / rollback
+install / env set / rollback
 ```
 
-VideoDamage core 默认不调用这些方法；它们属于 Extension Pack / 部署工具。
+VideoDamage core 默认不调用这些方法；它们属于部署/Extension Pack 场景。
 
 ---
 
-## 8. 版本策略
+## 8. 重新开放 API/插件的条件
 
-| 对象 | 版本字段 |
-|---|---|
-| Go API | `onemore/api/v1` |
-| CLI JSON | `schema` |
-| capabilities | `onemoreffmpeg.capabilities/v1` |
-| artifact | `onemoreffmpeg.artifact/v1` |
-| install record | `onemoreffmpeg.install/v1` |
-| journal | `onemoreffmpeg.journal/v1` |
-| plugin | `onemoreffmpeg.plugin/v1` |
+未来必须同时满足：
 
-不向下兼容旧实验版本；主版本变化即拒绝，不静默迁移。
+1. CLI schema 稳定；
+2. TOML config schema 稳定；
+3. installation / artifact / install.json 稳定；
+4. 错误码稳定；
+5. 双平台 CI 稳定；
+6. 有真实语料与回归测试；
+7. ADR 明确为什么需要 SDK/插件；
+8. 依赖库仍满足“6 个月内出新版本”标准；
+9. 明确版本兼容策略；
+10. 不破坏当前 CLI-first 调用方式。
+
+在此之前，本文件只是未来设计储备。

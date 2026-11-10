@@ -2,6 +2,7 @@
 
 > 状态：Phase 0 设计
 > 原则：默认只读、显式写入、先备份后修改、可回滚
+> 当前不做包管理器识别与包管理器共存逻辑
 
 ---
 
@@ -16,7 +17,7 @@
 | `GITHUB_TOKEN` | GitHub API 可选 token | 只读，不持久化 |
 | `HTTPS_PROXY` / `HTTP_PROXY` | 网络代理 | 只读，不持久化 |
 
-不覆盖用户已有变量，除非命令/API 明确 `overwrite=true`。
+不覆盖用户已有变量，除非 CLI 明确 `--overwrite`。
 
 ---
 
@@ -66,12 +67,23 @@ ONE_MORE_FFMPEG_DIR=<data-root>/current
 - 写入后广播 `WM_SETTINGCHANGE`；
 - 新进程才生效，当前进程不假装已生效。
 
-### 3.2 Scoop 共存
+### 3.2 包管理器共存（未来）
 
-- 如果检测到 Scoop shim，不覆盖 Scoop 的 PATH；
-- 默认把 `current/bin` 追加到用户 PATH；
-- `env status` 报告哪个 ffmpeg 会先被解析；
-- 用户可用 `--prepend` 显式改变优先级。
+当前不识别也不处理：
+
+```text
+Scoop
+winget
+Chocolatey
+```
+
+未来如果重新开放包管理器适配，需要单独 ADR，并明确：
+
+- 不覆盖 shim；
+- 不调用 `scoop update` / `scoop install`；
+- 不改包管理器内部目录；
+- `env status` 报告实际解析来源；
+- 是否 `--prepend` 必须由用户显式指定。
 
 ### 3.3 风险
 
@@ -105,12 +117,23 @@ ONE_MORE_FFMPEG_DIR=<data-root>/current
 
 shim 由本项目管理，卸载时按 journal 删除；不删除同名但非本项目创建的文件。
 
-### 4.3 Homebrew 共存
+### 4.3 包管理器共存（未来）
 
-- 不覆盖 Homebrew link；
-- `env status` 显示 `command -v ffmpeg` 的实际来源；
-- 若用户要求 `--prepend`，才把 `current/bin` 放到 PATH 前面；
-- 不执行 `brew unlink` / `brew link`。
+当前不识别也不处理：
+
+```text
+Homebrew
+apt / dnf / pacman
+snap / flatpak
+```
+
+未来如果重新开放，需要单独 ADR，并明确：
+
+- 不覆盖 `/usr/bin/ffmpeg`；
+- 不执行 `brew link` / `brew unlink`；
+- 不调用系统包管理器安装/升级；
+- `env status` 报告 `command -v ffmpeg` 的实际来源；
+- 是否 prepend PATH 必须由用户显式指定。
 
 ---
 
@@ -131,7 +154,7 @@ one-more-ffmpeg doctor --json
 
 - `current` 是否存在；
 - PATH 是否包含 `current/bin`；
-- `command -v ffmpeg` 是否解析到本项目；
+- `command -v ffmpeg` / `where.exe ffmpeg` 是否解析到本项目；
 - `ONE_MORE_FFMPEG_DIR` 是否一致；
 - 三件套是否仍通过校验；
 - 是否存在旧 journal 未提交/未回滚。
@@ -179,4 +202,5 @@ one-more-ffmpeg doctor --json
 - 删除非本项目创建的 ffmpeg；
 - 覆盖正在运行的 Windows exe；
 - 把 nonfree 路径写进公开 CI 的默认环境变量；
-- 没有 dry-run 就执行 env set。
+- 没有 dry-run 就执行 env set；
+- 当前阶段为包管理器写专门兼容逻辑。

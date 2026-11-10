@@ -1,17 +1,17 @@
 # 架构设计
 
 > 状态：Phase 0 设计
-> 原则：Go 单语言、纯 Go 优先、进程边界清晰、先只读后写入
+> 原则：Go 单语言、CLI-first、纯 Go 优先、进程边界清晰、先只读后写入
 
 ---
 
 ## 1. 总体结构
 
 ```text
-CLI / JSON-RPC / Go API
+可执行 CLI：one-more-ffmpeg
         │
         ▼
-pkg/onemore                 公共 API v1
+internal/cli               命令解析、参数、help、version
         │
         ▼
 internal/app               用例编排
@@ -25,12 +25,8 @@ internal/app               用例编排
    └─ doctor               健康检查
         │
         ▼
-internal/platform
-   ├─ windows              Scoop、PATH 注册表、Job Object 预留
-   └─ linux                Homebrew、shim、XDG 路径
-
 internal/core
-   ├─ model                公共数据结构
+   ├─ model                内部数据结构
    ├─ ffexec               FFmpeg 进程执行器
    ├─ parser               FFmpeg 输出解析
    ├─ checksum             SHA-256 / checksums.sha256
@@ -39,13 +35,18 @@ internal/core
    ├─ cache                能力缓存
    ├─ config               TOML 1.1
    └─ errors               稳定错误码
+        │
+        ▼
+internal/platform
+   ├─ windows              PATH 注册表、文件系统细节
+   └─ linux                shim、XDG 路径、文件系统细节
 ```
 
 依赖方向：
 
 ```text
-cmd → pkg/onemore → internal/app → internal/core
-                              ↘ internal/platform
+cmd → internal/cli → internal/app → internal/core
+                                 ↘ internal/platform
 ```
 
 禁止：
@@ -54,26 +55,58 @@ cmd → pkg/onemore → internal/app → internal/core
 - `internal/platform` 依赖 provider；
 - provider 直接写 PATH；
 - capability parser 直接写安装目录；
-- Go API 暴露 `internal/*` 类型。
+- 暴露 `internal/*` 作为公共 API；
+- 当前阶段引入 `pkg/onemore` 公共 SDK；
+- 当前阶段引入插件协议层。
 
 ---
 
 ## 2. 外部形态
 
-| 形态 | 入口 | 用途 |
+| 形态 | 当前状态 | 说明 |
 |---|---|---|
-| CLI | `one-more-ffmpeg` | 人工使用、脚本调用 |
-| Go library | `pkg/onemore` | Go 项目直接 import |
-| 进程插件 | JSON-RPC 2.0 over stdio | LAE / VideoDamage / 其他语言 |
-| C ABI | 后续评估 | Rust/C++ 宿主 in-process 调用 |
+| CLI `one-more-ffmpeg` | **当前唯一对外形态** | 其他项目只调用它 |
+| Go library `pkg/onemore` | 未来 | 功能完善后再评估 |
+| JSON-RPC / gRPC 插件 | 未来 | 当前不实现 |
+| C ABI / c-shared | 未来 | 需要单独 ADR |
+| 包管理器识别 | 未来 | 当前不实现 |
 
-优先做前三；C ABI 需要单独 ADR，因为 Go `-buildmode=c-shared` 会把 Go runtime 带进宿主进程，卸载和线程模型都有约束。
+当前外部契约：
+
+```text
+CLI 参数
+stdout：JSON / 文件路径
+stderr：日志 / 进度 / 错误
+退出码：0 / 1 / 2 / 130
+文件产物：artifact.json / install.json / 可选 ffmpeg-trio.lock
+```
+
+其他项目不得直接 import 本项目 Go 包，也不得依赖内部结构体。
 
 本阶段不使用 Go 标准库 `plugin` 包：Windows 不支持，跨版本 ABI 脆弱，且与“Go 1.27.3 精确锁定”冲突。
 
 ---
 
-## 3. 核心数据模型（概念）
+## 3. 依赖库落点
+
+| 层 | 采用库 |
+|---|---|
+| CLI | `urfave/cli/v3` |
+| config | `pelletier/go-toml/v2` |
+| log | `log/slog` + `lmittmann/tint` |
+| concurrency | `golang.org/x/sync` |
+| system | `golang.org/x/sys` / `golang.org/x/term` |
+| tty | `mattn/go-isatty` |
+| archive | `klauspost/compress` / `ulikunitz/xz` |
+| HTTP retry | `net/http` + `sethvargo/go-retry` |
+| human size | `dustin/go-humanize` |
+| test | `stretchr/testify` |
+
+详见 [`GO_LIBRARY_EVALUATION.md`](GO_LIBRARY_EVALUATION.md)。
+
+---
+
+## 4. 核心数据模型（内部概念）
 
 ```go
 type Installation struct {
@@ -130,35 +163,30 @@ type Release struct {
 }
 ```
 
-这些是概念结构，不代表最终 Go 结构体字段已冻结；字段名以 `API_AND_PLUGIN.md` 的 JSON 契约为准。
+这些是内部概念结构。对外 JSON 字段名以 CLI 输出 schema 为准，Go 结构体不对外承诺。
 
 ---
 
-## 4. 配置与输出
+## 5. 配置与输出
 
 | 类型 | 格式 | 说明 |
 |---|---|---|
-| 用户配置 | TOML 1.1 | provider、路径、扫描策略、权限 |
+| 用户配置 | TOML 1.1 | `pelletier/go-toml/v2`，strict mode |
 | CLI 输出 | JSON | `--json` 机器可读 |
-| Go API | Go 类型 | `pkg/onemore` |
-| 插件协议 | JSON-RPC 2.0 | stdio，一行一个 JSON object |
+| 文件产物 | JSON + SHA-256 | artifact / install / journal |
 | 能力缓存 | JSON | 按 installation fingerprint |
-| 安装记录 | JSON + SHA-256 | 写入版本化安装目录 |
 | 日志 | `log/slog` JSON/text | stderr，不污染 stdout |
 
-TOML 1.1 解析库在 Phase 1 选定，要求：
+TOML 解析要求：
 
 - 纯 Go；
-- 持续维护；
-- 明确支持 1.1；
-- 支持 `deny_unknown_fields` 或等价严格解码；
+- 明确支持 TOML 1.1.0；
+- 严格模式拒绝未知字段；
 - 无 cgo。
-
-若生态不满足，则配置改 JSON，并通过 ADR 记录变更。
 
 ---
 
-## 5. 进程执行模型
+## 6. 进程执行模型
 
 所有 FFmpeg 调用通过 `internal/core/ffexec`：
 
@@ -177,7 +205,7 @@ TOML 1.1 解析库在 Phase 1 选定，要求：
 
 ---
 
-## 6. 安装与事务模型
+## 7. 安装与事务模型
 
 目录示例：
 
@@ -216,7 +244,7 @@ journal rollback → remove temp → restore current/env → report
 
 ---
 
-## 7. 错误模型
+## 8. 错误模型
 
 - 稳定字符串错误码，例如 `OMF-E1001`；
 - 错误对象：`code` / `message` / `details` / `cause`；
@@ -226,32 +254,39 @@ journal rollback → remove temp → restore current/env → report
 
 ---
 
-## 8. 并发模型
+## 9. 并发模型
 
-- 所有公开 API 第一参数是 `context.Context`；
+- 所有用例内部第一关键对象是 `context.Context`；
 - 探测源可并发，但有上限；
-- 全盘扫描使用 `errgroup` 风格有限 worker；
-- 下载单连接 + 重试，不做无上限并发；
+- 全盘扫描使用 `errgroup` + 有界 channel；
+- 下载单连接 + 重试；
 - 安装与 env 写入加进程内互斥锁；
 - 同一 data root 跨进程用文件锁；
 - 能力命令可并行，但默认串行，避免 FFmpeg 进程风暴。
 
 ---
 
-## 9. 与 LAE / VideoDamage 的边界
+## 10. 与 LAE / VideoDamage 的边界
 
 ```text
 LiveArchiveEncoder / lae-videodamage
-        │ JSON-RPC / Go API / CLI
+        │ 调用可执行文件
         ▼
-OneMoreFFmpeg
+one-more-ffmpeg <command> --json
         │
-        ├─ 返回已安装 trio 路径
-        ├─ 返回 capabilities
-        ├─ 返回 install.json / release pin
-        └─ 可选：安装、切换、env 配置
+        ├─ stdout JSON
+        ├─ stderr 日志
+        ├─ 退出码
+        └─ 文件产物：artifact.json / install.json / 可选 ffmpeg-trio.lock
 ```
 
-OneMoreFFmpeg 不读取 LAE 业务配置，不生成 `ffmpeg-trio.lock` 以外的业务文件；但可以为 VideoDamage 生成符合其 C1 契约的 `ffmpeg-trio.lock`。
+规则：
 
-VideoDamage 不直接下载/安装 FFmpeg；它调用 OneMoreFFmpeg 或读取 OneMoreFFmpeg 产出的锁文件。
+- 不 import OneMoreFFmpeg Go 包；
+- 不链接 Go runtime；
+- 不调用 JSON-RPC / gRPC / C ABI；
+- 不依赖 OneMoreFFmpeg 内部结构体；
+- 只依赖 CLI schema 与退出码；
+- OneMoreFFmpeg 不读取 LAE 业务配置；
+- VideoDamage core 默认不调用 install/env；这些属于部署/Extension Pack 场景；
+- 未来若重新开放 API/插件，必须另写 ADR 并升版本。

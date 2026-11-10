@@ -163,7 +163,7 @@ ffmpeg -hide_banner -buildconf
 | `-h <topic>` | 5s |
 | 列表类命令 | 15s |
 
-默认 stdout 上限：8 MiB。  
+默认 stdout 上限：8 MiB。
 超过上限：截断、记录 warning、命令仍返回可解析结果。
 
 ---
