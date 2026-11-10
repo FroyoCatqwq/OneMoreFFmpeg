@@ -562,14 +562,16 @@ Phase 1 产出：`THIRD_PARTY_NOTICES` 与依赖许可证清单。
 
 它不是“所有功能实现细节都已冻结”的终态，因为 provider/download/install 仍需要 Phase 4/5 的真实实现验证；但 CLI JSON、错误码、平台环境、provider resolver 与许可证都已足够支撑 Phase 1。
 
-第二轮之后，剩余工作是实现与交付，不是文档契约缺口：
+第二轮之后，剩余工作是实现与交付，不是文档契约缺口。Phase 1 已完成其中的骨架部分：
 
 ```text
-Go CLI 实现
-go.sum 与依赖锁定
-THIRD_PARTY_NOTICES
-单元测试 / 集成测试 / CI
-真实 BtbN / BnqDzj resolve/download 验证
+[已完成] Go CLI 骨架
+[已完成] go.sum 与依赖锁定
+[已完成] THIRD_PARTY_NOTICES 初稿
+[已完成] 本地单元测试 / vet / 双平台交叉编译
+[待办] Phase 2–5 功能实现
+[待办] GitHub Actions / 发布 CI
+[待办] 真实 BtbN / BnqDzj resolve/download 验证
 ```
 
 这些完成后，项目才达到完整交付级；文档层面已不再阻塞 Phase 1。

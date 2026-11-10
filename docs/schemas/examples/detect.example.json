@@ -4,6 +4,7 @@
   "command": "detect",
   "data": {
     "schema": "onemoreffmpeg.detect/v1",
+    "placeholder": true,
     "installations": [
       {
         "id": "inst-0123456789abcdef",

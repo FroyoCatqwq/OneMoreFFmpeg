@@ -138,7 +138,7 @@ DoD：
 - 依赖库版本新鲜度已核对；
 - CLI JSON 契约、错误码、平台环境细节、provider resolver 细节已补齐；
 - 许可证已确定为 GPL-3.0-only；
-- 代码尚未开始。
+- Phase 0 结束时代码尚未开始；Phase 1 骨架已完成，见 [`PHASE1_STATUS.md`](PHASE1_STATUS.md)。
 
 ### Phase 0 契约引用
 
@@ -150,9 +150,9 @@ DoD：
 
 ---
 
-### Phase 1：仓库骨架与只读 CLI
+### Phase 1：仓库骨架与只读 CLI（已完成）
 
-目标：能编译、能输出版本、能 dry-run 发现。
+目标：能编译、能输出 `version --json`、能让 `detect --json` 返回只读占位结果。
 
 步骤：
 
@@ -429,11 +429,15 @@ M0 不通过，不进入下载/安装/环境变量写入实现。
 - 平台环境变量细则完成；
 - Provider resolver 细则完成；
 - 许可证已确定为 GPL-3.0-only，根目录 `LICENSE` 已添加；
-- 未写 Go 代码；
-- 未生成 `go.sum`；
+- Phase 1 Go 骨架完成，详见 [`PHASE1_STATUS.md`](PHASE1_STATUS.md)；
+- `go.sum` 已生成；
+- `version --json` / `detect --json` 占位 / `--help` 已验证；
+- 本地单测、`go vet`、Windows/Linux 交叉编译通过；
+- `THIRD_PARTY_NOTICES.md` 初稿完成；
 - 未下载任何 FFmpeg；
 - 未安装任何 FFmpeg；
 - 未修改 PATH；
+- 未实现真实发现、能力探测、provider resolve、install/env；
 - 未实现包管理器识别；
 - 未实现 Go API / 插件；
-- 未提交 CI。
+- 未提交 GitHub Actions / 发布 CI。

@@ -1,9 +1,9 @@
 # 文档索引与权威顺序
 
 > 项目：OneMoreFFmpeg
-> 状态：Phase 0 计划与契约文档，尚未开始实现
+> 状态：Phase 1 骨架已完成，Phase 2 尚未开始
 > 日期：2026-11-10
-> 更新：依据 `DOCUMENTATION_AUDIT.md` 完成第二轮补充
+> 更新：依据 `DOCUMENTATION_AUDIT.md` 完成契约冻结并进入 Phase 1
 
 ---
 
@@ -27,8 +27,10 @@
 | 14 | [`TECHNICAL_NOTES.md`](TECHNICAL_NOTES.md) | 技术约束、风险、注意点 |
 | 15 | [`LICENSE_DECISION.md`](LICENSE_DECISION.md) | 许可证决策记录（GPL-3.0-only） |
 | 16 | [`DOCUMENTATION_AUDIT.md`](DOCUMENTATION_AUDIT.md) | 文档审查与改进记录 |
-| 17 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
-| 18 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
+| 17 | [`PHASE1_STATUS.md`](PHASE1_STATUS.md) | Phase 1 实施状态与验证结果 |
+| 18 | [`PHASE1_CODE_REVIEW.md`](PHASE1_CODE_REVIEW.md) | Phase 1 代码审查、P0/P1 修复与残留 tech debt |
+| 19 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
+| 20 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
 
 冲突时：
 
@@ -73,22 +75,20 @@
 | 测试 | `stretchr/testify` |
 | 许可证 | `GPL-3.0-only`，见根目录 `LICENSE` 与 `LICENSE_DECISION.md` |
 | nonfree | 元数据可公开，二进制不可随公开 Release 分发 |
+| Phase 1 | 骨架、`version` / `detect --json` 占位、测试与交叉编译已完成 |
 
 ---
 
 ## 3. 尚未完成
 
-- Go 代码；
-- CLI 实现；
-- `go.sum`；
-- config schema 实现；
-- provider resolver 实现；
-- downloader；
-- installer；
-- PATH / 环境变量写入实现；
-- 单元测试 / 集成测试 / CI；
-- `THIRD_PARTY_NOTICES`；
-- 第三方依赖许可证清单。
+- 真实 FFmpeg 发现与校验（Phase 2）；
+- 13 项能力探测（Phase 3）；
+- provider resolver / download 实现（Phase 4）；
+- install / env / rollback 实现（Phase 5）；
+- GitHub Actions / 发布 CI（Phase 7）；
+- 公开二进制发布与完整许可证复核；
+- 包管理器识别；
+- Go API / 插件接口。
 
 ## 4. 未来，明确不属于当前 Phase
 
@@ -100,6 +100,8 @@
 - 自动更新服务；
 - GUI / TUI / CUI。
 
-## 5. 审查报告
+## 5. 审查与状态报告
 
-- [`DOCUMENTATION_AUDIT.md`](DOCUMENTATION_AUDIT.md)：第一轮审查、事实核实、P1/P2 问题与第二轮更新。
+- [`DOCUMENTATION_AUDIT.md`](DOCUMENTATION_AUDIT.md)：文档审查、事实核实、P0/P1/P2 问题与修复记录。
+- [`PHASE1_STATUS.md`](PHASE1_STATUS.md)：Phase 1 实施状态与验证结果。
+- [`PHASE1_CODE_REVIEW.md`](PHASE1_CODE_REVIEW.md)：Phase 1 代码审查、P0/P1 修复与残留 tech debt。

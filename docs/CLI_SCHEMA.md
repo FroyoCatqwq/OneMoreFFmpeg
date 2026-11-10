@@ -18,6 +18,7 @@
 - stdout 只写机器结果；
 - stderr 只写日志、进度、人类错误；
 - `--json` 成功/失败都必须返回 JSON；
+- 例外：`--help` 是交互帮助，始终写人类可读文本；机器消费者不要同时使用 `--json` 与 `--help`；
 - 无 `--json` 时输出人类可读文本，但不能混入 stdout JSON；
 - JSON 顶层必须有 `schema`；
 - 错误对象必须使用 `ERROR_CODES.md` 的 `code`；
@@ -85,6 +86,8 @@
 | `os` | string | `windows` / `linux` |
 | `arch` | string | `amd64` |
 
+> 开发构建允许 `git_commit` / `build_time` 为 `"unknown"`；发布构建应通过 `-ldflags` 注入真实提交与 RFC 3339 构建时间。
+
 示例：[`schemas/examples/version.example.json`](schemas/examples/version.example.json)
 
 ---
@@ -95,6 +98,8 @@
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
+| `schema` | string | `onemoreffmpeg.detect/v1` |
+| `placeholder` | boolean | 可选；Phase 1 占位为 `true`，真实探测时省略或 `false` |
 | `installations` | array | `Installation[]` |
 | `errors` | array | 非致命来源错误 |
 

@@ -1,0 +1,9 @@
+schema = "onemoreffmpeg.config/v1"
+
+[log]
+# error | warn | info | debug | trace
+level = "info"
+# true: slog JSON handler; false: tint text handler
+json = false
+# auto | always | never
+color = "auto"

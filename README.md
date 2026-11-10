@@ -4,9 +4,9 @@
 
 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg>
 
-状态：**Phase 0 项目计划与契约文档阶段，尚未开始实现代码。**
+状态：**Phase 1 仓库骨架已完成，Phase 2 尚未开始。**
 
-> 当前没有可运行 CLI。文档中出现的所有 `one-more-ffmpeg ...` 命令都是计划命令，尚未实现。
+> `version` 与 `detect --json` 占位命令已实现；其余 `one-more-ffmpeg ...` 命令仍是计划命令，尚未实现。
 
 ---
 
@@ -100,7 +100,7 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 | Go 版本 | `go1.27.3`，CI 精确锁定 |
 | 平台 | Windows x64 + Linux x86_64 |
 | 构建 | `CGO_ENABLED=0` 优先，纯 Go 交叉编译 |
-| CLI | `one-more-ffmpeg`，可选短别名 `omf` |
+| CLI | `one-more-ffmpeg`；`omf` 为未来候选，当前未提供 |
 | Go module | `github.com/FroyoCatqwq/OneMoreFFmpeg` |
 | CLI 框架 | `github.com/urfave/cli/v3` |
 | 配置 | TOML 1.1，`github.com/pelletier/go-toml/v2` |
@@ -142,6 +142,9 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 | [`docs/TECHNICAL_NOTES.md`](docs/TECHNICAL_NOTES.md) | Go 1.27、并发、安全、测试、注意点 |
 | [`docs/LICENSE_DECISION.md`](docs/LICENSE_DECISION.md) | 许可证决策记录（GPL-3.0-only） |
 | [`docs/DOCUMENTATION_AUDIT.md`](docs/DOCUMENTATION_AUDIT.md) | 文档审查、事实核实、P1/P2 问题与改进顺序 |
+| [`docs/PHASE1_STATUS.md`](docs/PHASE1_STATUS.md) | Phase 1 实施状态与验证结果 |
+| [`docs/PHASE1_CODE_REVIEW.md`](docs/PHASE1_CODE_REVIEW.md) | Phase 1 代码审查、P0/P1 修复与残留 tech debt |
+| [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) | 第三方依赖许可证清单初稿 |
 
 ---
 
@@ -149,23 +152,45 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 
 - GitHub 仓库：已创建；
 - `go.mod`：已创建，锁定 Go 1.27.3；
-- `go.sum`：未创建，Phase 1 锁定依赖时生成；
+- `go.sum`：已生成；
 - 项目计划与文档：已写入；
 - Go 依赖库评估：已完成；
 - CLI JSON 契约与示例：已写入；
-- 错误码注册表：已写入；
+- 错误码注册表：已写入，并在 Go 代码中实现；
 - 平台环境变量细则：已写入；
 - Provider resolver 细则：已写入；
 - 许可证：GPL-3.0-only，根目录 `LICENSE` 已添加；
-- 代码实现：未开始；
-- CLI：未实现；
+- Phase 1 Go 骨架：已完成；
+- CLI：`version` 与 `detect --json` 占位命令已实现；
+- 本地单测 / `go vet` / Windows+Linux 交叉编译：通过；
+- 第三方许可证清单 / `THIRD_PARTY_NOTICES`：初稿完成，许可证文本已复制；
 - 下载/安装/环境变量修改：未实现；
+- 真实 FFmpeg 发现、能力探测、provider resolve：未实现；
 - 包管理器识别：未实现，未来考虑；
 - Go API / 插件接口：未实现，未来考虑；
-- 测试 / CI：未建立；
-- 第三方许可证清单 / `THIRD_PARTY_NOTICES`：未完成。
+- GitHub Actions / 发布 CI：未建立。
 
-## 6. 许可证
+## 6. Phase 1 开发命令
+
+需要 Go 1.27.3：
+
+```bash
+go mod tidy
+go build ./...
+go test ./...
+go vet ./...
+go run ./cmd/one-more-ffmpeg version --json
+go run ./cmd/one-more-ffmpeg detect --json
+```
+
+双平台交叉编译：
+
+```bash
+CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build ./...
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build ./...
+```
+
+## 7. 许可证
 
 GPL-3.0-only，见根目录 [`LICENSE`](LICENSE) 与 [`docs/LICENSE_DECISION.md`](docs/LICENSE_DECISION.md)。
 

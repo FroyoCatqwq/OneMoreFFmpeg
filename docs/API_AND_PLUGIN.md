@@ -89,7 +89,7 @@ type Manager interface {
 one-more-ffmpeg
 ```
 
-可选别名：
+可选别名（未来候选，当前未提供）：
 
 ```text
 omf

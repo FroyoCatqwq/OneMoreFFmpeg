@@ -33,7 +33,9 @@
 
 ---
 
-## Phase 1：仓库骨架
+## Phase 1：仓库骨架（已完成）
+
+> 实施与验证结果见 [`PHASE1_STATUS.md`](PHASE1_STATUS.md)。
 
 内容：
 
