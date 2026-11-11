@@ -98,7 +98,9 @@ snap / flatpak 专门适配
 
 ---
 
-## Phase 3：能力检查
+## Phase 3：能力检查（已完成）
+
+> 实施与验证结果见 [`PHASE3_STATUS.md`](PHASE3_STATUS.md)。
 
 内容：
 

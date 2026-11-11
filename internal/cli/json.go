@@ -29,6 +29,8 @@ func wantsJSON(args []string) bool {
 		"--timeout":         true,
 		"--probe-timeout":   true,
 		"--installation-id": true,
+		"--help-topic":      true,
+		"--cache-dir":       true,
 	}
 	for i := 0; i < len(args); i++ {
 		arg := args[i]

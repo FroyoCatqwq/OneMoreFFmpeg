@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,6 +13,7 @@ import (
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/buildinfo"
 	appcli "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/cli"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/testutil"
 )
 
 func testOptions(args ...string) (appcli.RunOptions, *bytes.Buffer, *bytes.Buffer) {
@@ -145,4 +147,61 @@ func TestMissingConfigJSONError(t *testing.T) {
 	require.Equal(t, model.ErrorSchema, obj.Schema)
 	require.False(t, obj.OK)
 	require.Equal(t, "OMF-E7007", obj.Code)
+}
+
+func TestCapabilitiesRequiresInput(t *testing.T) {
+	opts, stdout, _ := testOptions("capabilities", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 2, code)
+
+	var obj model.ErrorObject
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
+	require.Equal(t, "OMF-E7001", obj.Code)
+}
+
+func TestCapabilitiesNoValidateRejected(t *testing.T) {
+	opts, stdout, _ := testOptions("capabilities", "--dir", t.TempDir(), "--no-validate", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 2, code)
+
+	var obj model.ErrorObject
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
+	require.Equal(t, "OMF-E7001", obj.Code)
+}
+
+func TestCapabilitiesHappyPath(t *testing.T) {
+	fake := testutil.NewFakeFFmpeg(t)
+	setCapabilityEnv(t, fake)
+
+	opts, stdout, _ := testOptions(
+		"capabilities",
+		"--dir", fake.Dir,
+		"--help-topic", "full",
+		"--no-cache",
+		"--no-path", "--no-env", "--no-common",
+		"--json",
+	)
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 0, code)
+
+	var result model.Result
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &result))
+	require.Equal(t, "capabilities", result.Command)
+	data, ok := result.Data.(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, model.CapabilitiesSchema, data["schema"])
+	commands, ok := data["commands"].(map[string]any)
+	require.True(t, ok)
+	require.Len(t, commands, 13)
+}
+
+func setCapabilityEnv(t *testing.T, fake *testutil.FakeFFmpeg) {
+	t.Helper()
+	for _, pair := range fake.CapabilityEnv() {
+		key, value, ok := strings.Cut(pair, "=")
+		if !ok {
+			continue
+		}
+		t.Setenv(key, value)
+	}
 }

@@ -1,8 +1,9 @@
 # FFmpeg 能力检查契约
 
-> 状态：Phase 0 设计
+> 状态：Phase 3 已实现
 > 范围：v1 只支持用户列出的 13 个 FFmpeg 参数 / 能力入口
 > 原则：原样调用 FFmpeg、结构化解析、保留原文哈希
+> 实现入口：`internal/capabilities/`；CLI：`capabilities`
 > 输出契约：[`CLI_SCHEMA.md`](CLI_SCHEMA.md)、[`schemas/examples/capabilities.example.json`](schemas/examples/capabilities.example.json)
 
 ---
@@ -64,17 +65,26 @@
     "schema": "onemoreffmpeg.capabilities/v1",
     "installation_id": "...",
     "fingerprint": "...",
+    "installation_fingerprint": "...",
+    "created_at": "...",
+    "cache_hit": false,
     "commands": {
-      "-decoders": {
-        "ok": true,
-        "exit_code": 0,
-        "stdout_sha256": "...",
-        "stderr_sha256": "...",
-        "duration_ms": 42
-      }
+      "-L": { "ok": true, "exit_code": 0, "stdout_sha256": "...", "stderr_sha256": "...", "duration_ms": 10 },
+      "-license": { "ok": true, "exit_code": 0, "stdout_sha256": "...", "stderr_sha256": "...", "duration_ms": 10 },
+      "-h full": { "ok": true, "exit_code": 0, "stdout_sha256": "...", "stderr_sha256": "...", "duration_ms": 10 },
+      "-version": { "ok": true, "exit_code": 0, "stdout_sha256": "...", "stderr_sha256": "...", "duration_ms": 10 },
+      "-muxers": { "ok": true, "exit_code": 0, "stdout_sha256": "...", "stderr_sha256": "...", "duration_ms": 10 },
+      "-demuxers": { "ok": true, "exit_code": 0, "stdout_sha256": "...", "stderr_sha256": "...", "duration_ms": 10 },
+      "-devices": { "ok": true, "exit_code": 0, "stdout_sha256": "...", "stderr_sha256": "...", "duration_ms": 10 },
+      "-decoders": { "ok": true, "exit_code": 0, "stdout_sha256": "...", "stderr_sha256": "...", "duration_ms": 42 },
+      "-encoders": { "ok": true, "exit_code": 0, "stdout_sha256": "...", "stderr_sha256": "...", "duration_ms": 10 },
+      "-filters": { "ok": true, "exit_code": 0, "stdout_sha256": "...", "stderr_sha256": "...", "duration_ms": 10 },
+      "-pix_fmts": { "ok": true, "exit_code": 0, "stdout_sha256": "...", "stderr_sha256": "...", "duration_ms": 10 },
+      "-layouts": { "ok": true, "exit_code": 0, "stdout_sha256": "...", "stderr_sha256": "...", "duration_ms": 10 },
+      "-sample_fmts": { "ok": true, "exit_code": 0, "stdout_sha256": "...", "stderr_sha256": "...", "duration_ms": 10 }
     },
-    "version": {},
-    "license": {},
+    "version": { "raw": "...", "version": "...", "configuration": "..." },
+    "license": { "raw": "...", "summary": "..." },
     "muxers": [],
     "demuxers": [],
     "devices": [],
@@ -84,11 +94,20 @@
     "pixel_formats": [],
     "channel_layouts": [],
     "sample_formats": [],
-    "help": {},
+    "help": { "full": { "topic": "full", "raw": "...", "stdout_sha256": "..." } },
     "warnings": []
   }
 }
 ```
+
+说明：
+
+- `commands` 固定包含 13 个键；`-h <topic>` 的键由 `--help-topic` 决定，例如 `-h full`、`-h decoder=h264`。
+- 每个 command result 还可选包含 `stdout_bytes` / `stderr_bytes` / `truncated` / `stderr_summary` / `error`。
+- `cache_hit` 为 `true` 时表示结果来自缓存，未重新执行 13 个命令。
+- `created_at` 为 RFC 3339 UTC；缓存命中时保留首次生成时间。
+- `fingerprint` 为 capabilities cache fingerprint；`installation_fingerprint` 为 Phase 2 `Installation.fingerprint`。
+- 数组字段的元素均为 `CapabilityEntry`：`name` / `flags` / `description` / `raw`。
 
 条目示例：
 
@@ -119,20 +138,26 @@
 
 ## 5. 缓存
 
-缓存路径：
+默认 `<data-root>` 为 `os.UserCacheDir()/OneMoreFFmpeg`，实际缓存路径：
 
 ```text
-<data-root>/cache/capabilities/<installation_fingerprint>.json
+<user-cache-dir>/OneMoreFFmpeg/cache/capabilities/<capabilities_fingerprint>.json
 ```
 
-`installation_fingerprint` 由以下字段生成：
+可用 `--cache-dir <PATH>` 覆盖目录。
+
+`capabilities_fingerprint` 由以下字段生成：
 
 ```text
-ffmpeg_sha256 + ffprobe_sha256 + ffplay_sha256
+onemoreffmpeg.capabilities/v1
++ capabilities command spec version
++ OS + ARCH
++ installation_id / installation_fingerprint / version
++ ffmpeg_sha256 + ffprobe_sha256 + ffplay_sha256
 + version stdout hash
 + -L stdout hash
-+ OS + ARCH
-+ OneMoreFFmpeg schema version
++ help topic
++ 13 个 command key
 ```
 
 缓存失效：
@@ -141,7 +166,10 @@ ffmpeg_sha256 + ffprobe_sha256 + ffplay_sha256
 - version / license 输出变化；
 - CLI 强制 `--refresh`；
 - schema 主版本变化；
-- 缓存文件 JSON 损坏。
+- 缓存文件 JSON 损坏；
+- 缓存缺少 13 个命令键。
+
+`--no-cache` 完全不读不写缓存；`--refresh` 忽略旧缓存但会写入新结果。缓存损坏或过期时输出 `OMF-W1003`，缓存命中时 `cache_hit=true`。
 
 ---
 
@@ -178,11 +206,35 @@ ffmpeg -hide_banner -buildconf
 
 | 场景 | 行为 |
 |---|---|
-| ffmpeg 不存在 | 整体失败 |
-| ffmpeg 无执行权限 | 整体失败 |
-| 单个命令超时 | 该命令 `ok=false`，其他继续 |
-| 单个命令非零退出 | 该命令 `ok=false`，继续 |
-| 解析异常 | warning，保留 raw hash |
-| 缓存损坏 | 重新探测，记录 warning |
+| ffmpeg 不存在 | `OMF-E1002`，整体失败 |
+| ffmpeg 无执行权限 | `OMF-E1005`，整体失败 |
+| `--dir` / `--installation-id` 缺失或同时给出 | `OMF-E7001` |
+| help topic 非法 | `OMF-E2005` |
+| 单个命令超时 | 该命令 `ok=false`，其他继续，记录 `OMF-W1002` |
+| 单个命令非零退出 | 该命令 `ok=false`，继续，记录 `OMF-W1002` |
+| stdout 截断 | warning `OMF-W1002`，仍尝试解析 |
+| 解析异常 | `OMF-W1002`，保留 raw hash |
+| 缓存损坏/过期 | 重新探测，记录 `OMF-W1003` |
+| ffplay 缺失 | `OMF-W1001`，不误判 ffmpeg 不可用 |
 
 `capabilities` 不修改任何文件，除了缓存目录；`--no-cache` 可完全只读。
+
+---
+
+## 9. Phase 3 CLI 映射
+
+```text
+one-more-ffmpeg capabilities --dir <PATH> --json
+one-more-ffmpeg capabilities --installation-id <ID> --json
+one-more-ffmpeg capabilities --dir <PATH> --help-topic decoder=h264 --json
+one-more-ffmpeg capabilities --dir <PATH> --refresh --json
+one-more-ffmpeg capabilities --dir <PATH> --no-cache --json
+```
+
+规则：
+
+- `--dir` 与 `--installation-id` 必须二选一；
+- `--installation-id` 会重新做发现以得到 `Installation`，可配合 `--no-path` / `--no-env` / `--no-common` / `--scan`；
+- `--no-validate` 在 capabilities 中禁用，必须得到 version/license stdout hash 才能算缓存指纹；
+- 输出 `onemoreffmpeg.result/v1` + `onemoreffmpeg.capabilities/v1`；
+- 所有能力命令都复用 `ffexec` 的 timeout、WaitDelay、进程树与输出上限。

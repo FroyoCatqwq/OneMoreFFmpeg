@@ -1,9 +1,9 @@
 # 文档索引与权威顺序
 
 > 项目：OneMoreFFmpeg
-> 状态：Phase 2 发现与校验已完成，Phase 3 尚未开始
+> 状态：Phase 3 能力检查已完成，Phase 4 尚未开始
 > 日期：2026-11-11
-> 更新：完成 Phase 1 代码审查修复与 Phase 2 真实发现/校验实现
+> 更新：完成 Phase 3 的 13 项能力命令、解析、缓存与 `capabilities` CLI
 
 ---
 
@@ -16,7 +16,7 @@
 | 3 | [`CLI_SCHEMA.md`](CLI_SCHEMA.md) | 当前唯一对外契约：CLI JSON v1 |
 | 4 | [`ERROR_CODES.md`](ERROR_CODES.md) | 错误码、警告码、退出码 |
 | 5 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | 模块边界与依赖方向 |
-| 6 | [`CAPABILITIES.md`](CAPABILITIES.md) | FFmpeg 能力命令与输出模型 |
+| 6 | [`CAPABILITIES.md`](CAPABILITIES.md) | 13 个能力命令与输出模型 |
 | 7 | [`PROVIDERS.md`](PROVIDERS.md) | 来源、channel、release pin、自定义 URL 总原则 |
 | 8 | [`PROVIDER_RESOLVER.md`](PROVIDER_RESOLVER.md) | GitHub API、限流、资产匹配、checksums、pin 细则 |
 | 9 | [`DETECTION_AND_VALIDATION.md`](DETECTION_AND_VALIDATION.md) | 发现与校验规则 |
@@ -31,8 +31,9 @@
 | 18 | [`PHASE1_CODE_REVIEW.md`](PHASE1_CODE_REVIEW.md) | Phase 1 代码审查、P0/P1 修复与残留 tech debt |
 | 19 | [`PHASE2_STATUS.md`](PHASE2_STATUS.md) | Phase 2 实施状态与验证结果 |
 | 20 | [`PHASE2_CODE_REVIEW.md`](PHASE2_CODE_REVIEW.md) | Phase 2 代码审查、缺陷修复与残留 tech debt |
-| 21 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
-| 22 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
+| 21 | [`PHASE3_STATUS.md`](PHASE3_STATUS.md) | Phase 3 实施状态与验证结果 |
+| 22 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
+| 23 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
 
 冲突时：
 
@@ -79,12 +80,12 @@
 | nonfree | 元数据可公开，二进制不可随公开 Release 分发 |
 | Phase 1 | 骨架、契约、错误码、进程执行器、测试与交叉编译已完成 |
 | Phase 2 | 真实发现源、三件套校验、`detect` / `validate` 已完成 |
+| Phase 3 | 13 项能力检查、解析、缓存、`capabilities` CLI 已完成 |
 
 ---
 
 ## 3. 尚未完成
 
-- 13 项能力探测（Phase 3）；
 - provider resolver / download 实现（Phase 4）；
 - install / env / rollback 实现（Phase 5）；
 - GitHub Actions / 发布 CI（Phase 7）；
@@ -109,3 +110,4 @@
 - [`PHASE1_CODE_REVIEW.md`](PHASE1_CODE_REVIEW.md)：Phase 1 代码审查、P0/P1 修复与残留 tech debt。
 - [`PHASE2_STATUS.md`](PHASE2_STATUS.md)：Phase 2 实施状态与验证结果。
 - [`PHASE2_CODE_REVIEW.md`](PHASE2_CODE_REVIEW.md)：Phase 2 代码审查、缺陷修复与残留 tech debt。
+- [`PHASE3_STATUS.md`](PHASE3_STATUS.md)：Phase 3 实施状态与验证结果。

@@ -32,3 +32,13 @@ func TestValidateDataNilSlicesMarshalAsArrays(t *testing.T) {
 	require.Contains(t, text, `"checks":[]`)
 	require.Contains(t, text, `"warnings":[]`)
 }
+
+func TestCapabilitySetNilSlicesMarshalAsArrays(t *testing.T) {
+	raw, err := json.Marshal(model.CapabilitySet{Schema: model.CapabilitiesSchema})
+	require.NoError(t, err)
+	text := string(raw)
+	require.Contains(t, text, `"commands":{}`)
+	require.Contains(t, text, `"muxers":[]`)
+	require.Contains(t, text, `"decoders":[]`)
+	require.Contains(t, text, `"warnings":[]`)
+}

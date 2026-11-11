@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	appcaps "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/capabilities"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 )
@@ -83,6 +84,29 @@ func ValidateExample(path string) error {
 		}
 		if _, ok := model.KnownDataSchemas[dataSchema]; !ok {
 			return apperrors.New(apperrors.E7003, "unknown result.data.schema").WithDetails(map[string]any{"schema": dataSchema})
+		}
+		if dataSchema == model.CapabilitiesSchema {
+			commands, ok := data["commands"].(map[string]any)
+			if !ok {
+				return apperrors.New(apperrors.E7003, "capabilities.commands is required")
+			}
+			if len(commands) != len(appcaps.CommandKeys("full")) {
+				return apperrors.New(apperrors.E7003, "capabilities.commands must contain all 13 commands")
+			}
+			for _, key := range appcaps.CommandKeys("full") {
+				if _, ok := commands[key]; !ok {
+					return apperrors.New(apperrors.E7003, "capabilities command missing").WithDetails(map[string]any{"command": key})
+				}
+			}
+			for _, field := range []string{
+				"installation_id", "fingerprint", "version", "license",
+				"muxers", "demuxers", "devices", "decoders", "encoders", "filters",
+				"pixel_formats", "channel_layouts", "sample_formats", "help", "warnings",
+			} {
+				if _, ok := data[field]; !ok {
+					return apperrors.New(apperrors.E7003, "capabilities field missing").WithDetails(map[string]any{"field": field})
+				}
+			}
 		}
 	case model.ErrorSchema:
 		ok, okType := obj["ok"].(bool)

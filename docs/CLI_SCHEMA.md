@@ -171,7 +171,53 @@ one-more-ffmpeg validate --installation-id <ID>
 
 ### 4.4 `capabilities`
 
-`data` 遵循 [`CAPABILITIES.md`](CAPABILITIES.md) 中的 `onemoreffmpeg.capabilities/v1`。
+命令必须二选一：
+
+```text
+one-more-ffmpeg capabilities --dir <PATH>
+one-more-ffmpeg capabilities --installation-id <ID>
+```
+
+主要参数：
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--help-topic` | `full` | `full` 或 `decoder=<name>` / `encoder=<name>` / `filter=<name>` / `muxer=<name>` / `demuxer=<name>` |
+| `--cache-dir` | 用户缓存目录 | capability cache 目录 |
+| `--refresh` | false | 忽略旧缓存并重新执行 |
+| `--no-cache` | false | 不读不写缓存 |
+| `--no-path` / `--no-env` / `--no-common` | false | 控制 `--installation-id` 的重新发现范围 |
+| `--scan` / `--roots` | false / 无 | 可选重新发现范围 |
+
+`--no-validate` 在 `capabilities` 中禁止。
+
+`data` 遵循 [`CAPABILITIES.md`](CAPABILITIES.md) 中的 `onemoreffmpeg.capabilities/v1`，必须包含：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `schema` | string | `onemoreffmpeg.capabilities/v1` |
+| `installation_id` | string | Phase 2 installation id |
+| `fingerprint` | string | capabilities cache fingerprint |
+| `installation_fingerprint` | string | 可选，Phase 2 installation fingerprint |
+| `created_at` | string | 可选，RFC 3339 UTC |
+| `cache_hit` | boolean | 可选，true 表示来自缓存 |
+| `commands` | object | 固定 13 个命令结果 |
+| `version` | object | raw / version / configuration |
+| `license` | object | raw / summary |
+| `muxers` / `demuxers` / `devices` / `decoders` / `encoders` / `filters` / `pixel_formats` / `channel_layouts` / `sample_formats` | array | `CapabilityEntry[]` |
+| `help` | object | key 为 help topic |
+| `warnings` | array | `OMF-W*` 列表 |
+
+`CapabilityEntry`：
+
+```json
+{
+  "name": "h264",
+  "flags": "V....D",
+  "description": "H.264 / AVC",
+  "raw": " V....D h264 ..."
+}
+```
 
 示例：[`schemas/examples/capabilities.example.json`](schemas/examples/capabilities.example.json)
 

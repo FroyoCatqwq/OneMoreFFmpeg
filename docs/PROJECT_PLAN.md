@@ -216,7 +216,9 @@ DoD：
 
 ---
 
-### Phase 3：能力检查
+### Phase 3：能力检查（已完成）
+
+> 实施与验证结果见 [`PHASE3_STATUS.md`](PHASE3_STATUS.md)。
 
 目标：结构化输出用户列出的 13 项能力。
 
@@ -434,14 +436,15 @@ M0 不通过，不进入下载/安装/环境变量写入实现。
 - Phase 1 Go 骨架完成，详见 [`PHASE1_STATUS.md`](PHASE1_STATUS.md)；
 - Phase 1 代码审查与 P0/P1 修复完成，详见 [`PHASE1_CODE_REVIEW.md`](PHASE1_CODE_REVIEW.md)；
 - Phase 2 真实发现与校验完成，详见 [`PHASE2_STATUS.md`](PHASE2_STATUS.md)；
+- Phase 3 13 项能力检查、解析、缓存与 `capabilities` CLI 完成，详见 [`PHASE3_STATUS.md`](PHASE3_STATUS.md)；
 - `go.sum` 已生成；
-- `version --json` / `detect --json` / `validate --json` / `--help` 已验证；
+- `version --json` / `detect --json` / `validate --json` / `capabilities --json` / `--help` 已验证；
 - 本地单测、`go vet`、Windows/Linux 交叉编译通过；
 - `THIRD_PARTY_NOTICES.md` 初稿完成；
 - 未下载任何 FFmpeg；
 - 未安装任何 FFmpeg；
 - 未修改 PATH；
-- 未实现能力探测、provider resolve、install/env；
+- 未实现 provider resolve / download、install/env；
 - 未实现包管理器识别；
 - 未实现 Go API / 插件；
 - 未提交 GitHub Actions / 发布 CI。

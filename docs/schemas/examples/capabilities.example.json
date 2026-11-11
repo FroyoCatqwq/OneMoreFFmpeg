@@ -6,20 +6,109 @@
     "schema": "onemoreffmpeg.capabilities/v1",
     "installation_id": "inst-0123456789abcdef",
     "fingerprint": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "installation_fingerprint": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+    "created_at": "2026-11-11T00:00:00Z",
     "commands": {
+      "-L": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "stderr_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "duration_ms": 10
+      },
+      "-license": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "stderr_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "duration_ms": 10
+      },
+      "-h full": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "stderr_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "duration_ms": 10
+      },
+      "-version": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "stderr_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "duration_ms": 10
+      },
+      "-muxers": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "stderr_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "duration_ms": 10
+      },
+      "-demuxers": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "stderr_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "duration_ms": 10
+      },
+      "-devices": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "stderr_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "duration_ms": 10
+      },
       "-decoders": {
         "ok": true,
         "exit_code": 0,
         "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         "stderr_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         "duration_ms": 42
+      },
+      "-encoders": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "stderr_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "duration_ms": 10
+      },
+      "-filters": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "stderr_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "duration_ms": 10
+      },
+      "-pix_fmts": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "stderr_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "duration_ms": 10
+      },
+      "-layouts": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "stderr_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "duration_ms": 10
+      },
+      "-sample_fmts": {
+        "ok": true,
+        "exit_code": 0,
+        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "stderr_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "duration_ms": 10
       }
     },
     "version": {
-      "raw": "ffmpeg version n9.0.2"
+      "raw": "ffmpeg version n9.0.2",
+      "version": "n9.0.2",
+      "configuration": "--enable-gpl"
     },
     "license": {
-      "raw": "GPL version 3 or later"
+      "raw": "GPL version 3 or later",
+      "summary": "GPL version 3 or later"
     },
     "muxers": [],
     "demuxers": [],
@@ -37,7 +126,13 @@
     "pixel_formats": [],
     "channel_layouts": [],
     "sample_formats": [],
-    "help": {},
+    "help": {
+      "full": {
+        "topic": "full",
+        "raw": "Help: full",
+        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      }
+    },
     "warnings": []
   }
 }

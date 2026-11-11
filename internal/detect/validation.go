@@ -45,11 +45,13 @@ func (d *Detector) buildInstallation(ctx context.Context, candidate *Candidate, 
 	checks := []model.Check{}
 	status := statusUnknown
 	version := ""
+	versionStdoutSHA := ""
+	licenseStdoutSHA := ""
 
 	if opts.NoValidate {
 		checks = append(checks, model.Check{Name: "validation_skipped", OK: true, Detail: "validation disabled by --no-validate"})
 	} else {
-		_, ffmpegVersion, ffmpegOK := runVersionCheck(ctx, runner, ffmpegPath)
+		ffmpegResult, ffmpegVersion, ffmpegOK := runVersionCheck(ctx, runner, ffmpegPath)
 		_, ffprobeVersion, ffprobeOK := runVersionCheck(ctx, runner, ffprobePath)
 		_, ffplayVersion, ffplayOK := runVersionCheck(ctx, runner, ffplayPath)
 
@@ -66,8 +68,14 @@ func (d *Detector) buildInstallation(ctx context.Context, candidate *Candidate, 
 			checks = append(checks, checkFromRun("ffplay_version", ffplayOK, ffplayVersion))
 		}
 
-		licenseOK, licenseDetail := runLicenseCheck(ctx, runner, ffmpegPath)
+		licenseResult, licenseOK, licenseDetail := runLicenseCheck(ctx, runner, ffmpegPath)
 		checks = append(checks, model.Check{Name: "ffmpeg_license", OK: licenseOK, Detail: licenseDetail})
+		if ffmpegOK {
+			versionStdoutSHA = ffmpegResult.StdoutSHA256
+		}
+		if licenseOK {
+			licenseStdoutSHA = licenseResult.StdoutSHA256
+		}
 
 		consistencyOK, consistencyDetail := versionsConsistent(ffmpegVersion, ffprobeVersion, ffplayVersion, ffplayPath != "")
 		checks = append(checks, model.Check{Name: "version_consistency", OK: consistencyOK, Detail: consistencyDetail})
@@ -93,17 +101,19 @@ func (d *Detector) buildInstallation(ctx context.Context, candidate *Candidate, 
 	fingerprint := buildFingerprint(root, hashes, version)
 	id := "inst-" + fingerprint[:16]
 	installation := model.Installation{
-		ID:          id,
-		RootDir:     root,
-		FFmpeg:      ffmpegPath,
-		FFprobe:     ffprobePath,
-		FFplay:      ffplayPath,
-		Sources:     sourceList(candidate.Sources),
-		Status:      status,
-		Version:     version,
-		Fingerprint: fingerprint,
-		Warnings:    warnings,
-		BinarySHA:   hashes,
+		ID:                  id,
+		RootDir:             root,
+		FFmpeg:              ffmpegPath,
+		FFprobe:             ffprobePath,
+		FFplay:              ffplayPath,
+		Sources:             sourceList(candidate.Sources),
+		Status:              status,
+		Version:             version,
+		Fingerprint:         fingerprint,
+		VersionStdoutSHA256: versionStdoutSHA,
+		LicenseStdoutSHA256: licenseStdoutSHA,
+		Warnings:            warnings,
+		BinarySHA:           hashes,
 	}
 	report := model.ValidateData{
 		Schema:         model.ValidateSchema,
@@ -126,18 +136,18 @@ func runVersionCheck(ctx context.Context, runner ffexec.Runner, path string) (ff
 	return result, versionFromOutput(result.Stdout), result.ExitCode == 0
 }
 
-func runLicenseCheck(ctx context.Context, runner ffexec.Runner, path string) (bool, string) {
+func runLicenseCheck(ctx context.Context, runner ffexec.Runner, path string) (ffexec.Result, bool, string) {
 	if path == "" {
-		return false, "ffmpeg missing"
+		return ffexec.Result{}, false, "ffmpeg missing"
 	}
 	result, err := runner.Run(ctx, path, "-L")
 	if err != nil {
-		return false, err.Error()
+		return result, false, err.Error()
 	}
 	if result.ExitCode != 0 {
-		return false, fmt.Sprintf("exit=%d", result.ExitCode)
+		return result, false, fmt.Sprintf("exit=%d", result.ExitCode)
 	}
-	return true, fmt.Sprintf("stdout=%d bytes", len(result.Stdout))
+	return result, true, fmt.Sprintf("stdout=%d bytes", len(result.Stdout))
 }
 
 func checkFromRun(name string, ok bool, version string) model.Check {

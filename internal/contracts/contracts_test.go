@@ -66,6 +66,16 @@ func TestValidateExampleRejectsInvalidResult(t *testing.T) {
 	}
 }
 
+func TestValidateExampleRejectsIncompleteCapabilities(t *testing.T) {
+	body := `{"schema":"onemoreffmpeg.result/v1","ok":true,"command":"capabilities","data":{"schema":"onemoreffmpeg.capabilities/v1"}}`
+	path := filepath.Join(t.TempDir(), "case.json")
+	require.NoError(t, os.WriteFile(path, []byte(body), 0o644))
+	err := contracts.ValidateExample(path)
+	typed, ok := apperrors.As(err)
+	require.True(t, ok)
+	require.Equal(t, apperrors.E7003, typed.Code)
+}
+
 func TestValidateExampleRejectsInvalidError(t *testing.T) {
 	cases := []string{
 		`{"schema":"onemoreffmpeg.error/v1","ok":true,"code":"OMF-E7001","message":"bad","details":{}}`,

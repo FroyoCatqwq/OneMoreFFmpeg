@@ -4,9 +4,9 @@
 
 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg>
 
-状态：**Phase 2 真实发现与校验已完成，Phase 3 尚未开始。**
+状态：**Phase 3 能力检查已完成，Phase 4 尚未开始。**
 
-> `version` / `detect` / `validate` 已实现；其余 `one-more-ffmpeg ...` 命令仍是计划命令，尚未实现。
+> `version` / `detect` / `validate` / `capabilities` 已实现；其余 `one-more-ffmpeg ...` 命令仍是计划命令，尚未实现。
 
 ---
 
@@ -24,26 +24,24 @@
 
 一句话：
 
-> **OneMoreFFmpeg 管“FFmpeg 从哪里来、装到哪里、怎么验证、怎么被发现”；当前不提供 Go SDK，也不提供插件接口。**
+> **OneMoreFFmpeg 管“FFmpeg 从哪里来、装到哪里、怎么验证、怎么被发现、支持什么能力”；当前不提供 Go SDK，也不提供插件接口。**
 
 ---
 
 ## 2. 当前范围
 
-首批只做简单但完整的闭环：
-
 | 能力 | 状态 |
 |---|---|
-| 管理 FFmpeg 路径 | 计划中 |
+| 管理 FFmpeg 路径 | 已实现发现与校验；安装/切换仍计划中 |
 | 下载/安装/部署 FFmpeg | 计划中 |
 | 配置环境变量 / PATH | 计划中 |
-| 检查支持的能力列表 | 计划中 |
-| Windows + Linux | 计划中 |
+| 检查支持的能力列表 | 已实现 |
+| Windows + Linux | 已完成本地构建/测试/交叉编译 |
 | 自定义 FFmpeg URL | 计划中 |
-| 内置 BtbN 与 BnqDzj 来源 | 计划中 |
+| 内置 BtbN 与 BnqDzj 来源 | 文档契约已就绪，实现计划中 |
 | 每日构建版 / 稳定版 | 计划中 |
-| 识别系统已有 FFmpeg | 计划中 |
-| 全盘扫描 | 计划中，但必须显式启用 |
+| 识别系统已有 FFmpeg | 已实现 |
+| 全盘扫描 | 已实现，必须显式 `--scan` |
 | 其他项目调用本项目产物可执行文件 | 当前唯一外部集成方式 |
 | 写视频损伤代码 | 不做 |
 | 自构建 FFmpeg | 不做，属于另一条未来路线 |
@@ -70,7 +68,7 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 - [`docs/ERROR_CODES.md`](docs/ERROR_CODES.md)
 - [`docs/schemas/README.md`](docs/schemas/README.md)
 
-当前支持的 FFmpeg 能力查看命令范围：
+已实现 13 个 FFmpeg 能力查看命令：
 
 ```text
 -L
@@ -146,6 +144,7 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 | [`docs/PHASE1_CODE_REVIEW.md`](docs/PHASE1_CODE_REVIEW.md) | Phase 1 代码审查、P0/P1 修复与残留 tech debt |
 | [`docs/PHASE2_STATUS.md`](docs/PHASE2_STATUS.md) | Phase 2 实施状态与验证结果 |
 | [`docs/PHASE2_CODE_REVIEW.md`](docs/PHASE2_CODE_REVIEW.md) | Phase 2 代码审查、缺陷修复与残留 tech debt |
+| [`docs/PHASE3_STATUS.md`](docs/PHASE3_STATUS.md) | Phase 3 实施状态与验证结果 |
 | [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) | 第三方依赖许可证清单初稿 |
 
 ---
@@ -165,16 +164,17 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 - Phase 1 Go 骨架：已完成；
 - Phase 1 代码审查与 P0/P1 修复：已完成；
 - Phase 2 真实 FFmpeg 发现、三件套校验、`detect` / `validate`：已完成；
-- CLI：`version` / `detect` / `validate` 已实现；
+- Phase 3 13 项能力检查、解析、缓存、`capabilities`：已完成；
+- CLI：`version` / `detect` / `validate` / `capabilities` 已实现；
 - 本地单测 / `go vet` / Windows+Linux 交叉编译：通过；
 - 第三方许可证清单 / `THIRD_PARTY_NOTICES`：初稿完成，许可证文本已复制；
 - 下载/安装/环境变量修改：未实现；
-- 能力探测、provider resolve：未实现；
+- provider resolve / download：未实现；
 - 包管理器识别：未实现，未来考虑；
 - Go API / 插件接口：未实现，未来考虑；
 - GitHub Actions / 发布 CI：未建立。
 
-## 6. Phase 1 开发命令
+## 6. 开发命令
 
 需要 Go 1.27.3：
 
@@ -186,6 +186,7 @@ go vet ./...
 go run ./cmd/one-more-ffmpeg version --json
 go run ./cmd/one-more-ffmpeg detect --json --no-path --no-env --no-common
 go run ./cmd/one-more-ffmpeg validate --dir C:/Tools/FFmpeg/bin --json
+go run ./cmd/one-more-ffmpeg capabilities --dir C:/Tools/FFmpeg/bin --json --no-cache
 ```
 
 双平台交叉编译：
