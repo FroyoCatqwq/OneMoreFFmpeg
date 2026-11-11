@@ -24,3 +24,11 @@ func TestInstallationNilSlicesMarshalAsArrays(t *testing.T) {
 	require.Contains(t, text, `"sources":[]`)
 	require.Contains(t, text, `"warnings":[]`)
 }
+
+func TestValidateDataNilSlicesMarshalAsArrays(t *testing.T) {
+	raw, err := json.Marshal(model.ValidateData{Schema: model.ValidateSchema})
+	require.NoError(t, err)
+	text := string(raw)
+	require.Contains(t, text, `"checks":[]`)
+	require.Contains(t, text, `"warnings":[]`)
+}

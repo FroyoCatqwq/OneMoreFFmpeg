@@ -1,8 +1,9 @@
 # FFmpeg 发现与可用性校验
 
-> 状态：Phase 0 设计
+> 状态：Phase 2 已实现
 > 原则：先只读、显式扫描、结果可审计、不误删
 > 当前不做包管理器识别
+> 实现入口：`internal/detect/`；CLI：`detect` / `validate`
 
 ---
 
@@ -294,3 +295,22 @@ scan
 - 日志不打印 token / 凭据；
 - 对 UNC、网络盘、符号链接保持显式警告；
 - 不因缺少包管理器路径而失败。
+
+---
+
+## 11. Phase 2 CLI 映射
+
+```text
+detect --dir <PATH> [--recursive] [--json]
+detect --scan [--roots <CSV>] [--max-depth N] [--max-files N] [--timeout SEC] [--json]
+detect --no-path --no-env --no-common --json
+validate --dir <PATH> --json
+validate --installation-id <ID> --json
+```
+
+实现规则：
+
+- `detect` 默认执行校验；`--no-validate` 只做发现与 hash；
+- `validate --installation-id` 不依赖持久化数据库，会重新执行默认发现但不启用 `--scan`；
+- `validate --dir` 只校验显式目录；
+- 所有命令都不写磁盘、不改 PATH、不下载、不安装。

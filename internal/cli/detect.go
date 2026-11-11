@@ -2,24 +2,36 @@ package cli
 
 import (
 	"context"
+	"fmt"
 
 	urfave "github.com/urfave/cli/v3"
 
+	appdetect "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/detect"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 )
 
 func detectCommand() *urfave.Command {
 	return &urfave.Command{
 		Name:  "detect",
-		Usage: "Phase 1 read-only placeholder; real discovery arrives in Phase 2",
+		Usage: "discover existing FFmpeg trio installations (read-only)",
+		Flags: detectionFlags(),
 		Action: func(ctx context.Context, cmd *urfave.Command) error {
+			opts, err := parseDetectOptions(cmd)
+			if err != nil {
+				return err
+			}
+			detector := appdetect.New()
+			result, err := detector.Detect(ctx, opts)
+			if err != nil {
+				return err
+			}
 			data := model.DetectData{
 				Schema:        model.DetectSchema,
-				Placeholder:   true,
-				Installations: []model.Installation{},
-				Errors:        []model.DetectError{},
+				Installations: result.Installations,
+				Errors:        result.Errors,
 			}
-			return writeResult(cmd, "detect", data, "detect: Phase 1 placeholder; no detection performed\n")
+			human := fmt.Sprintf("detect: %d installation(s), %d source error(s)\n", len(result.Installations), len(result.Errors))
+			return writeResult(cmd, "detect", data, human)
 		},
 	}
 }

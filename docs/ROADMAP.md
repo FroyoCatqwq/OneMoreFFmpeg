@@ -68,7 +68,9 @@
 
 ---
 
-## Phase 2：发现与校验
+## Phase 2：发现与校验（已完成）
+
+> 实施与验证结果见 [`PHASE2_STATUS.md`](PHASE2_STATUS.md)。
 
 内容：
 

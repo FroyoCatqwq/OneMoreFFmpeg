@@ -1,9 +1,9 @@
 # 文档索引与权威顺序
 
 > 项目：OneMoreFFmpeg
-> 状态：Phase 1 骨架已完成，Phase 2 尚未开始
-> 日期：2026-11-10
-> 更新：依据 `DOCUMENTATION_AUDIT.md` 完成契约冻结并进入 Phase 1
+> 状态：Phase 2 发现与校验已完成，Phase 3 尚未开始
+> 日期：2026-11-11
+> 更新：完成 Phase 1 代码审查修复与 Phase 2 真实发现/校验实现
 
 ---
 
@@ -29,8 +29,10 @@
 | 16 | [`DOCUMENTATION_AUDIT.md`](DOCUMENTATION_AUDIT.md) | 文档审查与改进记录 |
 | 17 | [`PHASE1_STATUS.md`](PHASE1_STATUS.md) | Phase 1 实施状态与验证结果 |
 | 18 | [`PHASE1_CODE_REVIEW.md`](PHASE1_CODE_REVIEW.md) | Phase 1 代码审查、P0/P1 修复与残留 tech debt |
-| 19 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
-| 20 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
+| 19 | [`PHASE2_STATUS.md`](PHASE2_STATUS.md) | Phase 2 实施状态与验证结果 |
+| 20 | [`PHASE2_CODE_REVIEW.md`](PHASE2_CODE_REVIEW.md) | Phase 2 代码审查、缺陷修复与残留 tech debt |
+| 21 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
+| 22 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
 
 冲突时：
 
@@ -75,13 +77,13 @@
 | 测试 | `stretchr/testify` |
 | 许可证 | `GPL-3.0-only`，见根目录 `LICENSE` 与 `LICENSE_DECISION.md` |
 | nonfree | 元数据可公开，二进制不可随公开 Release 分发 |
-| Phase 1 | 骨架、`version` / `detect --json` 占位、测试与交叉编译已完成 |
+| Phase 1 | 骨架、契约、错误码、进程执行器、测试与交叉编译已完成 |
+| Phase 2 | 真实发现源、三件套校验、`detect` / `validate` 已完成 |
 
 ---
 
 ## 3. 尚未完成
 
-- 真实 FFmpeg 发现与校验（Phase 2）；
 - 13 项能力探测（Phase 3）；
 - provider resolver / download 实现（Phase 4）；
 - install / env / rollback 实现（Phase 5）；
@@ -105,3 +107,5 @@
 - [`DOCUMENTATION_AUDIT.md`](DOCUMENTATION_AUDIT.md)：文档审查、事实核实、P0/P1/P2 问题与修复记录。
 - [`PHASE1_STATUS.md`](PHASE1_STATUS.md)：Phase 1 实施状态与验证结果。
 - [`PHASE1_CODE_REVIEW.md`](PHASE1_CODE_REVIEW.md)：Phase 1 代码审查、P0/P1 修复与残留 tech debt。
+- [`PHASE2_STATUS.md`](PHASE2_STATUS.md)：Phase 2 实施状态与验证结果。
+- [`PHASE2_CODE_REVIEW.md`](PHASE2_CODE_REVIEW.md)：Phase 2 代码审查、缺陷修复与残留 tech debt。

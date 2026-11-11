@@ -73,6 +73,7 @@ func New(opts RunOptions) (*urfave.Command, error) {
 		Commands: []*urfave.Command{
 			versionCommand(opts.Version),
 			detectCommand(),
+			validateCommand(),
 		},
 		Before: func(ctx context.Context, cmd *urfave.Command) (context.Context, error) {
 			cfg, err := config.Load(cmd.String("config"))

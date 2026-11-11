@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +42,13 @@ func main() {
 		child.Stderr = os.Stderr
 		_ = child.Start()
 		os.Exit(0)
+	}
+	name := strings.ToLower(filepath.Base(os.Args[0]))
+	if ext := filepath.Ext(name); ext != "" {
+		name = strings.TrimSuffix(name, ext)
+	}
+	if v := os.Getenv("OMF_FAKE_VERSION_" + strings.ToUpper(name)); v != "" {
+		fmt.Printf("%s version %s\n", name, v)
 	}
 	if s := os.Getenv("OMF_FAKE_STDOUT"); s != "" {
 		fmt.Print(s)
@@ -136,4 +144,12 @@ func (f *FakeFFmpeg) Env(stdout, stderr string, exitCode int) []string {
 		"OMF_FAKE_STDERR=" + stderr,
 		fmt.Sprintf("OMF_FAKE_EXIT=%d", exitCode),
 	}
+}
+
+func (f *FakeFFmpeg) VersionEnv(ffmpeg, ffprobe, ffplay string) []string {
+	return append(f.Env("", "", 0),
+		"OMF_FAKE_VERSION_FFMPEG="+ffmpeg,
+		"OMF_FAKE_VERSION_FFPROBE="+ffprobe,
+		"OMF_FAKE_VERSION_FFPLAY="+ffplay,
+	)
 }

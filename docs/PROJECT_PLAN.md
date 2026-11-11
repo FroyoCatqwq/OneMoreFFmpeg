@@ -179,7 +179,9 @@ DoD：
 
 ---
 
-### Phase 2：发现与可用性校验
+### Phase 2：发现与可用性校验（已完成）
+
+> 实施与验证结果见 [`PHASE2_STATUS.md`](PHASE2_STATUS.md)。
 
 目标：找到系统已有 FFmpeg，并判断能不能用。
 
@@ -430,14 +432,16 @@ M0 不通过，不进入下载/安装/环境变量写入实现。
 - Provider resolver 细则完成；
 - 许可证已确定为 GPL-3.0-only，根目录 `LICENSE` 已添加；
 - Phase 1 Go 骨架完成，详见 [`PHASE1_STATUS.md`](PHASE1_STATUS.md)；
+- Phase 1 代码审查与 P0/P1 修复完成，详见 [`PHASE1_CODE_REVIEW.md`](PHASE1_CODE_REVIEW.md)；
+- Phase 2 真实发现与校验完成，详见 [`PHASE2_STATUS.md`](PHASE2_STATUS.md)；
 - `go.sum` 已生成；
-- `version --json` / `detect --json` 占位 / `--help` 已验证；
+- `version --json` / `detect --json` / `validate --json` / `--help` 已验证；
 - 本地单测、`go vet`、Windows/Linux 交叉编译通过；
 - `THIRD_PARTY_NOTICES.md` 初稿完成；
 - 未下载任何 FFmpeg；
 - 未安装任何 FFmpeg；
 - 未修改 PATH；
-- 未实现真实发现、能力探测、provider resolve、install/env；
+- 未实现能力探测、provider resolve、install/env；
 - 未实现包管理器识别；
 - 未实现 Go API / 插件；
 - 未提交 GitHub Actions / 发布 CI。

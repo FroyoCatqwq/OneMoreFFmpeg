@@ -19,9 +19,16 @@ import (
 func wantsJSON(args []string) bool {
 	value := false
 	needsValue := map[string]bool{
-		"--config":    true,
-		"-c":          true,
-		"--log-level": true,
+		"--config":          true,
+		"-c":                true,
+		"--log-level":       true,
+		"--dir":             true,
+		"--roots":           true,
+		"--max-depth":       true,
+		"--max-files":       true,
+		"--timeout":         true,
+		"--probe-timeout":   true,
+		"--installation-id": true,
 	}
 	for i := 0; i < len(args); i++ {
 		arg := args[i]

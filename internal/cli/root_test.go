@@ -48,8 +48,8 @@ func TestVersionJSON(t *testing.T) {
 	require.Equal(t, "0.1.0-test", data["version"])
 }
 
-func TestDetectJSONPlaceholder(t *testing.T) {
-	opts, stdout, _ := testOptions("detect", "--json")
+func TestDetectJSONNoSources(t *testing.T) {
+	opts, stdout, _ := testOptions("detect", "--json", "--no-path", "--no-env", "--no-common", "--no-validate")
 	code := appcli.Run(context.Background(), opts)
 	require.Equal(t, 0, code)
 
@@ -59,7 +59,7 @@ func TestDetectJSONPlaceholder(t *testing.T) {
 	data, ok := result.Data.(map[string]any)
 	require.True(t, ok)
 	require.Equal(t, model.DetectSchema, data["schema"])
-	require.Equal(t, true, data["placeholder"])
+	require.NotContains(t, data, "placeholder")
 	require.Empty(t, data["installations"])
 	require.Empty(t, data["errors"])
 }
@@ -104,6 +104,26 @@ func TestUsageErrorJSON(t *testing.T) {
 	var obj model.ErrorObject
 	require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
 	require.False(t, obj.OK)
+	require.Equal(t, "OMF-E7001", obj.Code)
+}
+
+func TestRootsRequireScan(t *testing.T) {
+	opts, stdout, _ := testOptions("detect", "--roots", "/tmp", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 2, code)
+
+	var obj model.ErrorObject
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
+	require.Equal(t, "OMF-E7001", obj.Code)
+}
+
+func TestValidateRequiresInput(t *testing.T) {
+	opts, stdout, _ := testOptions("validate", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 2, code)
+
+	var obj model.ErrorObject
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
 	require.Equal(t, "OMF-E7001", obj.Code)
 }
 

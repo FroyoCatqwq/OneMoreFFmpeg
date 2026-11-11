@@ -99,9 +99,28 @@
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | `schema` | string | `onemoreffmpeg.detect/v1` |
-| `placeholder` | boolean | 可选；Phase 1 占位为 `true`，真实探测时省略或 `false` |
+| `placeholder` | boolean | 已废弃；仅 Phase 1 占位使用，Phase 2 起省略 |
 | `installations` | array | `Installation[]` |
 | `errors` | array | 非致命来源错误 |
+
+`detect` 命令选项：
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--dir <PATH>` | 无 | 显式 trio 目录或 ffmpeg 可执行文件路径 |
+| `--recursive` | false | 在 `--dir` 下递归查找 |
+| `--scan` | false | 显式扫描默认根或 `--roots` |
+| `--roots <CSV>` | 无 | 逗号分隔扫描根；必须配合 `--scan` |
+| `--max-depth <N>` | 8 | 扫描最大深度 |
+| `--max-files <N>` | 200000 | 每个扫描根最大文件数 |
+| `--timeout <SEC>` | 10 | 整体 detection 超时 |
+| `--probe-timeout <SEC>` | 5 | 单个 ffmpeg 进程超时 |
+| `--include-removable` | false | Windows 默认根包含可移动盘 |
+| `--include-network` | false | Windows 默认根包含网络盘 |
+| `--no-path` | false | 跳过 PATH 发现 |
+| `--no-env` | false | 跳过环境变量发现 |
+| `--no-common` | false | 跳过常见目录发现 |
+| `--no-validate` | false | 跳过运行 ffmpeg 校验命令 |
 
 `Installation`：
 
@@ -125,6 +144,17 @@
 ---
 
 ### 4.3 `validate`
+
+命令必须二选一：
+
+```text
+one-more-ffmpeg validate --dir <PATH>
+one-more-ffmpeg validate --installation-id <ID>
+```
+
+- `--dir` 只校验该目录；
+- `--installation-id` 会重新做一次默认发现（不启用 `--scan`）并匹配 ID；
+- `validate` 继承 detect 的发现参数；`--no-validate` 对 validate 命令无意义，不建议使用。
 
 `data` 字段：
 

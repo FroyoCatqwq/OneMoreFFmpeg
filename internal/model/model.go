@@ -95,6 +95,31 @@ type DetectData struct {
 	Errors        []DetectError  `json:"errors"`
 }
 
+type Check struct {
+	Name   string `json:"name"`
+	OK     bool   `json:"ok"`
+	Detail string `json:"detail"`
+}
+
+type ValidateData struct {
+	Schema         string    `json:"schema"`
+	InstallationID string    `json:"installation_id"`
+	Status         string    `json:"status"`
+	Checks         []Check   `json:"checks"`
+	Warnings       []Warning `json:"warnings"`
+}
+
+func (v ValidateData) MarshalJSON() ([]byte, error) {
+	if v.Checks == nil {
+		v.Checks = []Check{}
+	}
+	if v.Warnings == nil {
+		v.Warnings = []Warning{}
+	}
+	type alias ValidateData
+	return json.Marshal(alias(v))
+}
+
 func (i Installation) MarshalJSON() ([]byte, error) {
 	if i.Sources == nil {
 		i.Sources = []string{}
