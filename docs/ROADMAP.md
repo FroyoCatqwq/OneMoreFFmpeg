@@ -137,9 +137,9 @@ snap / flatpak 专门适配
 
 ---
 
-## Phase 4：Provider / Resolve / Download
+## Phase 4：Provider / Resolve / Download（已完成）
 
-> 状态：基础设施与决策 D1–D7 就绪（`paths` / `checksum` / `model` / `config` / `contracts` / provider 注册表 / GitHub client / `provider list` / pin 字段 / nonfree 同意）；`resolve` / `download` / `provider add` 未开始，无阻塞决策。见 [`PHASE4_READINESS.md`](PHASE4_READINESS.md)。
+> 状态：`provider list|add` / `resolve` / `download` 已实现并通过真实 GitHub 与真实下载验证，见 [`PHASE4_STATUS.md`](PHASE4_STATUS.md)。
 
 内容：
 

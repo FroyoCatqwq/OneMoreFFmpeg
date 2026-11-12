@@ -63,6 +63,15 @@ func TestStreamSHA256DeadlineIsDownloadFailure(t *testing.T) {
 	require.Equal(t, apperrors.E4001, typed.Code)
 }
 
+func TestStreamSHA256Deadline(t *testing.T) {
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+	_, _, err := checksum.StreamSHA256(ctx, strings.NewReader("data"))
+	typed, ok := apperrors.As(err)
+	require.True(t, ok)
+	require.Equal(t, apperrors.E4001, typed.Code)
+}
+
 func TestStreamSHA256ReaderError(t *testing.T) {
 	_, _, err := checksum.StreamSHA256(context.Background(), failingReader{})
 	typed, ok := apperrors.As(err)

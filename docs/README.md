@@ -1,9 +1,9 @@
 # 文档索引与权威顺序
 
 > 项目：OneMoreFFmpeg
-> 状态：Phase 3 已完成并通过代码审查，Phase 4 准备中
-> 日期：2026-11-11
-> 更新：完成 Phase 3 真实输出解析修复与 Phase 4 准入清单
+> 状态：Phase 3 已完成并通过代码审查，Phase 4 已实现
+> 日期：2026-11-12
+> 更新：Phase 4 provider / resolve / download 完成，见 `PHASE4_STATUS.md`
 
 ---
 
@@ -35,8 +35,10 @@
 | 22 | [`PHASE3_CODE_REVIEW.md`](PHASE3_CODE_REVIEW.md) | Phase 3 代码审查、P1 修复与残留 tech debt |
 | 23 | [`PHASE4_READINESS.md`](PHASE4_READINESS.md) | Phase 4 准入清单、真实上游事实、决策项与缺口 |
 | 24 | [`FULL_AUDIT_2026-11-11.md`](FULL_AUDIT_2026-11-11.md) | 全量审查、缺陷修复与残留风险 |
-| 25 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
-| 26 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
+| 25 | [`PHASE4_STATUS.md`](PHASE4_STATUS.md) | Phase 4 实施状态、验证与限制 |
+| 26 | [`PHASE4_CODE_REVIEW.md`](PHASE4_CODE_REVIEW.md) | Phase 4 审查、缺陷修复与残留限制 |
+| 27 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
+| 28 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
 
 冲突时：
 
@@ -84,14 +86,13 @@
 | Phase 1 | 骨架、契约、错误码、进程执行器、测试与交叉编译已完成 |
 | Phase 2 | 真实发现源、三件套校验、`detect` / `validate` 已完成 |
 | Phase 3 | 13 项能力检查、解析、缓存、`capabilities` CLI 已完成并通过代码审查 |
-| Phase 4 | 基础设施与决策（D1–D7）就绪：`paths` / `checksum` / `model` / `config` / `contracts` / provider 注册表 / GitHub client / `provider list` / pin 字段 / nonfree 同意策略；`resolve` / `download` 未开始 |
+| Phase 4 | provider / resolve / download 已实现：真实 GitHub 解析与自定义资产下载通过；见 `PHASE4_STATUS.md` |
 
 ---
 
 ## 3. 尚未完成
 
-- `resolve` 资产匹配、`download`、`provider add`（Phase 4，无阻塞决策）；
-- install / env / rollback 实现（Phase 5）；
+- `install` / `env` / `doctor`（Phase 5/6）；
 - GitHub Actions / 发布 CI（Phase 7）；
 - 公开二进制发布与完整许可证复核；
 - 包管理器识别；
@@ -118,3 +119,5 @@
 - [`PHASE3_CODE_REVIEW.md`](PHASE3_CODE_REVIEW.md)：Phase 3 真实输出解析修复、错误语义与缓存写入审查。
 - [`PHASE4_READINESS.md`](PHASE4_READINESS.md)：Phase 4 准入清单、真实 GitHub 资产事实与决策项。
 - [`FULL_AUDIT_2026-11-11.md`](FULL_AUDIT_2026-11-11.md)：全量审查、缺陷修复与残留风险。
+- [`PHASE4_STATUS.md`](PHASE4_STATUS.md)：Phase 4 实施状态、真实验证与已知限制。
+- [`PHASE4_CODE_REVIEW.md`](PHASE4_CODE_REVIEW.md)：Phase 4 代码审查、缺陷修复与残留限制。

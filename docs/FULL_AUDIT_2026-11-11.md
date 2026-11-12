@@ -106,7 +106,7 @@ Phase 3 可以冻结；Phase 4 的路径、checksum、模型、配置、契约�
 | `provider list` | 离线输出两个内置 provider，schema `onemoreffmpeg.provider-list/v1` |
 | 契约校验 | provider-list 非空、provider-add https/status/sha256、release 15 字段、artifact 必填与 `verified=true` |
 
-`resolve` / `download` 仍未实现：先在 [`PHASE4_READINESS.md`](PHASE4_READINESS.md) 落文 D1（stable pin）与 D5（nonfree 显式同意）。
+`resolve` / `download` 随后已实现：D1（latest + pin）与 D5（`--allow-nonfree`）已落文，状态见 [`PHASE4_STATUS.md`](PHASE4_STATUS.md)。
 
 ---
 

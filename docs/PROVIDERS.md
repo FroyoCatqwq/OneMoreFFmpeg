@@ -217,27 +217,56 @@ one-more-ffmpeg provider add \
 - 不允许自动执行下载包里的脚本；
 - 不允许把自定义 provider 标记为 `btbn` / `bnqdzj-nonfree`。
 
+存储与命令（已实现）：
+
+```text
+provider add --id my-ffmpeg --url https://example.com/ffmpeg.zip \
+             --sha256 <64-hex> [--checksums-url https://...] \
+             [--license-hint gpl|lgpl|nonfree|custom] [--dry-run]
+```
+
+- 写入 `<data-root>/providers.toml`（schema `onemoreffmpeg.providers/v1`），临时文件 + rename；保存前重新校验，拒绝重复/保留 id 与非法 URL；
+- 重复 id 直接失败，不覆盖既有 pin；
+- URL 必须 https 且指向 `.zip` / `.tar.xz` / `.tar.gz` / `.7z`；不接受 userinfo、目录 URL 或带查询参数的文件名推导；
+- `resolve --provider my-ffmpeg` 输出 `repository=custom`、`release_tag=direct-<sha256[:12]>`、`published_at=pinned_at=解析时间`；
+- 自定义 provider 的 `redistributable` 固定 false，`license_hint` 取 `--license-hint`（默认 `custom`）；
+- 自定义 provider 在 `provider list` 中 `channels=["daily"]`；`resolve --channel stable` 返回 `OMF-E3004`；`--release-tag` / `--release-line` 返回 `OMF-E7001`；
+- `checksums_url` 在 resolve 时拉取：计算 `checksums_sha256` 并校验目标行，与 `sha256` 不一致返回 `OMF-E4002`。
+
 ---
 
 ## 7. 下载流程
 
 ```text
-resolve
+resolve（digest / checksums 双重来源，产出 pin）
   ↓
-选择 asset
+download 读取 release（--release 或在线 resolve）
   ↓
-下载 checksums.sha256（若存在）
+已有 <sha16>/<asset> 且摘要匹配 -> 直接复用
   ↓
-下载 asset 到 downloads/临时文件
+下载 asset 到同目录 *.part，边写边算 SHA-256
   ↓
-SHA-256 校验
+与 pin 比较（不匹配删除临时文件）
   ↓
-原子移动到 downloads/<asset-sha256>/
+存在 checksums_url 时再校验其自身 SHA-256 与目标行
   ↓
-生成 Artifact 记录
+rename 到 downloads/<sha256[:16]>/<asset>
+  ↓
+写同目录 artifact.json
 ```
 
-不自动解压，不自动安装，不自动改 PATH。
+失败时删除 `.part` 与空目录；不自动解压，不自动安装，不自动改 PATH。
+
+校验源降级规则：
+
+```text
+asset.digest 存在，checksums.sha256 拉取失败 -> 仅用 digest 完成 resolve（不写 checksums_url/sha256）
+asset.digest 缺失，checksums.sha256 可用     -> 用 checksums 行
+两者都存在但不一致                           -> OMF-E4002
+两者都不可用                                 -> OMF-E3005
+```
+
+下载阶段仍会用 release 里记录的 `checksums_url` 做第二次校验（存在时）。
 
 下载产物记录：
 

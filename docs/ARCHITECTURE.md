@@ -41,8 +41,9 @@ internal/model    internal/errors  internal/errors
 | `internal/capabilities` | 13 项能力命令、解析、缓存 |
 | `internal/paths` | data root / cache / downloads / config 路径 |
 | `internal/checksum` | 流式 SHA-256、`checksums.sha256` 解析 |
-| `internal/provider` | provider 注册表与元数据 |
+| `internal/provider` | provider 注册表、资产匹配、pin 解析、nonfree 同意、自定义 provider 存储 |
 | `internal/provider/github` | GitHub Releases API 客户端（重试/限流/脱敏） |
+| `internal/download` | 流式下载、双重校验、原子落盘、artifact.json |
 | `internal/contracts` | JSON 示例与错误码注册表校验 |
 | `internal/config` | 严格 TOML 1.1 配置 |
 | `internal/model` | JSON 契约结构体 |
@@ -54,11 +55,12 @@ internal/model    internal/errors  internal/errors
 依赖方向（实际）：
 
 ```text
-cmd → cli → {detect, capabilities, provider, config, logging, contracts}
+cmd → cli → {detect, capabilities, provider, download, config, logging, contracts}
 detect → {ffexec, model, errors}
 capabilities → {ffexec, model, paths, errors}
-provider → {model, errors}
+provider → {github, checksum, model, errors}
 provider/github → errors
+download → {checksum, model, errors}
 checksum → errors
 paths → errors
 ```

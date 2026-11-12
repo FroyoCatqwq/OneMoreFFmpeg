@@ -31,6 +31,20 @@ func wantsJSON(args []string) bool {
 		"--installation-id": true,
 		"--help-topic":      true,
 		"--cache-dir":       true,
+		"--provider":        true,
+		"--channel":         true,
+		"--target":          true,
+		"--variant":         true,
+		"--linkage":         true,
+		"--release-line":    true,
+		"--release-tag":     true,
+		"--release":         true,
+		"--id":              true,
+		"--url":             true,
+		"--sha256":          true,
+		"--checksums-url":   true,
+		"--license-hint":    true,
+		"--max-bytes":       true,
 	}
 	for i := 0; i < len(args); i++ {
 		arg := args[i]

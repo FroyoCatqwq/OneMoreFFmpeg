@@ -182,6 +182,14 @@ github_api = "https://"
 	}
 }
 
+func TestAllowsLoopbackHTTPGitHubAPI(t *testing.T) {
+	for _, api := range []string{"http://localhost:8080", "http://127.0.0.1:8080/api", "http://[::1]:8080"} {
+		body := fmt.Sprintf("schema = \"onemoreffmpeg.config/v1\"\n[network]\ngithub_api = %q\n", api)
+		_, err := config.Parse(strings.NewReader(body))
+		require.NoError(t, err, api)
+	}
+}
+
 func TestRejectInvalidDownloadSettings(t *testing.T) {
 	cases := []string{
 		`

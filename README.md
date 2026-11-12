@@ -4,9 +4,9 @@
 
 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg>
 
-状态：**Phase 3 已完成并通过全量审查；Phase 4 基础设施与全部决策（D1–D7）已就绪，`resolve` / `download` / `provider add` 尚未实现。**
+状态：**Phase 3 已完成并通过全量审查；Phase 4（provider / resolve / download）已实现并通过真实 GitHub 与下载验证。**
 
-> `version` / `detect` / `validate` / `capabilities` 已实现；其余 `one-more-ffmpeg ...` 命令仍是计划命令，尚未实现。
+> `version` / `detect` / `validate` / `capabilities` / `provider list|add` / `resolve` / `download` 已实现；`install` / `env` / `doctor` 仍是计划命令。
 
 ---
 
@@ -148,6 +148,8 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 | [`docs/PHASE3_CODE_REVIEW.md`](docs/PHASE3_CODE_REVIEW.md) | Phase 3 代码审查、真实输出解析修复与残留 tech debt |
 | [`docs/PHASE4_READINESS.md`](docs/PHASE4_READINESS.md) | Phase 4 准入清单、真实上游事实与决策项 |
 | [`docs/FULL_AUDIT_2026-11-11.md`](docs/FULL_AUDIT_2026-11-11.md) | 全量审查、缺陷修复与残留风险 |
+| [`docs/PHASE4_STATUS.md`](docs/PHASE4_STATUS.md) | Phase 4 实施状态、真实验证与已知限制 |
+| [`docs/PHASE4_CODE_REVIEW.md`](docs/PHASE4_CODE_REVIEW.md) | Phase 4 代码审查、缺陷修复与残留限制 |
 | [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) | 第三方依赖许可证清单初稿 |
 
 ---
@@ -173,7 +175,7 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 - Phase 4 基础件 `internal/paths` / `internal/checksum` / `model.Release` / 配置网络段 / 契约字段校验：已完成；
 - Phase 4 provider 注册表、GitHub Releases 客户端、`provider list`：已完成；
 - Phase 4 决策 D1（stable pin）/ D5（nonfree 同意）/ D7（Job Object 推迟）：已定并落文；
-- Phase 4 `resolve` 资产匹配、`download`、`provider add`：未开始（无阻塞决策）；
+- Phase 4 `provider add` / `resolve` / `download`：已完成，状态见 [`docs/PHASE4_STATUS.md`](docs/PHASE4_STATUS.md)；
 - 全量审查与缺陷修复：见 [`docs/FULL_AUDIT_2026-11-11.md`](docs/FULL_AUDIT_2026-11-11.md)；
 - CLI：`version` / `detect` / `validate` / `capabilities` 已实现；
 - 本地单测 / `go vet` / Windows+Linux 交叉编译：通过；

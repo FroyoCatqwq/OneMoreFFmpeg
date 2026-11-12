@@ -1,7 +1,6 @@
 package provider_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -47,13 +46,4 @@ func TestProviderSummaryMarshalsEmptySlices(t *testing.T) {
 		require.NotNil(t, item.Variants)
 		require.NotNil(t, item.Linkages)
 	}
-}
-
-func TestResolveIsNotImplementedYet(t *testing.T) {
-	item, err := provider.NewRegistry().Get(provider.IDBtbn)
-	require.NoError(t, err)
-	_, err = item.Resolve(context.Background(), provider.Request{Provider: provider.IDBtbn, Channel: "daily"})
-	typed, ok := apperrors.As(err)
-	require.True(t, ok)
-	require.Equal(t, apperrors.E3007, typed.Code)
 }

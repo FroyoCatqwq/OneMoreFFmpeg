@@ -199,7 +199,7 @@ CLI 冒烟：
 
 ## 7. 明确未完成
 
-- provider resolve / download（Phase 4，前置项见 [`PHASE4_READINESS.md`](PHASE4_READINESS.md)）；
+- ~~provider resolve / download~~（Phase 4 已完成，见 [`PHASE4_STATUS.md`](PHASE4_STATUS.md)）；
 - install / env / rollback（Phase 5）；
 - GitHub Actions / 发布 CI（Phase 7）；
 - 包管理器识别；

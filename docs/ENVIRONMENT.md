@@ -38,7 +38,8 @@
 ├─ apps/
 ├─ current
 ├─ journal/
-└─ config.toml
+├─ config.toml
+└─ providers.toml
 ```
 
 规则：
@@ -47,7 +48,9 @@
 - `--cache-dir`（CLI）优先于默认值；下载目录由 `[download] dir` 覆盖 `<data-root>/downloads`；
 - data root 不可判定时返回 `OMF-E9003`，不静默回退到当前工作目录；
 - Windows 不使用 `XDG_*`；Linux 不读 `LOCALAPPDATA`；
-- 配置：显式 `--config` > `<data-root>/config.toml`（存在时）> 内置默认值，详见 `CLI_SCHEMA.md` §3.1。
+- 配置：显式 `--config` > `<data-root>/config.toml`（存在时）> 内置默认值，详见 `CLI_SCHEMA.md` §3.1；
+- 自定义 provider：`<data-root>/providers.toml`，由 `provider add` 写入，`provider list` / `resolve` 读取；
+- `[network] github_api` 仅允许 https；例外：`localhost` / `127.0.0.1` / `::1` 的 http 允许用于测试与自建镜像。
 
 ---
 

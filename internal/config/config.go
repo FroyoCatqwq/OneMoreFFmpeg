@@ -5,6 +5,7 @@ import (
 	"bytes"
 	stderrors "errors"
 	"io"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -166,5 +167,20 @@ func (c Config) validate() error {
 
 func isHTTPSURL(value string) bool {
 	parsed, err := url.Parse(value)
-	return err == nil && parsed.Scheme == "https" && parsed.Host != ""
+	if err != nil || parsed.Host == "" {
+		return false
+	}
+	if parsed.Scheme == "https" {
+		return true
+	}
+	// Loopback http is allowed for tests and self-hosted mirrors only.
+	return parsed.Scheme == "http" && isLoopback(parsed.Hostname())
+}
+
+func isLoopback(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

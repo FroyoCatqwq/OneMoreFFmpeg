@@ -4,6 +4,7 @@ package github
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -21,6 +22,7 @@ const (
 	defaultRetryBase       = 500 * time.Millisecond
 	defaultMaxRedirects    = 5
 	defaultTimeout         = 30 * time.Second
+	maxRetryAfter          = 60 * time.Second
 	userAgent              = "OneMoreFFmpeg"
 	apiVersion             = "2022-11-28"
 )
@@ -32,6 +34,8 @@ type Asset struct {
 	Size               int64     `json:"size"`
 	BrowserDownloadURL string    `json:"browser_download_url"`
 	UpdatedAt          time.Time `json:"updated_at"`
+	// Digest is "sha256:<hex>" when GitHub exposes an asset digest.
+	Digest string `json:"digest"`
 }
 
 // Release is the subset of the GitHub release payload OneMoreFFmpeg needs.
@@ -55,6 +59,7 @@ type Client struct {
 	MaxResponseBytes int64
 	RetryBase        time.Duration
 	MaxRedirects     int
+	Timeout          time.Duration
 	Sleep            func(ctx context.Context, delay time.Duration) error
 }
 
@@ -85,13 +90,21 @@ func (c *Client) newHTTPClient() *http.Client {
 	if maxRedirects <= 0 {
 		maxRedirects = defaultMaxRedirects
 	}
+	timeout := c.Timeout
+	if timeout <= 0 {
+		timeout = defaultTimeout
+	}
 	return &http.Client{
-		Timeout: defaultTimeout,
+		Timeout: timeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			// len(via) counts this request's redirect chain only; a client-wide
 			// counter would poison later requests.
 			if len(via) > maxRedirects {
 				return apperrors.New(apperrors.E4003, "redirect limit exceeded")
+			}
+			// API calls must never be downgraded to plain http.
+			if !isAllowedURL(req.URL.String()) {
+				return apperrors.New(apperrors.E3007, "redirect target must be https").WithDetails(map[string]any{"url": req.URL.String()})
 			}
 			return nil
 		},
@@ -106,6 +119,20 @@ func (c *Client) LatestRelease(ctx context.Context, owner, repo string) (Release
 		return Release{}, err
 	}
 	return release, nil
+}
+
+// ListReleases returns up to perPage releases, newest first.
+func (c *Client) ListReleases(ctx context.Context, owner, repo string, perPage int) ([]Release, error) {
+	if perPage <= 0 || perPage > 100 {
+		perPage = 30
+	}
+	var releases []Release
+	path := "/repos/" + url.PathEscape(owner) + "/" + url.PathEscape(repo) +
+		"/releases?per_page=" + strconv.Itoa(perPage)
+	if err := c.getJSON(ctx, path, &releases); err != nil {
+		return nil, err
+	}
+	return releases, nil
 }
 
 // ReleaseByTag returns one release by tag name.
@@ -158,11 +185,18 @@ func (c *Client) getJSON(ctx context.Context, path string, out any) error {
 				details["reset"] = reset
 			}
 			lastErr = apperrors.New(apperrors.E3006, "github api rate limited").WithDetails(details)
-			if retryAfter, ok := retryAfter(header); ok && attempt < attempts {
-				if err := c.sleep(ctx, retryAfter); err != nil {
-					return err
+			if retryAfter, ok := retryAfter(header); ok {
+				// Never block the CLI for hours; fail fast and let the caller retry.
+				if retryAfter > maxRetryAfter {
+					details["retry_after"] = retryAfter.String()
+					return lastErr
 				}
-				continue
+				if attempt < attempts {
+					if err := c.sleep(ctx, retryAfter); err != nil {
+						return err
+					}
+					continue
+				}
 			}
 			return lastErr
 		case status >= 500 && status <= 599:
@@ -261,7 +295,7 @@ func contextError(err error) error {
 	if err == nil {
 		return nil
 	}
-	if strings.Contains(err.Error(), "deadline exceeded") {
+	if errors.Is(err, context.DeadlineExceeded) {
 		return apperrors.New(apperrors.E3007, "github request timed out").WithCause(err.Error())
 	}
 	return apperrors.New(apperrors.E9004, "context canceled").WithCause(err.Error())
@@ -311,4 +345,15 @@ func isLoopback(host string) bool {
 	}
 	ip := net.ParseIP(host)
 	return ip != nil && ip.IsLoopback()
+}
+
+func isAllowedURL(raw string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || parsed.Host == "" || parsed.User != nil {
+		return false
+	}
+	if parsed.Scheme == "https" {
+		return true
+	}
+	return parsed.Scheme == "http" && isLoopback(parsed.Hostname())
 }

@@ -1,11 +1,8 @@
-// Package provider defines the FFmpeg release providers and their registry.
-// Resolution is intentionally not implemented yet: Phase 4 adds the GitHub
-// client and per-provider asset matching on top of this registry.
+// Package provider defines the FFmpeg release providers, their registry and
+// the pinning resolver (asset matching, checksums selection, nonfree consent).
 package provider
 
 import (
-	"context"
-
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 )
@@ -19,20 +16,21 @@ const (
 // Request selects one release/asset. Empty fields fall back to documented
 // defaults once resolution is implemented.
 type Request struct {
-	Provider    string
-	Channel     string // stable | daily
-	Target      string // win64 | linux64
-	Variant     string // gpl | lgpl | nonfree | nonfree-shared
-	Linkage     string // static | shared
-	ReleaseTag  string
-	ReleaseLine string // master | n8.1 | n9.0 ...
+	Provider     string
+	Channel      string // stable | daily
+	Target       string // win64 | linux64
+	Variant      string // gpl | lgpl | nonfree | nonfree-shared
+	Linkage      string // static | shared
+	ReleaseTag   string
+	ReleaseLine  string // master | n8.1 | n9.0 ...
+	AllowNonfree bool   // required for nonfree providers/variants (D5)
 }
 
-// Provider resolves one pinned release for a provider id.
+// Provider exposes one built-in provider's metadata. Resolution is a separate
+// Resolver so metadata stays usable offline (`provider list`).
 type Provider interface {
 	ID() string
 	Summary() model.ProviderSummary
-	Resolve(ctx context.Context, req Request) (model.Release, error)
 }
 
 // Registry holds the built-in providers. It is immutable after construction
@@ -102,7 +100,7 @@ func bnqdzjSummary() model.ProviderSummary {
 	}
 }
 
-// summaryProvider exposes metadata only; Resolve is wired in Phase 4.
+// summaryProvider exposes metadata only; resolution lives in Resolver.
 type summaryProvider struct {
 	summary model.ProviderSummary
 }
@@ -113,8 +111,4 @@ func (p summaryProvider) ID() string {
 
 func (p summaryProvider) Summary() model.ProviderSummary {
 	return p.summary
-}
-
-func (p summaryProvider) Resolve(context.Context, Request) (model.Release, error) {
-	return model.Release{}, apperrors.New(apperrors.E3007, "provider resolution is not implemented yet").WithDetails(map[string]any{"provider": p.summary.ID})
 }

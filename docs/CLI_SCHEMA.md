@@ -95,8 +95,7 @@
 | 命令 | 状态 |
 |---|---|
 | `version` / `detect` / `validate` / `capabilities` | 已实现 |
-| `provider list` | 已实现（离线，Phase 4 基础件） |
-| `provider add` / `resolve` / `download` | 未实现（Phase 4） |
+| `provider list` / `provider add` / `resolve` / `download` | 已实现（Phase 4） |
 | `install` / `env.*` / `doctor` | 未实现（Phase 5/6） |
 
 未实现命令的 data 表与示例仍是**计划契约**，用于冻结字段形状；调用会得到 `OMF-E7001`。
@@ -264,7 +263,7 @@ one-more-ffmpeg capabilities --installation-id <ID>
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `providers` | array | provider 摘要列表 |
+| `providers` | array | 内置 provider 在前（btbn、bnqdzj-nonfree），自定义 provider 按 `providers.toml` 顺序追加 |
 
 provider 摘要：
 
@@ -283,22 +282,35 @@ provider 摘要：
 
 ---
 
-### 4.6 `provider add`（未实现，Phase 4）
+### 4.6 `provider add`（已实现）
 
 `data` 字段：
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `id` | string | 新 provider id |
-| `url` | string | HTTPS URL |
-| `sha256` | string | 必填时记录 |
+| `id` | string | 新 provider id（小写，保留 id 不可用） |
+| `url` | string | HTTPS 直链 |
+| `sha256` | string | 必填；64 位 hex |
 | `status` | string | `added` / `dry-run` |
+
+参数：
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--id` | 无 | 必填；`^[a-z0-9][a-z0-9-]{0,63}$`，不能是 `btbn` / `bnqdzj-nonfree` / `custom` |
+| `--url` | 无 | 必填；仅 https，且必须指向 `.zip` / `.tar.xz` / `.tar.gz` / `.7z` |
+| `--sha256` | 无 | 必填；缺失 `OMF-E3009`，格式错误同码 |
+| `--checksums-url` | 无 | 可选；仅 https |
+| `--license-hint` | `custom` | `gpl` / `lgpl` / `nonfree` / `custom` |
+| `--dry-run` | false | 只校验并返回 `status=dry-run`，不写文件 |
+
+存储：`<data-root>/providers.toml`，schema `onemoreffmpeg.providers/v1`；重复 id 返回 `OMF-E7005`，不覆盖旧 pin。文件写入为临时文件 + rename。
 
 示例：[`schemas/examples/provider-add.example.json`](schemas/examples/provider-add.example.json)
 
 ---
 
-### 4.7 `resolve`（未实现，Phase 4）
+### 4.7 `resolve`（已实现）
 
 `data` 字段遵循 `onemoreffmpeg.release/v1`：
 
@@ -321,8 +333,9 @@ provider 摘要：
 | `target` | string | win64 / linux64 |
 | `license_hint` | string | gpl / lgpl / nonfree / custom |
 | `redistributable` | boolean | nonfree 必须为 false |
+| `warnings` | array | 可选；`OMF-W1006` 等 |
 
-`resolve` 选项（Phase 4 实现时按此冻结）：
+`resolve` 选项：
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
@@ -332,10 +345,20 @@ provider 摘要：
 | `--variant <V>` | `gpl` | `gpl` / `lgpl` / `nonfree` / `nonfree-shared` |
 | `--linkage <L>` | `static` | `static` / `shared` |
 | `--release-line <X>` | 最高 `nX.Y` | 仅 btbn stable；`master` 只用于 daily |
-| `--release-tag <TAG>` | 无 | 显式 pin；与 `--release-line` 互斥 |
+| `--release-tag <TAG>` | 无 | 显式 pin；与 `--release-line` 互斥；daily 不接受 `latest` |
 | `--allow-nonfree` | false | nonfree provider 必填，缺失返回 `OMF-E7001`；成功时输出 `OMF-W1006` |
 
 `release_tag=latest` 的合法条件是同时具备 `release_id`、`published_at` 与非空 `asset_sha256`；缺少任一字段返回 `OMF-E3010`。其他 channel/tag 组合按 `PROVIDER_RESOLVER.md` §7。
+
+实现行为：
+
+- `stable` + btbn：解析 `latest` release，在 `nX.Y` 资产中取最高版本（可用 `--release-line` 指定）；`release_tag` 记录 `latest`，同时写 `release_id` / `published_at` / `asset_sha256`；
+- `daily` + btbn/bnqdzj：列出 releases，取最新 `autobuild-*`，记录具体 tag；daily 必须匹配 master 资产，缺失返回 `E3003`，**不回退** stable-line 资产；
+- 资产格式按 target 优先：win64 选 `.zip`，linux64 选 `.tar.xz`；同一 release line 仍有多个匹配时返回 `E3003`；
+- `--release-tag` 显式指定时直接按 tag 解析；custom provider 不接受 `--release-tag` / `--release-line`（`E7001`）；
+- 校验来源优先级：GitHub asset `digest` > release 内 `checksums.sha256` > `OMF-E3005`；两者同时存在但不一致返回 `OMF-E4002`；digest 存在而 checksums 拉取失败时降级为仅 digest（不写 `checksums_url` / `checksums_sha256`）；
+- custom provider 的 `checksums_url` 会在 resolve 时拉取并计算 `checksums_sha256`，同时校验目标行；
+- `resolve` 只产出 pin，不下载资产；`asset_url` 必须为 https。
 
 示例：[`schemas/examples/provider-resolve.example.json`](schemas/examples/provider-resolve.example.json)
 
@@ -343,20 +366,43 @@ provider 摘要：
 
 ---
 
-### 4.8 `download`（未实现，Phase 4）
+### 4.8 `download`（已实现）
 
 `data` 字段遵循 `onemoreffmpeg.artifact/v1`：
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `artifact_id` | string | 本地标识 |
+| `artifact_id` | string | `art-` + sha256 前 16 位 |
 | `provider` | string | provider id |
-| `release_tag` | string | 具体 tag |
+| `release_tag` | string | resolve 记录的 tag（可能为 `latest` + pin） |
 | `asset_name` | string | 资产名 |
 | `asset_sha256` | string | SHA-256 |
 | `local_path` | string | 本地文件路径 |
-| `verified` | boolean | 是否校验通过 |
+| `verified` | boolean | 固定 true；失败不会返回 artifact |
 | `downloaded_at` | string | RFC 3339 UTC |
+| `warnings` | array | 可选；nonfree 下载带 `OMF-W1006` |
+
+参数：
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--release <PATH>` | 无 | 读取 `resolve --json` 输出或裸 release 对象；给定时不再解析 |
+| `--dir <PATH>` | `[download] dir` 或 `<data-root>/downloads` | 必须为绝对路径 |
+| `--max-bytes <N>` | `[download] max_bytes`（512 MiB） | 覆盖单资产上限 |
+| provider 参数 | 同 `resolve` | 未给 `--release` 时先执行 resolve |
+
+落盘规则：
+
+```text
+<dir>/<asset_sha256[0:16]>/<asset_name>
+<dir>/<asset_sha256[0:16]>/artifact.json
+```
+
+- 先写 `*.part`，流式 SHA-256 通过后再 rename；
+- 已有同名文件且摘要匹配时直接复用，不重新下载；
+- `checksums_url` 存在时再次校验 checksums 文件（含其自身 SHA-256）；
+- 失败删除临时文件与空目录，不保留半成品；
+- `license_hint=nonfree` 仍需 `--allow-nonfree`，离线 release 文件同样适用。
 
 示例：[`schemas/examples/artifact.example.json`](schemas/examples/artifact.example.json)
 

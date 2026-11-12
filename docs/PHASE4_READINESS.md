@@ -21,13 +21,15 @@ internal/config           [network] / [download] + 校验                     �
 internal/contracts        Phase 4 示例字段级校验                            完成
 internal/provider         注册表 + 内置 provider 元数据 + provider list     完成
 internal/provider/github  Releases API 客户端（重试/限流/重定向/脱敏）      完成
-internal/download         下载与 artifact.json                              未开始
-resolve / provider add    provider 资产匹配与 pin                           未开始（依赖 D1/D5）
+internal/download         下载与 artifact.json                              完成
+provider resolve          资产匹配 / pin / 校验源选择 / nonfree 同意        完成
+provider add              自定义 provider 注册                               完成
+resolve / download CLI    端到端可用                                         完成
 ```
 
 结论：
 
-> **Phase 4 的基础设施与全部决策（D1–D7）已就绪：路径、checksum、模型、配置、契约校验、HTTP 客户端、provider 注册表、`provider list`、D1 pin 字段与 D5 同意策略。剩余工作只有 `resolve` 资产匹配、`download` 落盘与 `provider add`，不再有阻塞性决策。**
+> **Phase 4 已实现完毕：路径、checksum、模型、配置、契约校验、HTTP 客户端、provider 注册表、`provider list` / `provider add` / `resolve` / `download`，D1–D7 全部落文并有测试。收尾状态见 [`PHASE4_STATUS.md`](PHASE4_STATUS.md)。**
 
 ### 1.1 已落地的基础件（2026-11-11）
 
@@ -40,6 +42,9 @@ resolve / provider add    provider 资产匹配与 pin                          
 | Phase 4 示例字段级校验 | `internal/contracts` | 完成，release / artifact / provider list / add |
 | provider 注册表 + `provider list` | `internal/provider`、`internal/cli/provider.go` | 完成，离线运行 |
 | GitHub HTTP 客户端 | `internal/provider/github` | 完成，含 403/429/5xx/重定向/大小上限/脱敏测试 |
+| `provider add` + `providers.toml` | `internal/provider/custom.go`、`internal/cli/provider.go` | 完成，原子写入、重复 id 拒绝 |
+| `resolve` | `internal/provider/resolve.go`、`internal/cli/resolve.go` | 完成，stable/daily/nonfree/custom 真实解析通过 |
+| `download` + `artifact.json` | `internal/download`、`internal/cli/download.go` | 完成，双重校验、原子落盘、复用已有文件 |
 
 ---
 
@@ -475,8 +480,8 @@ resolve（或读取 --release）
 | 4 | ~~`internal/checksum` + 真实 checksums 测试~~ | **已完成** |
 | 5 | ~~`internal/provider/github` + 重试/限流/脱敏测试~~ | **已完成** |
 | 6 | ~~`provider list` + registry~~；`provider add` 待做 | **provider list 已完成** |
-| 7 | `btbn`（daily 先行）、`bnqdzj-nonfree`、`custom` | `resolve` 可用 |
-| 8 | `internal/download` + `artifact.json` | `download` 可用 |
+| 7 | ~~`btbn`、`bnqdzj-nonfree`、`custom`~~ | **已完成**（stable/daily/nonfree/custom 均有真实解析验证） |
+| 8 | ~~`internal/download` + `artifact.json`~~ | **已完成** |
 | 9 | 文档、示例、`PHASE4_STATUS.md`、DoD 对照 | Phase 4 收尾 |
 
 ### DoD 对照
@@ -519,4 +524,5 @@ resolve（或读取 --release）
 - [x] `contracts` 对 release / artifact 示例做字段级校验；
 - [x] `provider list` 可离线运行（不触发网络）；
 - [x] GitHub 客户端具备注入点、重试、限流、重定向上限、大小上限与 token 脱敏测试；
-- [x] Phase 3 的 `OMF-E2001`、`help.found`、缓存写入语义未被破坏（全量测试通过）。
+- [x] Phase 3 的 `OMF-E2001`、`help.found`、缓存写入语义未被破坏（全量测试通过）；
+- [x] `provider add` / `resolve` / `download` 已实现并通过真实 GitHub 与真实下载验证（见 `PHASE4_STATUS.md`）。

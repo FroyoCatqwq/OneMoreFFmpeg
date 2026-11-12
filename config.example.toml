@@ -13,7 +13,7 @@ color = "auto"
 timeout = "30s"
 # total attempts per request, including the first one (1..10)
 max_attempts = 3
-# GitHub REST base URL; must be https
+# GitHub REST base URL; must be https (loopback http only for tests/self-hosted mirrors)
 github_api = "https://api.github.com"
 
 [download]

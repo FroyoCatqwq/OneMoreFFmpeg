@@ -34,6 +34,7 @@ func TestResolveWindowsDefault(t *testing.T) {
 	require.Equal(t, filepath.Join(root, "cache"), layout.CacheDir)
 	require.Equal(t, filepath.Join(root, "downloads"), layout.DownloadsDir)
 	require.Equal(t, filepath.Join(root, "config.toml"), layout.ConfigFile)
+	require.Equal(t, filepath.Join(root, "providers.toml"), layout.ProvidersFile)
 }
 
 func TestResolveWindowsRequiresLocalAppData(t *testing.T) {
@@ -108,6 +109,10 @@ func TestResolveUsesProcessEnvironment(t *testing.T) {
 	configFile, err := ConfigFile()
 	require.NoError(t, err)
 	require.Equal(t, filepath.Join(override, "config.toml"), configFile)
+
+	providersFile, err := ProvidersFile()
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join(override, "providers.toml"), providersFile)
 
 	root, err := DataRoot()
 	require.NoError(t, err)

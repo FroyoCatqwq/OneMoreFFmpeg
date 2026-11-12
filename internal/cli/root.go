@@ -23,6 +23,19 @@ type RunOptions struct {
 	Version buildinfo.Info
 }
 
+type configContextKey struct{}
+
+func withConfig(ctx context.Context, cfg config.Config) context.Context {
+	return context.WithValue(ctx, configContextKey{}, cfg)
+}
+
+func configFrom(ctx context.Context) config.Config {
+	if cfg, ok := ctx.Value(configContextKey{}).(config.Config); ok {
+		return cfg
+	}
+	return config.Default()
+}
+
 func Run(ctx context.Context, opts RunOptions) (code int) {
 	if opts.Stdout == nil {
 		opts.Stdout = os.Stdout
@@ -78,6 +91,8 @@ func New(opts RunOptions) (*urfave.Command, error) {
 			validateCommand(),
 			capabilitiesCommand(),
 			providerCommand(),
+			resolveCommand(),
+			downloadCommand(),
 		},
 		Before: func(ctx context.Context, cmd *urfave.Command) (context.Context, error) {
 			cfg, configPath, err := loadConfig(cmd)
@@ -99,6 +114,7 @@ func New(opts RunOptions) (*urfave.Command, error) {
 				"log_level", cfg.Log.Level,
 				"log_json", cfg.Log.JSON,
 			)
+			ctx = withConfig(ctx, cfg)
 			return logging.WithLogger(ctx, logger), nil
 		},
 		Action: func(ctx context.Context, cmd *urfave.Command) error {

@@ -97,6 +97,20 @@ func TestRateLimitedWithoutRetryAfter(t *testing.T) {
 	require.EqualValues(t, 1, atomic.LoadInt32(&hits), "rate limit must not be retried without Retry-After")
 }
 
+func TestRateLimitedRejectsHugeRetryAfter(t *testing.T) {
+	var hits int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		w.Header().Set("Retry-After", "3600")
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer server.Close()
+
+	_, err := newClient(t, server).LatestRelease(context.Background(), "o", "r")
+	require.Equal(t, apperrors.E3006, errCode(t, err))
+	require.EqualValues(t, 1, atomic.LoadInt32(&hits), "huge Retry-After must fail fast")
+}
+
 func TestRateLimitedHonorsRetryAfter(t *testing.T) {
 	var hits int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

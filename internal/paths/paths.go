@@ -17,10 +17,11 @@ const HomeEnv = "ONE_MORE_FFMPEG_HOME"
 
 // Layout is the resolved on-disk layout. All fields are absolute.
 type Layout struct {
-	DataRoot     string
-	CacheDir     string
-	DownloadsDir string
-	ConfigFile   string
+	DataRoot      string
+	CacheDir      string
+	DownloadsDir  string
+	ConfigFile    string
+	ProvidersFile string
 }
 
 // Resolve returns the layout for the current process.
@@ -68,6 +69,15 @@ func ConfigFile() (string, error) {
 	return layout.ConfigFile, nil
 }
 
+// ProvidersFile returns the user provider registry path.
+func ProvidersFile() (string, error) {
+	layout, err := Resolve()
+	if err != nil {
+		return "", err
+	}
+	return layout.ProvidersFile, nil
+}
+
 func resolve(goos, home string, getenv func(string) string) (Layout, error) {
 	if override := strings.TrimSpace(getenv(HomeEnv)); override != "" {
 		if !filepath.IsAbs(override) {
@@ -95,9 +105,10 @@ func resolve(goos, home string, getenv func(string) string) (Layout, error) {
 
 func layoutFor(root string) Layout {
 	return Layout{
-		DataRoot:     root,
-		CacheDir:     filepath.Join(root, "cache"),
-		DownloadsDir: filepath.Join(root, "downloads"),
-		ConfigFile:   filepath.Join(root, "config.toml"),
+		DataRoot:      root,
+		CacheDir:      filepath.Join(root, "cache"),
+		DownloadsDir:  filepath.Join(root, "downloads"),
+		ConfigFile:    filepath.Join(root, "config.toml"),
+		ProvidersFile: filepath.Join(root, "providers.toml"),
 	}
 }

@@ -246,10 +246,10 @@ DoD：
 
 ---
 
-### Phase 4：Provider / Resolve / Download
+### Phase 4：Provider / Resolve / Download（已完成）
 
-> 准入清单、真实上游事实与决策项见 [`PHASE4_READINESS.md`](PHASE4_READINESS.md)。
-> 状态：基础设施与决策 D1–D7 就绪（`paths` / `checksum` / `model` / `config` / `contracts` / provider 注册表 / GitHub client / `provider list` / pin 字段 / nonfree 同意）；`resolve` / `download` / `provider add` 未开始，无阻塞决策。
+> 实施状态见 [`PHASE4_STATUS.md`](PHASE4_STATUS.md)；准入与决策见 [`PHASE4_READINESS.md`](PHASE4_READINESS.md)。
+> 状态：`provider list` / `provider add` / `resolve` / `download` 全部实现并通过真实 GitHub 解析与真实小文件下载验证。
 
 目标：解析 BtbN、BnqDzj、自定义 URL，并安全下载。
 
@@ -444,6 +444,7 @@ M0 不通过，不进入下载/安装/环境变量写入实现。
 - Phase 3 代码审查完成，修复真实 `-pix_fmts` / `-layouts` 解析、`-h` 未命中、全失败语义与缓存污染，详见 [`PHASE3_CODE_REVIEW.md`](PHASE3_CODE_REVIEW.md)；
 - Phase 4 契约与真实 GitHub 资产事实已核对，准入清单见 [`PHASE4_READINESS.md`](PHASE4_READINESS.md)；
 - Phase 4 基础设施（paths / checksum / model / config / contracts / provider 注册表 / GitHub client / `provider list`）已完成；
+- Phase 4 `provider add` / `resolve` / `download` 已完成，见 [`PHASE4_STATUS.md`](PHASE4_STATUS.md)；
 - 全量审查与缺陷修复见 [`FULL_AUDIT_2026-11-11.md`](FULL_AUDIT_2026-11-11.md)；
 - `go.sum` 已生成；
 - `version --json` / `detect --json` / `validate --json` / `capabilities --json` / `--help` 已验证；
