@@ -236,6 +236,41 @@ func TestExplicitEmptyConfigUsesDefaults(t *testing.T) {
 	require.True(t, json.Valid(stdout.Bytes()))
 }
 
+func TestRelativeDataRootOverrideIsReported(t *testing.T) {
+	t.Setenv(paths.HomeEnv, "relative-root")
+	opts, stdout, _ := testOptions("version", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 2, code)
+
+	var obj model.ErrorObject
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
+	require.Equal(t, "OMF-E7007", obj.Code)
+}
+
+func TestCapabilitiesProbeTimeoutIsIndependentOfDetectBudget(t *testing.T) {
+	opts, stdout, _ := testOptions("capabilities", "--dir", filepath.Join(t.TempDir(), "missing"),
+		"--probe-timeout", "30", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 1, code)
+
+	var obj model.ErrorObject
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
+	require.Equal(t, "OMF-E1001", obj.Code)
+}
+
+func TestCapabilitiesRejectsRelativeCacheDir(t *testing.T) {
+	fake := testutil.NewFakeFFmpeg(t)
+	setCapabilityEnv(t, fake)
+	opts, stdout, _ := testOptions("capabilities", "--dir", fake.Dir,
+		"--cache-dir", "relative-cache", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 2, code)
+
+	var obj model.ErrorObject
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
+	require.Equal(t, "OMF-E7001", obj.Code)
+}
+
 func TestProviderListJSON(t *testing.T) {
 	opts, stdout, _ := testOptions("provider", "list", "--json")
 	code := appcli.Run(context.Background(), opts)

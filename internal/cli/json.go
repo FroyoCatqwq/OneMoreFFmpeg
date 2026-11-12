@@ -107,12 +107,14 @@ func encodeJSON(w io.Writer, value any) error {
 }
 
 func writeResult(cmd *urfave.Command, command string, data any, human string) error {
-	if err := contracts.ValidateData(data); err != nil {
+	if err := contracts.ValidateDataFields(data); err != nil {
 		return err
 	}
 	if !jsonEnabled(cmd) {
-		_, err := fmt.Fprint(writerFor(cmd), human)
-		return err
+		if _, err := fmt.Fprint(writerFor(cmd), human); err != nil {
+			return apperrors.New(apperrors.E7006, "stdout write failed").WithCause(err.Error())
+		}
+		return nil
 	}
 	return encodeJSON(writerFor(cmd), model.Result{
 		Schema:  model.ResultSchema,
@@ -136,8 +138,16 @@ func errorObject(err error) model.ErrorObject {
 
 func writeFailure(stdout, stderr io.Writer, asJSON bool, err error) {
 	obj := errorObject(err)
+	// A failed stdout write must not be followed by a second stdout write,
+	// which would mix human text and JSON / emit two JSON objects.
+	if obj.Code == string(apperrors.E7006) {
+		_, _ = fmt.Fprintf(stderr, "error: %s: %s\n", obj.Code, obj.Message)
+		return
+	}
 	if asJSON {
-		_ = encodeJSON(stdout, obj)
+		if writeErr := encodeJSON(stdout, obj); writeErr != nil {
+			_, _ = fmt.Fprintln(stderr, "error: OMF-E7006: stdout JSON write failed")
+		}
 		return
 	}
 	if obj.Cause != "" {

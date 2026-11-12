@@ -3,6 +3,7 @@ package provider
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -31,9 +32,11 @@ type ChecksumsFetcher func(ctx context.Context, rawURL string) ([]byte, error)
 // Resolver turns a Request into a fully pinned Release. It never downloads the
 // asset itself; that is the download package's job.
 type Resolver struct {
-	Client *github.Client
-	Fetch  ChecksumsFetcher
-	Now    func() time.Time
+	Client       *github.Client
+	Fetch        ChecksumsFetcher
+	Now          func() time.Time
+	Timeout      time.Duration
+	MaxRedirects int
 }
 
 // DefaultTarget maps the host platform to the supported asset target.
@@ -139,6 +142,13 @@ func (r *Resolver) Resolve(ctx context.Context, registry *Registry, req Request,
 }
 
 func (r *Resolver) resolveGitHub(ctx context.Context, req Request, summary model.ProviderSummary) (model.Release, error) {
+	if !supportsVariant(summary, req.Variant, req.Linkage) {
+		return model.Release{}, apperrors.New(apperrors.E7001, "provider does not offer the requested variant").WithDetails(map[string]any{
+			"provider": summary.ID,
+			"variant":  req.Variant,
+			"linkage":  req.Linkage,
+		})
+	}
 	if !contains(summary.Channels, req.Channel) {
 		return model.Release{}, apperrors.New(apperrors.E3004, "provider does not support the requested channel").WithDetails(map[string]any{
 			"provider": summary.ID,
@@ -394,43 +404,66 @@ func (r *Resolver) fetch(ctx context.Context, rawURL string) ([]byte, error) {
 		return r.Fetch(ctx, rawURL)
 	}
 	if !isStrictHTTPSURL(rawURL) {
-		return nil, apperrors.New(apperrors.E3005, "checksums url must be https").WithDetails(map[string]any{"url": rawURL})
+		return nil, apperrors.New(apperrors.E4001, "checksums url must be https").WithDetails(map[string]any{"url": rawURL})
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
-		return nil, apperrors.New(apperrors.E3005, "checksums request could not be built").WithCause(err.Error())
+		return nil, apperrors.New(apperrors.E4001, "checksums request could not be built").WithCause(err.Error())
+	}
+	timeout := 30 * time.Second
+	maxRedirects := 5
+	if r != nil {
+		if r.Timeout > 0 {
+			timeout = r.Timeout
+		}
+		if r.MaxRedirects >= 0 {
+			maxRedirects = r.MaxRedirects
+		}
 	}
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: timeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) > 5 {
+			if len(via) > maxRedirects {
 				return apperrors.New(apperrors.E4003, "redirect limit exceeded")
 			}
 			if !isStrictHTTPSURL(req.URL.String()) {
-				return apperrors.New(apperrors.E3005, "checksums redirect must be https")
+				return apperrors.New(apperrors.E4001, "checksums redirect must be https").WithDetails(map[string]any{"url": req.URL.String()})
 			}
 			return nil
 		},
 	}
 	response, err := client.Do(req)
 	if err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, checksumsContextError(ctxErr)
+		}
 		if typed, ok := apperrors.As(err); ok {
 			return nil, typed
 		}
-		return nil, apperrors.New(apperrors.E3005, "checksums download failed").WithCause(err.Error())
+		return nil, apperrors.New(apperrors.E4001, "checksums download failed").WithCause(err.Error())
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		return nil, apperrors.New(apperrors.E3005, "checksums download failed").WithDetails(map[string]any{"status": response.StatusCode})
+		return nil, apperrors.New(apperrors.E4001, "checksums download failed").WithDetails(map[string]any{"status": response.StatusCode})
 	}
 	body, err := io.ReadAll(io.LimitReader(response.Body, defaultChecksumsLimit+1))
 	if err != nil {
-		return nil, apperrors.New(apperrors.E3005, "checksums download failed").WithCause(err.Error())
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, checksumsContextError(ctxErr)
+		}
+		return nil, apperrors.New(apperrors.E4001, "checksums download failed").WithCause(err.Error())
 	}
 	if int64(len(body)) > defaultChecksumsLimit {
-		return nil, apperrors.New(apperrors.E3005, "checksums file exceeds size limit").WithDetails(map[string]any{"limit": defaultChecksumsLimit})
+		return nil, apperrors.New(apperrors.E4004, "checksums file exceeds size limit").WithDetails(map[string]any{"limit": defaultChecksumsLimit})
 	}
 	return body, nil
+}
+
+func checksumsContextError(err error) error {
+	if errors.Is(err, context.DeadlineExceeded) {
+		return apperrors.New(apperrors.E3007, "checksums request timed out").WithCause(err.Error())
+	}
+	return apperrors.New(apperrors.E9004, "context canceled").WithCause(err.Error())
 }
 
 func licenseHintFor(providerID, variant string) string {
@@ -456,6 +489,13 @@ func contains(values []string, wanted string) bool {
 		}
 	}
 	return false
+}
+
+func supportsVariant(summary model.ProviderSummary, variant, linkage string) bool {
+	if contains(summary.Variants, variant) {
+		return true
+	}
+	return linkage == "shared" && contains(summary.Variants, variant+"-shared")
 }
 
 // isStrictHTTPSURL enforces the https-only rule for GitHub-provided asset and

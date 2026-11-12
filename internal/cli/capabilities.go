@@ -56,7 +56,7 @@ func capabilitiesCommand() *urfave.Command {
 			if err := appcaps.ValidateHelpTopic(topic); err != nil {
 				return err
 			}
-			detectOptions, err := parseDetectOptions(cmd)
+			detectOptions, err := parseDetectOptions(cmd, false)
 			if err != nil {
 				return err
 			}

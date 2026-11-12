@@ -19,7 +19,7 @@ func detectionFlags() []urfave.Flag {
 		&urfave.StringFlag{Name: "roots", Usage: "comma-separated scan roots; requires --scan"},
 		&urfave.StringFlag{Name: "max-depth", Value: "8", Usage: "maximum scan depth"},
 		&urfave.StringFlag{Name: "max-files", Value: "200000", Usage: "maximum files visited per scan"},
-		&urfave.StringFlag{Name: "timeout", Value: "10", Usage: "discovery/scan budget in seconds (must be >= --probe-timeout)"},
+		&urfave.StringFlag{Name: "timeout", Value: "10", Usage: "discovery/scan budget in seconds (detect only requires >= --probe-timeout)"},
 		&urfave.StringFlag{Name: "probe-timeout", Value: "5", Usage: "per-process probe timeout in seconds"},
 		&urfave.BoolFlag{Name: "include-removable", Usage: "include removable Windows drives in default roots (requires --scan)"},
 		&urfave.BoolFlag{Name: "include-network", Usage: "include network Windows drives in default roots (requires --scan)"},
@@ -30,7 +30,10 @@ func detectionFlags() []urfave.Flag {
 	}
 }
 
-func parseDetectOptions(cmd *urfave.Command) (appdetect.Options, error) {
+// enforceTimeoutBudget applies the detect-only rule that the discovery budget
+// must cover a single probe. validate/capabilities do not use the discovery
+// budget, so their --probe-timeout may legitimately be larger.
+func parseDetectOptions(cmd *urfave.Command, enforceTimeoutBudget bool) (appdetect.Options, error) {
 	opts := appdetect.DefaultOptions()
 	opts.Dir = cmd.String("dir")
 	opts.Recursive = cmd.Bool("recursive")
@@ -63,7 +66,7 @@ func parseDetectOptions(cmd *urfave.Command) (appdetect.Options, error) {
 		return opts, err
 	}
 	opts.ProbeTimeout = time.Duration(probeSeconds) * time.Second
-	if opts.ProbeTimeout > opts.Timeout {
+	if enforceTimeoutBudget && opts.ProbeTimeout > opts.Timeout {
 		return opts, apperrors.New(apperrors.E7005, "--probe-timeout must not exceed --timeout").WithDetails(map[string]any{
 			"probe_timeout_seconds": probeSeconds,
 			"timeout_seconds":       timeoutSeconds,

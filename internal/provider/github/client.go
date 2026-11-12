@@ -81,13 +81,19 @@ func NewClient(baseURL, token string) (*Client, error) {
 		RetryBase:        defaultRetryBase,
 		MaxRedirects:     defaultMaxRedirects,
 	}
-	client.HTTPClient = client.newHTTPClient()
+	client.RebuildHTTPClient()
 	return client, nil
+}
+
+// RebuildHTTPClient applies the current Timeout / MaxRedirects settings.
+// Callers that mutate those fields must call this before the next request.
+func (c *Client) RebuildHTTPClient() {
+	c.HTTPClient = c.newHTTPClient()
 }
 
 func (c *Client) newHTTPClient() *http.Client {
 	maxRedirects := c.MaxRedirects
-	if maxRedirects <= 0 {
+	if maxRedirects < 0 {
 		maxRedirects = defaultMaxRedirects
 	}
 	timeout := c.Timeout

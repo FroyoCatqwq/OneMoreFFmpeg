@@ -195,6 +195,24 @@ func TestRedirectBudgetIsPerRequest(t *testing.T) {
 	}
 }
 
+func TestClientHonorsTimeoutAfterRebuild(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(300 * time.Millisecond)
+		_, _ = w.Write([]byte(`{"id":1,"tag_name":"latest","assets":[]}`))
+	}))
+	defer server.Close()
+
+	client := newClient(t, server)
+	client.MaxAttempts = 1
+	client.Timeout = 40 * time.Millisecond
+	client.RebuildHTTPClient()
+
+	start := time.Now()
+	_, err := client.LatestRelease(context.Background(), "o", "r")
+	require.Equal(t, apperrors.E3007, errCode(t, err))
+	require.Less(t, time.Since(start), 250*time.Millisecond)
+}
+
 func TestCanceledContext(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{}`))

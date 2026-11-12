@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	urfave "github.com/urfave/cli/v3"
 
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/contracts"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/download"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
@@ -77,6 +79,9 @@ func downloadCommand() *urfave.Command {
 					return err
 				}
 			}
+			if !filepath.IsAbs(directory) {
+				return apperrors.New(apperrors.E7001, "--dir must be an absolute path").WithDetails(map[string]any{"dir": directory})
+			}
 			timeout, _ := time.ParseDuration(cfg.Network.Timeout)
 			instance, err := download.New(download.Options{
 				Dir:          directory,
@@ -101,7 +106,7 @@ func downloadCommand() *urfave.Command {
 func loadReleaseFile(path string) (model.Release, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		return model.Release{}, apperrors.New(apperrors.E7002, "release file cannot be read").WithCause(err.Error())
+		return model.Release{}, apperrors.New(apperrors.E7007, "release file cannot be read").WithCause(err.Error())
 	}
 	// Accept either a raw release object or a `resolve --json` result wrapper.
 	var envelope struct {
@@ -113,21 +118,10 @@ func loadReleaseFile(path string) (model.Release, error) {
 	}
 	var release model.Release
 	if err := json.Unmarshal(raw, &release); err != nil {
-		return model.Release{}, apperrors.New(apperrors.E7005, "release file is not valid JSON").WithCause(err.Error())
+		return model.Release{}, apperrors.New(apperrors.E7003, "release file is not valid JSON").WithCause(err.Error())
 	}
 	if release.Schema != model.ReleaseSchema {
 		return model.Release{}, apperrors.New(apperrors.E7003, "release file schema mismatch").WithDetails(map[string]any{"schema": release.Schema})
-	}
-	for field, value := range map[string]string{
-		"provider":     release.Provider,
-		"release_tag":  release.ReleaseTag,
-		"asset_name":   release.AssetName,
-		"asset_url":    release.AssetURL,
-		"asset_sha256": release.AssetSHA256,
-	} {
-		if strings.TrimSpace(value) == "" {
-			return model.Release{}, apperrors.New(apperrors.E7005, "release file is incomplete").WithDetails(map[string]any{"field": field})
-		}
 	}
 	if release.ReleaseTag == "latest" && (release.ReleaseID == "" || release.PublishedAt == "") {
 		return model.Release{}, apperrors.New(apperrors.E3010, "release file is not pinned").WithDetails(map[string]any{
@@ -135,6 +129,9 @@ func loadReleaseFile(path string) (model.Release, error) {
 			"release_id":  release.ReleaseID,
 			"published":   release.PublishedAt,
 		})
+	}
+	if err := contracts.ValidateDataFields(release); err != nil {
+		return model.Release{}, err
 	}
 	return release, nil
 }

@@ -426,7 +426,10 @@ func (c *Collector) capabilityFingerprint(installation model.Installation, topic
 }
 
 func resolveCacheDir(explicit string) (string, error) {
-	if strings.TrimSpace(explicit) != "" {
+	if explicit = strings.TrimSpace(explicit); explicit != "" {
+		if !filepath.IsAbs(explicit) {
+			return "", apperrors.New(apperrors.E7001, "--cache-dir must be an absolute path").WithDetails(map[string]any{"dir": explicit})
+		}
 		return explicit, nil
 	}
 	base, err := paths.CacheDir()

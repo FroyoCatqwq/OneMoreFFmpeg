@@ -149,21 +149,42 @@ func TestValidateReleaseLatestWithExplicitPin(t *testing.T) {
 }
 
 func TestValidateExampleRejectsInvalidRelease(t *testing.T) {
-	cases := []func(map[string]any){
-		func(data map[string]any) { data["release_tag"] = "latest" },
-		func(data map[string]any) { data["asset_sha256"] = "short" },
-		func(data map[string]any) { data["asset_url"] = "http://example.com/asset.zip" },
-		func(data map[string]any) { data["channel"] = "beta" },
-		func(data map[string]any) { data["published_at"] = "yesterday" },
-		func(data map[string]any) { delete(data, "license_hint") },
-		func(data map[string]any) { data["linkage"] = "dynamic" },
-		func(data map[string]any) { data["target"] = "darwin-arm64" },
-		func(data map[string]any) {
+	cases := []struct {
+		mutate func(map[string]any)
+		code   apperrors.Code
+	}{
+		{func(data map[string]any) { data["release_tag"] = "latest" }, apperrors.E3010},
+		{func(data map[string]any) { data["asset_sha256"] = "short" }, apperrors.E7003},
+		{func(data map[string]any) { data["asset_url"] = "http://example.com/asset.zip" }, apperrors.E7003},
+		{func(data map[string]any) { data["channel"] = "beta" }, apperrors.E7003},
+		{func(data map[string]any) { data["published_at"] = "yesterday" }, apperrors.E7003},
+		{func(data map[string]any) { delete(data, "license_hint") }, apperrors.E7003},
+		{func(data map[string]any) { data["linkage"] = "dynamic" }, apperrors.E7003},
+		{func(data map[string]any) { data["target"] = "darwin-arm64" }, apperrors.E7003},
+		{func(data map[string]any) {
 			data["license_hint"] = "nonfree"
 			data["redistributable"] = true
+		}, apperrors.E7003},
+		{func(data map[string]any) { data["checksums_url"] = "ftp://example.com/checksums.sha256" }, apperrors.E7003},
+		{func(data map[string]any) { data["checksums_sha256"] = strings.Repeat("Z", 64) }, apperrors.E7003},
+	}
+	for index, testCase := range cases {
+		data := validRelease()
+		testCase.mutate(data)
+		err := contracts.ValidateExample(writeResultExample(t, "resolve", data))
+		typed, ok := apperrors.As(err)
+		require.True(t, ok, index)
+		require.Equal(t, testCase.code, typed.Code, index)
+	}
+}
+
+func TestValidateExampleRejectsContractHoles(t *testing.T) {
+	cases := []func(map[string]any){
+		func(data map[string]any) { data["asset_name"] = "../evil.zip" },
+		func(data map[string]any) {
+			data["warnings"] = []any{map[string]any{"code": "OMF-W9999", "message": "x"}}
 		},
-		func(data map[string]any) { data["checksums_url"] = "ftp://example.com/checksums.sha256" },
-		func(data map[string]any) { data["checksums_sha256"] = strings.Repeat("Z", 64) },
+		func(data map[string]any) { data["checksums_url"] = "https://example.com/checksums.sha256" },
 	}
 	for index, mutate := range cases {
 		data := validRelease()
@@ -173,6 +194,47 @@ func TestValidateExampleRejectsInvalidRelease(t *testing.T) {
 		require.True(t, ok, index)
 		require.Equal(t, apperrors.E7003, typed.Code, index)
 	}
+}
+
+func TestValidateExampleRejectsArtifactContractHoles(t *testing.T) {
+	cases := []func(map[string]any){
+		func(data map[string]any) { data["artifact_id"] = "whatever" },
+		func(data map[string]any) { data["local_path"] = "relative/a.zip" },
+		func(data map[string]any) {
+			data["warnings"] = []any{map[string]any{"code": "OMF-W9999", "message": "x"}}
+		},
+	}
+	for index, mutate := range cases {
+		data := validArtifact()
+		mutate(data)
+		err := contracts.ValidateExample(writeResultExample(t, "download", data))
+		typed, ok := apperrors.As(err)
+		require.True(t, ok, index)
+		require.Equal(t, apperrors.E7003, typed.Code, index)
+	}
+}
+
+func TestValidateDataFieldsRejectsMalformedCapabilities(t *testing.T) {
+	body, err := os.ReadFile(filepath.Join("..", "..", "docs", "schemas", "examples", "capabilities.example.json"))
+	require.NoError(t, err)
+	var wrapper map[string]any
+	require.NoError(t, json.Unmarshal(body, &wrapper))
+	data := wrapper["data"].(map[string]any)
+	require.NoError(t, contracts.ValidateDataFields(data))
+
+	commands := data["commands"].(map[string]any)
+	commands["extra"] = map[string]any{"ok": true}
+	require.Error(t, contracts.ValidateDataFields(data))
+	delete(commands, "extra")
+
+	delete(data, "warnings")
+	require.Error(t, contracts.ValidateDataFields(data))
+}
+
+func TestValidateExampleAcceptsUNCPath(t *testing.T) {
+	data := validArtifact()
+	data["local_path"] = `\\server\share\downloads\ffmpeg.zip`
+	require.NoError(t, contracts.ValidateExample(writeResultExample(t, "download", data)))
 }
 
 func TestValidateExampleRejectsInvalidArtifact(t *testing.T) {

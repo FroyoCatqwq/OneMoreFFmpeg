@@ -72,7 +72,7 @@
 | 参数 | 默认 | 说明 |
 |---|---|---|
 | `--json` | false | stdout 输出 v1 JSON；错误也输出错误对象 |
-| `--config <PATH>` / `-c` | `<data-root>/config.toml`（存在时） | 显式指定 TOML；显式路径不存在 → `OMF-E7007` |
+| `--config <PATH>` / `-c` | `<data-root>/config.toml`（存在时） | 显式指定 TOML；显式路径不存在、或 `ONE_MORE_FFMPEG_HOME` 非绝对路径 → `OMF-E7007` |
 | `--log-level <LEVEL>` | 配置值或 `info` | 覆盖 `[log] level`；当前 `trace` 与 `debug` 输出相同（保留级别，写入类命令实现后再区分） |
 | `--quiet` | false | 强制 `error` 级；与 `--log-level` 同时出现时 `--quiet` 优先 |
 
@@ -142,7 +142,7 @@
 | `--roots <CSV>` | 无 | 逗号分隔扫描根；必须配合 `--scan` |
 | `--max-depth <N>` | 8 | 扫描最大深度 |
 | `--max-files <N>` | 200000 | 一次扫描（所有 root 合计）的最大文件数，超限记 `OMF-E1008` |
-| `--timeout <SEC>` | 10 | 扫描/发现预算；必须 ≥ `--probe-timeout` |
+| `--timeout <SEC>` | 10 | 扫描/发现预算；仅 `detect` 要求 ≥ `--probe-timeout`，`validate` / `capabilities` 不使用该预算 |
 | `--probe-timeout <SEC>` | 5 | 单个 ffmpeg 进程超时；不占用扫描预算 |
 | `--include-removable` | false | Windows 默认根包含可移动盘；必须配合 `--scan` |
 | `--include-network` | false | Windows 默认根包含网络盘；必须配合 `--scan` |
@@ -182,7 +182,7 @@ one-more-ffmpeg validate --installation-id <ID>
 ```
 
 - `--dir` 只校验该目录，且与 `--scan` / `--recursive` / `--roots` 互斥（`OMF-E7001`）；父目录下的 `bin/` 会被自动发现；
-- `--installation-id` 会重新做一次默认发现并匹配 ID，与 `--scan` / `--recursive` / `--roots` 互斥（`OMF-E7001`）；
+- `--installation-id` 会重新做一次默认发现并匹配 ID，与 `--scan` / `--recursive` / 非空 `--roots` 互斥（`OMF-E7001`）；纯空白的 `--roots` 视为未提供；
 - `--no-validate` 对 validate 无意义，使用即返回 `OMF-E7001`；
 - 只要生成了报告就退出 0；判定结果在 `data.status`，脚本必须显式检查；
 - `status=unusable` 时报告仍完整返回，不映射成整体错误码。
@@ -214,14 +214,14 @@ one-more-ffmpeg capabilities --installation-id <ID>
 | 参数 | 默认 | 说明 |
 |---|---|---|
 | `--help-topic` | `full` | `full` 或 `decoder=<name>` / `encoder=<name>` / `filter=<name>` / `muxer=<name>` / `demuxer=<name>` |
-| `--cache-dir` | `<data-root>/cache/capabilities` | capability cache 目录 |
+| `--cache-dir` | `<data-root>/cache/capabilities` | capability cache 目录；显式传入时必须为绝对路径，否则 `OMF-E7001` |
 | `--refresh` | false | 忽略旧缓存并重新执行 |
 | `--no-cache` | false | 不读不写缓存 |
 | `--probe-timeout` | 5 | 显式传入时覆盖每个能力命令的单命令超时（秒） |
 | `--no-path` / `--no-env` / `--no-common` | false | 控制 `--installation-id` 的重新发现范围 |
 | `--scan` / `--roots` | false / 无 | 可选重新发现范围；与 `--dir` 互斥 |
 
-`capabilities` 不提供 `--no-validate`（help 中也不显示），因为能力采集必须先完成校验。`--dir` 只使用该目录，与 `--scan` / `--recursive` / `--roots` 同时出现时返回 `OMF-E7001`。`--timeout` 只约束 detect 的发现预算；能力命令超时由 `--probe-timeout` 显式覆盖，未显式传入时使用 `CAPABILITIES.md` §7 的默认值。生效的单命令超时与输出上限参与缓存键。
+`capabilities` 不提供 `--no-validate`（help 中也不显示），因为能力采集必须先完成校验。`--dir` 只使用该目录，与 `--scan` / `--recursive` / `--roots` 同时出现时返回 `OMF-E7001`。`--timeout` 只约束 detect 的发现预算；能力命令超时由 `--probe-timeout` 显式覆盖，可以大于 `--timeout`。未显式传入时使用 `CAPABILITIES.md` §7 的默认值。生效的单命令超时与输出上限参与缓存键。输出前会校验 13 个命令键与必需字段，缓存命中同样受此约束。
 
 `data` 遵循 [`CAPABILITIES.md`](CAPABILITIES.md) 中的 `onemoreffmpeg.capabilities/v1`，必须包含：
 
@@ -358,7 +358,10 @@ provider 摘要：
 - `--release-tag` 显式指定时直接按 tag 解析；custom provider 不接受 `--release-tag` / `--release-line`（`E7001`）；
 - 校验来源优先级：GitHub asset `digest` > release 内 `checksums.sha256` > `OMF-E3005`；两者同时存在但不一致返回 `OMF-E4002`；digest 存在而 checksums 拉取失败时降级为仅 digest（不写 `checksums_url` / `checksums_sha256`）；
 - custom provider 的 `checksums_url` 会在 resolve 时拉取并计算 `checksums_sha256`，同时校验目标行；
-- `resolve` 只产出 pin，不下载资产；`asset_url` 必须为 https。
+- `resolve` 只产出 pin，不下载资产；`asset_url` 必须为 https；
+- `[network] timeout` 与 `[download] max_redirects` 同时作用于 GitHub API 与 checksums 请求；`max_redirects=0` 表示禁止重定向；
+- 输出前按 `onemoreffmpeg.release/v1` 做运行时字段级校验，不满足契约返回 `OMF-E7003` 而不是输出非法 pin；
+- nonfree-only provider 只提供 `nonfree*` variant；`--variant gpl` 返回 `E7001`，且无论 variant 为何都要求 `--allow-nonfree`。
 
 示例：[`schemas/examples/provider-resolve.example.json`](schemas/examples/provider-resolve.example.json)
 
@@ -398,11 +401,13 @@ provider 摘要：
 <dir>/<asset_sha256[0:16]>/artifact.json
 ```
 
-- 先写 `*.part`，流式 SHA-256 通过后再 rename；
-- 已有同名文件且摘要匹配时直接复用，不重新下载；
-- `checksums_url` 存在时再次校验 checksums 文件（含其自身 SHA-256）；
-- 失败删除临时文件与空目录，不保留半成品；
-- `license_hint=nonfree` 仍需 `--allow-nonfree`，离线 release 文件同样适用。
+- 先校验 `checksums_url`（含其自身 SHA-256 与目标行），再下载资产；校验失败不会留下半成品；
+- 已有同名文件且摘要匹配时复用，不重新下载资产；但 checksums 第二源每次仍重新校验；
+- 先写 `*.part`，流式 SHA-256 通过后再原子提交；提交失败会备份旧文件并回滚；
+- `artifact.json` 写入失败时删除本次新下载的资产，不保留“有资产无记录”的目录；复用已有资产时不会删除它；
+- 失败删除临时文件与空目录；
+- `license_hint=nonfree` 或 `variant=nonfree*` 仍需 `--allow-nonfree`，离线 release 文件同样适用；
+- `--release` 文件按完整 `onemoreffmpeg.release/v1` 契约校验；不存在的路径 `E7007`，字段非法 `E7003`，未 pin 的 latest `E3010`。
 
 示例：[`schemas/examples/artifact.example.json`](schemas/examples/artifact.example.json)
 

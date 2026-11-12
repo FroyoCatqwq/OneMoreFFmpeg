@@ -27,20 +27,23 @@ func shaOf(payload []byte) string {
 }
 
 type fixture struct {
-	server    *httptest.Server
-	payload   []byte
-	sha       string
-	checksums string
-	requests  *int
+	server        *httptest.Server
+	payload       []byte
+	sha           string
+	checksums     string
+	requests      *int
+	assetRequests *int
 }
 
 func newFixture(t *testing.T, payload []byte) *fixture {
 	t.Helper()
 	requests := 0
-	f := &fixture{payload: payload, sha: shaOf(payload), requests: &requests}
+	assetRequests := 0
+	f := &fixture{payload: payload, sha: shaOf(payload), requests: &requests, assetRequests: &assetRequests}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/asset", func(writer http.ResponseWriter, _ *http.Request) {
 		requests++
+		assetRequests++
 		_, _ = writer.Write(payload)
 	})
 	mux.HandleFunc("/checksums", func(writer http.ResponseWriter, _ *http.Request) {
@@ -122,7 +125,8 @@ func TestFetchReusesExistingFile(t *testing.T) {
 
 	_, err = instance.Fetch(context.Background(), fixture.release())
 	require.NoError(t, err)
-	require.Equal(t, requestsAfterFirst, *fixture.requests, "matching file must not be downloaded again")
+	require.Equal(t, 1, *fixture.assetRequests, "matching file must not be downloaded again")
+	require.Equal(t, requestsAfterFirst+1, *fixture.requests, "checksums source must be rechecked on reuse")
 }
 
 func TestFetchRejectsSHA256Mismatch(t *testing.T) {
@@ -140,6 +144,19 @@ func TestFetchRejectsSHA256Mismatch(t *testing.T) {
 	entries, readErr := os.ReadDir(dir)
 	require.NoError(t, readErr)
 	require.Empty(t, entries, "failed download must not leave files behind")
+}
+
+func TestFetchRejectsBackslashAssetName(t *testing.T) {
+	fixture := newFixture(t, []byte("payload"))
+	release := fixture.release()
+	release.ChecksumsURL = ""
+	release.ChecksumsSHA256 = ""
+	release.AssetName = `..\\evil.zip`
+
+	_, err := downloader(t, t.TempDir()).Fetch(context.Background(), release)
+	typed, ok := apperrors.As(err)
+	require.True(t, ok)
+	require.Equal(t, apperrors.E4005, typed.Code)
 }
 
 func TestFetchRejectsChecksumsDisagreement(t *testing.T) {
@@ -214,6 +231,37 @@ func TestFetchReplacesCorruptExistingFile(t *testing.T) {
 	content, err := os.ReadFile(target)
 	require.NoError(t, err)
 	require.Equal(t, fixture.payload, content)
+}
+
+func TestFetchCleansUpWhenArtifactWriteFails(t *testing.T) {
+	fixture := newFixture(t, []byte("payload-bytes"))
+	dir := t.TempDir()
+	targetDir := filepath.Join(dir, fixture.sha[:16])
+	require.NoError(t, os.MkdirAll(filepath.Join(targetDir, "artifact.json"), 0o755))
+	require.NoError(t, os.MkdirAll(filepath.Join(targetDir, "artifact.json.bak"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(targetDir, "artifact.json.bak", "keep"), []byte("x"), 0o644))
+
+	_, err := downloader(t, dir).Fetch(context.Background(), fixture.release())
+	typed, ok := apperrors.As(err)
+	require.True(t, ok)
+	require.Equal(t, apperrors.E4005, typed.Code)
+	_, statErr := os.Stat(filepath.Join(targetDir, assetName))
+	require.True(t, os.IsNotExist(statErr), "newly downloaded asset must be removed when artifact.json cannot be written")
+}
+
+func TestFetchHonorsZeroRedirects(t *testing.T) {
+	fixture := newFixture(t, []byte("payload"))
+	release := fixture.release()
+	release.ChecksumsURL = ""
+	release.ChecksumsSHA256 = ""
+	release.AssetURL = fixture.server.URL + "/redirect"
+	instance, err := download.New(download.Options{Dir: t.TempDir(), MaxBytes: 1 << 20, MaxRedirects: 0})
+	require.NoError(t, err)
+
+	_, err = instance.Fetch(context.Background(), release)
+	typed, ok := apperrors.As(err)
+	require.True(t, ok)
+	require.Equal(t, apperrors.E4003, typed.Code)
 }
 
 func TestFetchEnforcesRedirectLimit(t *testing.T) {

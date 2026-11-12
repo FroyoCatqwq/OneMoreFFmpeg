@@ -206,6 +206,7 @@ func TestDownloadOfflineRelease(t *testing.T) {
 
 	// Nonfree offline release must still require consent.
 	release.LicenseHint = "nonfree"
+	release.Redistributable = false
 	raw, err = json.Marshal(release)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(releasePath, raw, 0o644))
@@ -237,6 +238,47 @@ func TestDownloadOfflineRelease(t *testing.T) {
 func shaOfString(value string) string {
 	sum := sha256.Sum256([]byte(value))
 	return hex.EncodeToString(sum[:])
+}
+
+func TestDownloadRejectsMalformedReleaseFile(t *testing.T) {
+	phase4Home(t)
+	base := model.Release{
+		Schema:      model.ReleaseSchema,
+		Provider:    "btbn",
+		ReleaseTag:  "v1",
+		AssetName:   phase4AssetName,
+		AssetURL:    "https://example.invalid/a.zip",
+		AssetSHA256: phase4SHA,
+	}
+	path := filepath.Join(t.TempDir(), "release.json")
+	raw, err := json.Marshal(base)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(path, raw, 0o644))
+
+	// Missing repository/channel/published/variant/... is a contract error.
+	code, object, _ := runJSON(t, "download", "--release", path, "--dir", t.TempDir(), "--json")
+	require.Equal(t, 2, code)
+	require.Equal(t, "OMF-E7003", object["code"])
+
+	code, object, _ = runJSON(t, "download", "--release", filepath.Join(t.TempDir(), "missing.json"),
+		"--dir", t.TempDir(), "--json")
+	require.Equal(t, 2, code)
+	require.Equal(t, "OMF-E7007", object["code"])
+
+	base.Repository = "FFmpeg-Builds/FFmpeg-Builds"
+	base.Channel = "stable"
+	base.PublishedAt = "2026-11-11T13:00:32Z"
+	base.Variant = "gpl"
+	base.Linkage = "static"
+	base.Target = "win64"
+	base.LicenseHint = "gpl"
+	base.Redistributable = true
+	raw, err = json.Marshal(base)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(path, raw, 0o644))
+	code, object, _ = runJSON(t, "download", "--release", path, "--dir", "relative", "--json")
+	require.Equal(t, 2, code)
+	require.Equal(t, "OMF-E7001", object["code"])
 }
 
 func TestDownloadRejectsUnpinnedReleaseFile(t *testing.T) {

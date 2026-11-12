@@ -3,6 +3,7 @@ package contracts
 
 import (
 	"encoding/json"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -17,8 +18,9 @@ import (
 )
 
 var (
-	codePattern   = regexp.MustCompile(`\bOMF-[EW][0-9]{4}\b`)
-	sha256Pattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+	codePattern       = regexp.MustCompile(`\bOMF-[EW][0-9]{4}\b`)
+	sha256Pattern     = regexp.MustCompile(`^[0-9a-f]{64}$`)
+	artifactIDPattern = regexp.MustCompile(`^art-[0-9a-f]{16}$`)
 )
 
 var knownCommands = map[string]struct{}{
@@ -57,6 +59,25 @@ func ValidateData(data any) error {
 	return nil
 }
 
+// ValidateDataFields validates the schema-specific fields of a runtime data
+// object. It is used by both example validation and CLI output so stdout JSON
+// cannot silently violate the published contract.
+func ValidateDataFields(data any) error {
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return apperrors.New(apperrors.E7006, "data cannot be serialized").WithCause(err.Error())
+	}
+	var object map[string]any
+	if err := json.Unmarshal(raw, &object); err != nil {
+		return apperrors.New(apperrors.E7003, "data is not a JSON object").WithCause(err.Error())
+	}
+	if err := ValidateData(data); err != nil {
+		return err
+	}
+	schema, _ := object["schema"].(string)
+	return validateDataFields(schema, object)
+}
+
 func ValidateExample(path string) error {
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -93,50 +114,6 @@ func ValidateExample(path string) error {
 		}
 		if err := validateDataFields(dataSchema, data); err != nil {
 			return err
-		}
-		if dataSchema == model.CapabilitiesSchema {
-			commands, ok := data["commands"].(map[string]any)
-			if !ok {
-				return apperrors.New(apperrors.E7003, "capabilities.commands is required")
-			}
-			expected := appcaps.CommandKeys("full")
-			if len(commands) != len(expected) {
-				return apperrors.New(apperrors.E7003, "capabilities.commands must contain 13 commands").WithDetails(map[string]any{"expected": len(expected), "actual": len(commands)})
-			}
-			for _, key := range expected {
-				if strings.HasPrefix(key, "-h ") {
-					continue
-				}
-				if _, ok := commands[key]; !ok {
-					return apperrors.New(apperrors.E7003, "capabilities command missing").WithDetails(map[string]any{"command": key})
-				}
-			}
-			helpCommands := 0
-			for key := range commands {
-				if strings.HasPrefix(key, "-h ") {
-					helpCommands++
-					topic := strings.TrimPrefix(key, "-h ")
-					help, ok := data["help"].(map[string]any)
-					if !ok {
-						return apperrors.New(apperrors.E7003, "capabilities.help is required")
-					}
-					if _, ok := help[topic]; !ok {
-						return apperrors.New(apperrors.E7003, "capabilities help entry missing").WithDetails(map[string]any{"topic": topic})
-					}
-				}
-			}
-			if helpCommands != 1 {
-				return apperrors.New(apperrors.E7003, "capabilities.commands must contain exactly one -h <topic> key").WithDetails(map[string]any{"count": helpCommands})
-			}
-			for _, field := range []string{
-				"installation_id", "fingerprint", "version", "license",
-				"muxers", "demuxers", "devices", "decoders", "encoders", "filters",
-				"pixel_formats", "channel_layouts", "sample_formats", "help", "warnings",
-			} {
-				if _, ok := data[field]; !ok {
-					return apperrors.New(apperrors.E7003, "capabilities field missing").WithDetails(map[string]any{"field": field})
-				}
-			}
 		}
 	case model.ErrorSchema:
 		ok, okType := obj["ok"].(bool)
@@ -226,6 +203,54 @@ func validateDataFields(schema string, data map[string]any) error {
 		return validateRelease(raw)
 	case model.ArtifactSchema:
 		return validateArtifact(raw, data)
+	case model.CapabilitiesSchema:
+		return validateCapabilities(data)
+	}
+	return nil
+}
+
+func validateCapabilities(data map[string]any) error {
+	commands, ok := data["commands"].(map[string]any)
+	if !ok {
+		return apperrors.New(apperrors.E7003, "capabilities.commands is required")
+	}
+	expected := appcaps.CommandKeys("full")
+	if len(commands) != len(expected) {
+		return apperrors.New(apperrors.E7003, "capabilities.commands must contain 13 commands").WithDetails(map[string]any{"expected": len(expected), "actual": len(commands)})
+	}
+	for _, key := range expected {
+		if strings.HasPrefix(key, "-h ") {
+			continue
+		}
+		if _, ok := commands[key]; !ok {
+			return apperrors.New(apperrors.E7003, "capabilities command missing").WithDetails(map[string]any{"command": key})
+		}
+	}
+	helpCommands := 0
+	for key := range commands {
+		if strings.HasPrefix(key, "-h ") {
+			helpCommands++
+			topic := strings.TrimPrefix(key, "-h ")
+			help, ok := data["help"].(map[string]any)
+			if !ok {
+				return apperrors.New(apperrors.E7003, "capabilities.help is required")
+			}
+			if _, ok := help[topic]; !ok {
+				return apperrors.New(apperrors.E7003, "capabilities help entry missing").WithDetails(map[string]any{"topic": topic})
+			}
+		}
+	}
+	if helpCommands != 1 {
+		return apperrors.New(apperrors.E7003, "capabilities.commands must contain exactly one -h <topic> key").WithDetails(map[string]any{"count": helpCommands})
+	}
+	for _, field := range []string{
+		"installation_id", "fingerprint", "version", "license",
+		"muxers", "demuxers", "devices", "decoders", "encoders", "filters",
+		"pixel_formats", "channel_layouts", "sample_formats", "help", "warnings",
+	} {
+		if _, ok := data[field]; !ok {
+			return apperrors.New(apperrors.E7003, "capabilities field missing").WithDetails(map[string]any{"field": field})
+		}
 	}
 	return nil
 }
@@ -261,7 +286,7 @@ func validateRelease(raw []byte) error {
 	// carries an immutable release id plus the published time and asset hash.
 	if release.ReleaseTag == "latest" {
 		if release.ReleaseID == "" || release.PublishedAt == "" || !sha256Pattern.MatchString(release.AssetSHA256) {
-			return apperrors.New(apperrors.E7003, "release_tag=latest requires release_id, published_at and asset_sha256")
+			return apperrors.New(apperrors.E3010, "release_tag=latest requires release_id, published_at and asset_sha256")
 		}
 	}
 	if release.PinnedAt != "" {
@@ -277,6 +302,12 @@ func validateRelease(raw []byte) error {
 	}
 	if !sha256Pattern.MatchString(release.AssetSHA256) {
 		return apperrors.New(apperrors.E7003, "release asset_sha256 must be lowercase hex")
+	}
+	if !safeAssetName(release.AssetName) {
+		return apperrors.New(apperrors.E7003, "release asset_name must be a bare file name").WithDetails(map[string]any{"asset": release.AssetName})
+	}
+	if err := validateWarnings(release.Warnings); err != nil {
+		return err
 	}
 	switch release.Linkage {
 	case "static", "shared", "unknown":
@@ -302,6 +333,9 @@ func validateRelease(raw []byte) error {
 	if release.ChecksumsSHA256 != "" && !sha256Pattern.MatchString(release.ChecksumsSHA256) {
 		return apperrors.New(apperrors.E7003, "release checksums_sha256 must be lowercase hex")
 	}
+	if (release.ChecksumsURL == "") != (release.ChecksumsSHA256 == "") {
+		return apperrors.New(apperrors.E7003, "release checksums_url and checksums_sha256 must be paired")
+	}
 	return nil
 }
 
@@ -326,6 +360,18 @@ func validateArtifact(raw []byte, data map[string]any) error {
 	if !sha256Pattern.MatchString(artifact.AssetSHA256) {
 		return apperrors.New(apperrors.E7003, "artifact asset_sha256 must be lowercase hex")
 	}
+	if !artifactIDPattern.MatchString(artifact.ArtifactID) {
+		return apperrors.New(apperrors.E7003, "artifact_id must be art- plus 16 lowercase hex")
+	}
+	if !safeAssetName(artifact.AssetName) {
+		return apperrors.New(apperrors.E7003, "artifact asset_name must be a bare file name")
+	}
+	if !isAbsoluteLike(artifact.LocalPath) {
+		return apperrors.New(apperrors.E7003, "artifact local_path must be absolute")
+	}
+	if err := validateWarnings(artifact.Warnings); err != nil {
+		return err
+	}
 	if _, err := time.Parse(time.RFC3339, artifact.DownloadedAt); err != nil {
 		return apperrors.New(apperrors.E7003, "artifact downloaded_at must be RFC 3339").WithCause(err.Error())
 	}
@@ -340,7 +386,50 @@ func validateArtifact(raw []byte, data map[string]any) error {
 
 func isHTTPS(value string) bool {
 	parsed, err := url.Parse(value)
-	return err == nil && parsed.Scheme == "https" && parsed.Host != ""
+	if err != nil || parsed.Host == "" || parsed.User != nil {
+		return false
+	}
+	if parsed.Scheme == "https" {
+		return true
+	}
+	// Loopback http is permitted for tests and self-hosted mirrors, matching
+	// the download layer's URL policy.
+	return parsed.Scheme == "http" && isLoopback(parsed.Hostname())
+}
+
+func isLoopback(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
+func safeAssetName(name string) bool {
+	if name == "" || name == "." || name == ".." {
+		return false
+	}
+	if filepath.Base(name) != name || strings.ContainsAny(name, "/\\") {
+		return false
+	}
+	return true
+}
+
+func isAbsoluteLike(value string) bool {
+	if strings.HasPrefix(value, "\\\\") || strings.HasPrefix(value, "//") {
+		return true // UNC / Windows extended-length path
+	}
+	return strings.HasPrefix(value, "/") ||
+		(len(value) >= 3 && value[1] == ':' && (value[2] == '/' || value[2] == '\\'))
+}
+
+func validateWarnings(warnings []model.Warning) error {
+	for _, warning := range warnings {
+		if !apperrors.IsKnown(warning.Code) {
+			return apperrors.New(apperrors.E7003, "warning code is not registered").WithDetails(map[string]any{"code": warning.Code})
+		}
+	}
+	return nil
 }
 
 func ValidateErrorRegistryDocs(path string, isKnown func(string) bool) error {

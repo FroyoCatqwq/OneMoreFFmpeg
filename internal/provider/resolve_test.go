@@ -261,6 +261,16 @@ func TestNormalizeRequestDefaults(t *testing.T) {
 	require.Equal(t, "shared", request.Linkage)
 }
 
+func TestResolveRejectsUnsupportedVariant(t *testing.T) {
+	server := btbnServer(t, false, "")
+	_, err := resolver(t, server, nil).Resolve(context.Background(), provider.NewRegistry(), provider.Request{
+		Provider: provider.IDBnqdzjNonfree, Channel: "daily", Target: "win64", Variant: "gpl",
+	}, nil)
+	typed, ok := apperrors.As(err)
+	require.True(t, ok)
+	require.Equal(t, apperrors.E7001, typed.Code)
+}
+
 func TestNormalizeRequestRejectsLineChannelMismatch(t *testing.T) {
 	cases := []provider.Request{
 		{Channel: "stable", ReleaseLine: "master"},

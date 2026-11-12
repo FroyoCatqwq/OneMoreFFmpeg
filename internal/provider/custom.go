@@ -46,7 +46,7 @@ func LoadCustomFile(path string) ([]Custom, error) {
 		if errors.Is(err, os.ErrNotExist) {
 			return []Custom{}, nil
 		}
-		return nil, apperrors.New(apperrors.E7002, "providers file cannot be read").WithCause(err.Error())
+		return nil, apperrors.New(apperrors.E7007, "providers file cannot be read").WithCause(err.Error())
 	}
 	var file customFile
 	decoder := toml.NewDecoder(bytes.NewReader(raw))
@@ -105,14 +105,33 @@ func SaveCustomFile(path string, entries []Custom) error {
 		return apperrors.New(apperrors.E7007, "cannot close providers temp file").WithCause(err.Error())
 	}
 	_ = os.Chmod(tmpPath, 0o644)
-	if err := os.Rename(tmpPath, path); err != nil {
-		// Windows cannot replace an existing file with Rename.
-		_ = os.Remove(path)
-		if err := os.Rename(tmpPath, path); err != nil {
-			_ = os.Remove(tmpPath)
-			return apperrors.New(apperrors.E7007, "cannot commit providers file").WithCause(err.Error())
-		}
+	if err := commitProvidersFile(tmpPath, path); err != nil {
+		_ = os.Remove(tmpPath)
+		return apperrors.New(apperrors.E7007, "cannot commit providers file").WithCause(err.Error())
 	}
+	return nil
+}
+
+// commitProvidersFile preserves the previous registry until the new one is in
+// place. Windows needs a backup rename because Rename cannot replace a file.
+func commitProvidersFile(tmpPath, path string) error {
+	if err := os.Rename(tmpPath, path); err == nil {
+		return nil
+	}
+	backup := path + ".bak"
+	_ = os.Remove(backup)
+	if err := os.Rename(path, backup); err != nil {
+		if os.IsNotExist(err) {
+			return os.Rename(tmpPath, path)
+		}
+		return err
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		_ = os.Remove(path)
+		_ = os.Rename(backup, path)
+		return err
+	}
+	_ = os.Remove(backup)
 	return nil
 }
 

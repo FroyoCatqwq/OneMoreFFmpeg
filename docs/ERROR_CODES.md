@@ -135,9 +135,11 @@ OMF-Wxxxx  警告码（不导致命令失败）
 
 说明：
 
-- `release_tag=latest` 不是错误；只有缺 pin 字段时才是 `E3010`（D1）；
+- `release_tag=latest` 不是错误；只有缺 pin 字段时才是 `E3010`（D1），离线 release 文件、契约校验与 `resolve` 输出统一使用该码；
 - 具体 tag（含 `autobuild-*`）本身就是 pin，不需要 `release_id`；
-- nonfree provider 缺少 `--allow-nonfree` 属于用法错误，使用 `OMF-E7001`（退出 2），成功时输出 `OMF-W1006`；不复用 `E3004`。
+- nonfree provider 缺少 `--allow-nonfree` 属于用法错误，使用 `OMF-E7001`（退出 2），成功时输出 `OMF-W1006`；不复用 `E3004`；
+- `E3005` 只表示「没有任何可信校验来源」；checksums 网络失败 `E4001`、重定向超限 `E4003`、文件超限 `E4004`、摘要不符 `E4002`；
+- checksums/下载阶段的 context 取消统一 `E9004`（退出 130），超时用 `E3007` / `E4001`（退出 1）。
 
 ---
 
@@ -193,8 +195,8 @@ OMF-Wxxxx  警告码（不导致命令失败）
 | `OMF-E7003` | `SCHEMA_MISMATCH` | config/CLI JSON schema 不匹配 | 2 |
 | `OMF-E7004` | `UNKNOWN_KEY` | strict mode 拒绝未知字段 | 2 |
 | `OMF-E7005` | `INVALID_VALUE` | 类型/范围/枚举非法 | 2 |
-| `OMF-E7006` | `JSON_OUTPUT_FAILED` | stdout JSON 序列化失败 | 1 |
-| `OMF-E7007` | `CONFIG_PATH_INVALID` | config 路径不存在或不可读 | 2 |
+| `OMF-E7006` | `JSON_OUTPUT_FAILED` | stdout JSON 序列化或写入失败；失败后不再向 stdout 追加第二个对象，只写 stderr | 1 |
+| `OMF-E7007` | `CONFIG_PATH_INVALID` | config / release / providers 文件路径不存在或不可读；`ONE_MORE_FFMPEG_HOME` 非绝对路径 | 2 |
 
 ---
 

@@ -19,7 +19,7 @@ func detectCommand() *urfave.Command {
 			if err := rejectExtraArgs(cmd); err != nil {
 				return err
 			}
-			opts, err := parseDetectOptions(cmd)
+			opts, err := parseDetectOptions(cmd, true)
 			if err != nil {
 				return err
 			}

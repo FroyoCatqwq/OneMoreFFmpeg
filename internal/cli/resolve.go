@@ -83,9 +83,14 @@ func resolveRelease(ctx context.Context, cmd *urfave.Command) (model.Release, er
 		}
 	}
 
+	cfg := configFrom(ctx)
 	resolver := &provider.Resolver{Now: time.Now}
+	if timeout, err := time.ParseDuration(cfg.Network.Timeout); err == nil {
+		resolver.Timeout = timeout
+	}
+	resolver.MaxRedirects = cfg.Download.MaxRedirects
 	if builtin {
-		client, err := newGitHubClient(configFrom(ctx))
+		client, err := newGitHubClient(cfg)
 		if err != nil {
 			return model.Release{}, err
 		}
@@ -100,9 +105,11 @@ func newGitHubClient(cfg config.Config) (*github.Client, error) {
 		return nil, err
 	}
 	client.MaxAttempts = cfg.Network.MaxAttempts
+	client.MaxRedirects = cfg.Download.MaxRedirects
 	if timeout, err := time.ParseDuration(cfg.Network.Timeout); err == nil {
 		client.Timeout = timeout
 	}
+	client.RebuildHTTPClient()
 	return client, nil
 }
 

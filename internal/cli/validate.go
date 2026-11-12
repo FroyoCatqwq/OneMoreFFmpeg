@@ -26,7 +26,7 @@ func validateCommand() *urfave.Command {
 			if cmd.Bool("no-validate") {
 				return apperrors.New(apperrors.E7001, "validate cannot skip validation; remove --no-validate")
 			}
-			opts, err := parseDetectOptions(cmd)
+			opts, err := parseDetectOptions(cmd, false)
 			if err != nil {
 				return err
 			}
@@ -38,7 +38,7 @@ func validateCommand() *urfave.Command {
 			if err := rejectDirDiscoveryConflict(cmd, dir); err != nil {
 				return err
 			}
-			if id != "" && (cmd.Bool("scan") || cmd.Bool("recursive") || cmd.String("roots") != "") {
+			if id != "" && (cmd.Bool("scan") || cmd.Bool("recursive") || len(parseRoots(cmd.String("roots"))) > 0) {
 				return apperrors.New(apperrors.E7001, "--installation-id cannot be combined with --scan, --recursive or --roots")
 			}
 

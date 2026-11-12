@@ -17,7 +17,9 @@ func IsNonfreeVariant(variant string) bool {
 // consent (--allow-nonfree) and always emit OMF-W1006. Free variants return no
 // warnings and no error.
 func CheckNonfreeConsent(summary model.ProviderSummary, variant string, allowNonfree bool) ([]model.Warning, error) {
-	if !IsNonfreeVariant(variant) {
+	// A nonfree-only provider requires consent regardless of the requested
+	// variant; otherwise `--variant gpl` could silently bypass the policy.
+	if summary.ID != IDBnqdzjNonfree && !IsNonfreeVariant(variant) {
 		return nil, nil
 	}
 	details := map[string]any{

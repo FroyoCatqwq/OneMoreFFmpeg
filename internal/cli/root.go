@@ -164,7 +164,11 @@ func loadConfig(cmd *urfave.Command) (config.Config, string, error) {
 	}
 	path, err := paths.ConfigFile()
 	if err != nil {
-		return config.Default(), "", nil
+		typed, ok := apperrors.As(err)
+		if ok && typed.Code == apperrors.E9003 {
+			return config.Default(), "", nil
+		}
+		return config.Config{}, "", err
 	}
 	cfg, err := config.LoadOptional(path)
 	if err != nil {

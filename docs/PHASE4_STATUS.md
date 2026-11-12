@@ -90,9 +90,12 @@ GOOS=windows / linux       go build 通过
 4. stable 依赖上游 `latest` release 内的 `nX.Y` 资产；若上游改结构，返回 `E3003` 而不是猜测。
 5. Windows Job Object 按 D7 推迟到 Phase 5；当前 `taskkill` + `Kill` 为尽力终止。
 6. 未实现 `--select` / provider 优先级；`resolve` 每次显式指定 provider。
-7. `provider add` 的读-改-写没有跨进程锁；并发添加同一文件时后写覆盖先写（单进程 CLI 场景不受影响）。
-8. `download` 复用已有文件时会完整重算 SHA-256；195 MB 资产约需一次全量读取。
+7. `provider add` 的读-改-写没有跨进程锁；并发添加同一文件时后写覆盖先写（单进程 CLI 场景不受影响）。文件提交已改为“备份旧文件 + rename + 失败回滚”，不会再删除唯一的好副本。
+8. `download` 复用已有文件时会完整重算 SHA-256，并重新拉取 `checksums_url`（若存在）；195 MB 资产约需一次全量读取。
 9. daily 只尝试最新 `autobuild-*`；若该 release 缺目标资产，不会回退到上一个 autobuild（返回 `E3003`）。
 10. GitHub asset digest 存在但 `checksums.sha256` 拉取失败时，resolve 降级为仅 digest，并留空 `checksums_url` / `checksums_sha256`；下载阶段因此不再做第二源校验。
 11. GitHub release 列表最多读取 100 条（一个请求），未实现分页回溯。
 12. `Retry-After` 超过 60s 时直接返回 `E3006`，不阻塞等待。
+13. 运行时 stdout 数据按 `onemoreffmpeg.*/v1` 做字段级契约校验；`--release` 离线输入使用同一套规则，非法对象返回 `E7003`。
+14. `[network] timeout` 与 `[download] max_redirects` 已贯通到 GitHub API 与 checksums 请求；`max_redirects=0` 表示禁止重定向。
+15. 运行时 stdout 契约校验同样覆盖 capabilities 缓存命中路径；非法 data root 覆盖不再被静默忽略。

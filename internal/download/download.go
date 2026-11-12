@@ -63,7 +63,7 @@ func New(options Options) (*Downloader, error) {
 	if options.MaxBytes <= 0 {
 		options.MaxBytes = defaultMaxBytes
 	}
-	if options.MaxRedirects <= 0 {
+	if options.MaxRedirects < 0 {
 		options.MaxRedirects = defaultMaxRedirects
 	}
 	if options.Timeout <= 0 {
@@ -82,7 +82,7 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 		return model.Artifact{}, apperrors.New(apperrors.E4002, "asset sha256 is invalid").WithDetails(map[string]any{"asset_sha256": release.AssetSHA256})
 	}
 	name := strings.TrimSpace(release.AssetName)
-	if name == "" || filepath.Base(name) != name || name == "." || name == ".." {
+	if name == "" || name == "." || name == ".." || filepath.Base(name) != name || strings.ContainsAny(name, "/\\") {
 		return model.Artifact{}, apperrors.New(apperrors.E4005, "asset name is unsafe").WithDetails(map[string]any{"asset": release.AssetName})
 	}
 	if !isAllowedURL(release.AssetURL) {
@@ -95,22 +95,34 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 	}
 	finalPath := filepath.Join(targetDir, name)
 
-	if matches, err := fileMatches(ctx, finalPath, sha); err != nil {
+	// Verify the independent checksums source before touching the asset. This
+	// makes checksums failures cheap, keeps reuse honest, and avoids deleting a
+	// fully verified 500 MiB asset after the fact.
+	if err := d.verifyChecksumsFile(ctx, release); err != nil {
+		_ = os.Remove(targetDir)
 		return model.Artifact{}, err
-	} else if matches {
-		return d.record(targetDir, release, finalPath, sha)
 	}
 
-	if err := d.download(ctx, release.AssetURL, finalPath, sha); err != nil {
-		_ = os.Remove(targetDir)
+	downloaded := false
+	if matches, err := fileMatches(ctx, finalPath, sha); err != nil {
+		return model.Artifact{}, err
+	} else if !matches {
+		if err := d.download(ctx, release.AssetURL, finalPath, sha); err != nil {
+			_ = os.Remove(targetDir)
+			return model.Artifact{}, err
+		}
+		downloaded = true
+	}
+
+	artifact, err := d.record(targetDir, release, finalPath, sha)
+	if err != nil {
+		if downloaded {
+			_ = os.Remove(finalPath)
+			_ = os.Remove(targetDir)
+		}
 		return model.Artifact{}, err
 	}
-	if err := d.verifyChecksumsFile(ctx, release); err != nil {
-		_ = os.Remove(finalPath)
-		_ = os.Remove(targetDir)
-		return model.Artifact{}, err
-	}
-	return d.record(targetDir, release, finalPath, sha)
+	return artifact, nil
 }
 
 func (d *Downloader) record(targetDir string, release model.Release, finalPath, sha string) (model.Artifact, error) {
@@ -165,7 +177,7 @@ func (d *Downloader) download(ctx context.Context, rawURL, finalPath, expected s
 	for {
 		if err := ctx.Err(); err != nil {
 			cleanup()
-			return apperrors.New(apperrors.E4006, "download canceled").WithCause(err.Error())
+			return contextError(err)
 		}
 		read, readErr := response.Body.Read(buffer)
 		if read > 0 {
@@ -185,8 +197,8 @@ func (d *Downloader) download(ctx context.Context, rawURL, finalPath, expected s
 				break
 			}
 			cleanup()
-			if ctx.Err() != nil {
-				return apperrors.New(apperrors.E4006, "download canceled").WithCause(ctx.Err().Error())
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return contextError(ctxErr)
 			}
 			return apperrors.New(apperrors.E4001, "download stream failed").WithCause(readErr.Error())
 		}
@@ -205,12 +217,9 @@ func (d *Downloader) download(ctx context.Context, rawURL, finalPath, expected s
 		return apperrors.New(apperrors.E4005, "cannot close temporary file").WithCause(err.Error())
 	}
 	_ = os.Chmod(tmpPath, 0o644)
-	if err := os.Rename(tmpPath, finalPath); err != nil {
-		_ = os.Remove(finalPath)
-		if err := os.Rename(tmpPath, finalPath); err != nil {
-			_ = os.Remove(tmpPath)
-			return apperrors.New(apperrors.E4005, "cannot commit downloaded file").WithCause(err.Error())
-		}
+	if err := commitFile(tmpPath, finalPath); err != nil {
+		_ = os.Remove(tmpPath)
+		return apperrors.New(apperrors.E4005, "cannot commit downloaded file").WithCause(err.Error())
 	}
 	return nil
 }
@@ -273,13 +282,13 @@ func (d *Downloader) get(ctx context.Context, rawURL string) (*http.Response, er
 		client = &http.Client{
 			Timeout: d.options.Timeout,
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				if len(via) > maxRedirects {
-					return apperrors.New(apperrors.E4003, "redirect limit exceeded")
-				}
 				// Never downgrade to plain http, even if the original URL was
 				// https; loopback is the only exception (tests/mirrors).
 				if !isAllowedURL(req.URL.String()) {
 					return apperrors.New(apperrors.E4001, "redirect target must be https").WithDetails(map[string]any{"url": req.URL.String()})
+				}
+				if len(via) > maxRedirects {
+					return apperrors.New(apperrors.E4003, "redirect limit exceeded")
 				}
 				return nil
 			},
@@ -322,13 +331,33 @@ func writeArtifact(path string, artifact model.Artifact) error {
 		return apperrors.New(apperrors.E4005, "cannot close artifact temp file").WithCause(err.Error())
 	}
 	_ = os.Chmod(tmpPath, 0o644)
-	if err := os.Rename(tmpPath, path); err != nil {
-		_ = os.Remove(path)
-		if err := os.Rename(tmpPath, path); err != nil {
-			_ = os.Remove(tmpPath)
-			return apperrors.New(apperrors.E4005, "cannot commit artifact").WithCause(err.Error())
-		}
+	if err := commitFile(tmpPath, path); err != nil {
+		_ = os.Remove(tmpPath)
+		return apperrors.New(apperrors.E4005, "cannot commit artifact").WithCause(err.Error())
 	}
+	return nil
+}
+
+// commitFile prefers an atomic rename. Windows cannot replace an existing
+// file, so it renames the old target aside first and restores it on failure.
+func commitFile(tmpPath, target string) error {
+	if err := os.Rename(tmpPath, target); err == nil {
+		return nil
+	}
+	backup := target + ".bak"
+	_ = os.Remove(backup)
+	if err := os.Rename(target, backup); err != nil {
+		if os.IsNotExist(err) {
+			return os.Rename(tmpPath, target)
+		}
+		return err
+	}
+	if err := os.Rename(tmpPath, target); err != nil {
+		_ = os.Remove(target)
+		_ = os.Rename(backup, target)
+		return err
+	}
+	_ = os.Remove(backup)
 	return nil
 }
 
