@@ -130,7 +130,8 @@
       "full": {
         "topic": "full",
         "raw": "Help: full",
-        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        "stdout_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "found": true
       }
     },
     "warnings": []

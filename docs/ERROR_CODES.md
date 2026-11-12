@@ -44,9 +44,11 @@
 | CLI 退出码 | 含义 | 典型 code |
 |---:|---|---|
 | 0 | 成功 | 无 |
-| 1 | 运行期错误 | E1xxx–E6xxx、`E7006`、E9xxx |
+| 1 | 运行期错误 | 除下表列出的用法/取消码之外的 E1xxx–E6xxx、`E7006`、E9xxx |
 | 2 | 用法/配置/契约错误 | `E7001–E7005`、`E7007`、`E2005`、`E3001`、`E3004`、`E3008`、`E3009`、`E6003`、`E6004` |
 | 130 | 用户取消 | `OMF-E1011`、`OMF-E4006`、`OMF-E9004` |
+
+> 退出码由 `internal/errors.exitFor` 唯一决定；上表两行不重叠：凡是退出 2 的 E2/E3/E6 码都不再计入“运行期错误”。
 
 ---
 
@@ -74,7 +76,7 @@ OMF-Wxxxx  警告码（不导致命令失败）
 | `OMF-E1001` | `DIR_MISSING` | 显式目录不存在 | 1 |
 | `OMF-E1002` | `BINARY_MISSING` | ffmpeg/ffprobe/ffplay 缺失 | 1 |
 | `OMF-E1003` | `VERSION_MISMATCH` | 三件套版本核心不一致 | 1 |
-| `OMF-E1004` | `INSTALLATION_UNUSABLE` | 启动失败/权限错误/损坏 | 1 |
+| `OMF-E1004` | `INSTALLATION_UNUSABLE` | 安装不可用（缺二进制或校验失败） | 1 |
 | `OMF-E1005` | `PERMISSION_DENIED` | 无执行或读取权限 | 1 |
 | `OMF-E1006` | `PROCESS_TIMEOUT` | FFmpeg 命令超时 | 1 |
 | `OMF-E1007` | `PROCESS_FAILED` | FFmpeg 非零退出 | 1 |
@@ -82,8 +84,17 @@ OMF-Wxxxx  警告码（不导致命令失败）
 | `OMF-E1009` | `SCAN_ROOT_INVALID` | 扫描根无效或不可读 | 1 |
 | `OMF-E1010` | `SYMLINK_LOOP` | 符号链接循环 | 1 |
 | `OMF-E1011` | `CANCELED` | 用户取消 | 130 |
+| `OMF-E1012` | `EXEC_FAILED` | 进程无法启动（可执行文件损坏/格式错误） | 1 |
 
 > `ffexec` 对非零退出返回 `Result.ExitCode`，不直接返回 error；由能力探测/运行层按策略映射成 `OMF-E1007`。
+> 超时、取消、I/O 未收敛或启动失败时 `Result.ExitCode = -1`（`ffexec.ExitCodeNotStarted`），不会伪装成 0。
+
+保留说明：
+
+- `E1003`（三件套版本不一致）目前不单独返回：版本差异写入 `checks[]` 并由 `status=degraded` 表达，Phase 5 安装校验可复用；
+- `E1004`（安装不可用）目前只在“显式目录无有效安装”时由 `validate --dir` / `capabilities --dir` 使用；
+- `E1010`（symlink loop）暂不可达：`WalkDir` 不跟随符号链接，循环不会发生；
+- `E1011`（用户取消）保留给未来交互式命令；当前 context 取消统一 `E9004`，下载取消使用 `E4006`。
 
 ---
 
@@ -101,7 +112,9 @@ OMF-Wxxxx  警告码（不导致命令失败）
 说明：
 
 - 单个能力命令失败通常应记录 warning，不一定导致整个 `capabilities` 命令失败；
-- 只有所有能力命令都失败或缓存/输出不可用时才返回整体错误。
+- 只有所有能力命令都失败或缓存/输出不可用时才返回整体错误；
+- 当前实现：单个命令失败 → `OMF-W1002`；13 个命令全部失败 → `OMF-E2001` 且不写缓存；`-h <topic>` 未命中 → 该命令 `ok=false` + `OMF-W1002`，整体仍成功；
+- `OMF-E2002` / `OMF-E2003` / `OMF-E2004` / `OMF-E2006` 为保留码：当前解析器对未知行降级为 `OMF-W1002`，缓存读取失败降级为 `OMF-W1003`，缓存写入失败降级为 `OMF-W1007`，不单独使用这些码。
 
 ---
 
@@ -118,7 +131,13 @@ OMF-Wxxxx  警告码（不导致命令失败）
 | `OMF-E3007` | `GITHUB_API_FAILED` | GitHub API 其他失败 | 1 |
 | `OMF-E3008` | `CUSTOM_URL_INVALID` | 自定义 URL 非法或非 https | 2 |
 | `OMF-E3009` | `CUSTOM_SHA256_REQUIRED` | 自定义 direct asset 缺少 SHA-256 | 2 |
-| `OMF-E3010` | `RELEASE_NOT_PINNED` | 解析结果仍是 `latest` 而非具体 tag | 1 |
+| `OMF-E3010` | `RELEASE_NOT_PINNED` | `release_tag=latest` 且缺少 `release_id` / `published_at` / `asset_sha256` | 1 |
+
+说明：
+
+- `release_tag=latest` 不是错误；只有缺 pin 字段时才是 `E3010`（D1）；
+- 具体 tag（含 `autobuild-*`）本身就是 pin，不需要 `release_id`；
+- nonfree provider 缺少 `--allow-nonfree` 属于用法错误，使用 `OMF-E7001`（退出 2），成功时输出 `OMF-W1006`；不复用 `E3004`。
 
 ---
 
@@ -196,10 +215,11 @@ OMF-Wxxxx  警告码（不导致命令失败）
 |---|---|---|
 | `OMF-W1001` | `FFPLAY_MISSING` | ffplay 缺失，但不影响 ffmpeg/ffprobe |
 | `OMF-W1002` | `CAPABILITY_PARSE_WARNING` | 部分输出行无法解析 |
-| `OMF-W1003` | `CACHE_STALE` | 缓存过期或损坏，已重新探测 |
+| `OMF-W1003` | `CACHE_STALE` | 缓存过期、损坏或不可读，已重新探测 |
 | `OMF-W1004` | `NETWORK_DRIVE_SKIPPED` | 网络盘/可移动盘默认跳过 |
 | `OMF-W1005` | `ENV_NOT_EFFECTIVE_CURRENT_PROCESS` | 当前进程无法立即看到新 PATH |
 | `OMF-W1006` | `NONFREE_BINARY` | 使用 nonfree 资产，需合规提示 |
+| `OMF-W1007` | `CACHE_WRITE_FAILED` | 能力缓存写入失败，本次结果仍返回 |
 
 警告码不改变退出码；写入 `warnings[]`。
 

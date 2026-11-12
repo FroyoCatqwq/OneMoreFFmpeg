@@ -5,56 +5,70 @@
 
 ---
 
-## 1. 总体结构
+## 1. 总体结构（当前实现）
+
+> 早期设计中的 `internal/app`、`internal/core`、`internal/platform` 三层没有落地；实现采用扁平包结构，命令只依赖具体能力包。若未来需要分层，必须同时更新本节，不允许文档先于代码。
 
 ```text
-可执行 CLI：one-more-ffmpeg
+cmd/one-more-ffmpeg       main、信号、buildinfo 注入
         │
         ▼
-internal/cli               命令解析、参数、help、version
+internal/cli              命令解析、全局 flags、JSON/人类输出、退出码
+   ├─ provider            provider list（离线）
+   ├─ detect/validate     调用 internal/detect
+   └─ capabilities        调用 internal/capabilities
         │
-        ▼
-internal/app               用例编排
-   ├─ detect               系统发现
-   ├─ validate             可用性校验
-   ├─ capabilities         13 项能力命令
-   ├─ resolve              provider release 解析
-   ├─ download             下载与校验
-   ├─ install              解压、安装、current 切换
-   ├─ env                  PATH / 环境变量 / 回滚
-   └─ doctor               健康检查
+        ├──────────────┬───────────────┬──────────────┬─────────────┐
+        ▼              ▼               ▼              ▼             ▼
+internal/detect   internal/capabilities  internal/provider  internal/config  internal/logging
+        │              │               │                    │
+        ▼              ▼               ▼                    ▼
+internal/ffexec   internal/paths   internal/provider/github  internal/contracts
+        │              │               │
+        ▼              ▼               ▼
+internal/model    internal/errors  internal/errors
         │
-        ▼
-internal/core
-   ├─ model                内部数据结构
-   ├─ ffexec               FFmpeg 进程执行器
-   ├─ parser               FFmpeg 输出解析
-   ├─ checksum             SHA-256 / checksums.sha256
-   ├─ archive              zip / tar.xz 安全解压
-   ├─ journal              安装/环境变更事务
-   ├─ cache                能力缓存
-   ├─ config               TOML 1.1
-   └─ errors               稳定错误码
-        │
-        ▼
-internal/platform
-   ├─ windows              PATH 注册表、文件系统细节
-   └─ linux                shim、XDG 路径、文件系统细节
+        ├─ internal/buildinfo
+        └─ internal/checksum
 ```
 
-依赖方向：
+包职责：
+
+| 包 | 职责 |
+|---|---|
+| `internal/ffexec` | 进程执行、超时/取消、输出上限、进程树终止 |
+| `internal/detect` | 只读发现、候选去重、三件套校验、fingerprint/ID |
+| `internal/capabilities` | 13 项能力命令、解析、缓存 |
+| `internal/paths` | data root / cache / downloads / config 路径 |
+| `internal/checksum` | 流式 SHA-256、`checksums.sha256` 解析 |
+| `internal/provider` | provider 注册表与元数据 |
+| `internal/provider/github` | GitHub Releases API 客户端（重试/限流/脱敏） |
+| `internal/contracts` | JSON 示例与错误码注册表校验 |
+| `internal/config` | 严格 TOML 1.1 配置 |
+| `internal/model` | JSON 契约结构体 |
+| `internal/errors` | 稳定错误码注册表 |
+| `internal/logging` | slog / tint、颜色能力 |
+| `internal/buildinfo` | 版本/提交/构建时间 |
+| `internal/testutil` | 测试用 fake FFmpeg（仅测试） |
+
+依赖方向（实际）：
 
 ```text
-cmd → internal/cli → internal/app → internal/core
-                                 ↘ internal/platform
+cmd → cli → {detect, capabilities, provider, config, logging, contracts}
+detect → {ffexec, model, errors}
+capabilities → {ffexec, model, paths, errors}
+provider → {model, errors}
+provider/github → errors
+checksum → errors
+paths → errors
 ```
 
 禁止：
 
-- `internal/core` 依赖 CLI；
-- `internal/platform` 依赖 provider；
-- provider 直接写 PATH；
+- 能力包反向依赖 CLI；
+- provider 直接写 PATH 或安装目录；
 - capability parser 直接写安装目录；
+- provider/github 依赖 CLI 或 logging（token 不得进日志）；
 - 暴露 `internal/*` 作为公共 API；
 - 当前阶段引入 `pkg/onemore` 公共 SDK；
 - 当前阶段引入插件协议层。
@@ -107,64 +121,75 @@ stderr：日志 / 进度 / 错误
 
 ---
 
-## 4. 核心数据模型（内部概念）
+## 4. 核心数据模型（与实现一致）
+
+字段名即 JSON 契约名；未标注 `omitempty` 的字段总是输出。
 
 ```go
 type Installation struct {
-    ID             string
-    RootDir        string
-    FFmpegPath     string
-    FFprobePath    string
-    FFplayPath     string
-    Source         string
-    ProviderHint   string
-    Version        string
-    BinarySHA256   map[string]string
-    Status         string
-    Warnings       []string
-    Fingerprint    string
+    ID                  string            `json:"id"`
+    RootDir             string            `json:"root_dir"`
+    FFmpeg              string            `json:"ffmpeg,omitempty"`
+    FFprobe             string            `json:"ffprobe,omitempty"`
+    FFplay              string            `json:"ffplay,omitempty"`
+    Sources             []string          `json:"sources"`
+    Status              string            `json:"status"`
+    Version             string            `json:"version,omitempty"`
+    Fingerprint         string            `json:"fingerprint"`
+    VersionStdoutSHA256 string            `json:"version_stdout_sha256,omitempty"`
+    LicenseStdoutSHA256 string            `json:"license_stdout_sha256,omitempty"`
+    BinarySHA           map[string]string `json:"binary_sha256,omitempty"`
+    Warnings            []Warning         `json:"warnings"`
 }
 ```
 
 ```go
 type CapabilitySet struct {
-    Schema         string
-    InstallationID string
-    Fingerprint    string
-    Commands       map[string]CommandResult
-    Decoders       []CapabilityEntry
-    Encoders       []CapabilityEntry
-    Muxers         []CapabilityEntry
-    Demuxers       []CapabilityEntry
-    Devices        []CapabilityEntry
-    Filters        []CapabilityEntry
-    PixelFormats   []string
-    ChannelLayouts []string
-    SampleFormats  []string
-    License        LicenseInfo
-    Version        VersionInfo
-    CreatedAt      string
+    Schema                  string
+    InstallationID          string
+    InstallationFingerprint string
+    Fingerprint             string
+    CreatedAt               string
+    CacheHit                bool
+    Commands                map[string]CapabilityCommand
+    Version                 VersionInfo
+    License                 LicenseInfo
+    Muxers                  []CapabilityEntry
+    Demuxers                []CapabilityEntry
+    Devices                 []CapabilityEntry
+    Decoders                []CapabilityEntry
+    Encoders                []CapabilityEntry
+    Filters                 []CapabilityEntry
+    PixelFormats            []CapabilityEntry
+    ChannelLayouts          []CapabilityEntry
+    SampleFormats           []CapabilityEntry
+    Help                    map[string]HelpInfo // 含 found
+    Warnings                []Warning
 }
 ```
 
 ```go
 type Release struct {
-    Provider      string
-    Channel       string
-    ReleaseTag    string
-    PublishedAt   string
-    AssetName     string
-    AssetURL      string
-    AssetSHA256   string
-    ChecksumsURL  string
-    ChecksumsSHA  string
-    Variant       string
-    Linkage       string
-    Target        string
+    Schema          string `json:"schema"`
+    Provider        string `json:"provider"`
+    Repository      string `json:"repository"`
+    Channel         string `json:"channel"`
+    ReleaseTag      string `json:"release_tag"`
+    PublishedAt     string `json:"published_at"`
+    AssetName       string `json:"asset_name"`
+    AssetURL        string `json:"asset_url"`
+    AssetSHA256     string `json:"asset_sha256"`
+    ChecksumsURL    string `json:"checksums_url,omitempty"`
+    ChecksumsSHA256 string `json:"checksums_sha256,omitempty"`
+    Variant         string `json:"variant"`
+    Linkage         string `json:"linkage"`
+    Target          string `json:"target"`
+    LicenseHint     string `json:"license_hint"`
+    Redistributable bool   `json:"redistributable"`
 }
 ```
 
-这些是内部概念结构。对外 JSON 字段名以 CLI 输出 schema 为准，Go 结构体不对外承诺。
+Go 结构体仍不是公共 API；对外只承诺 CLI JSON，字段改动必须先改 `CLI_SCHEMA.md` 与示例。
 
 ---
 
@@ -189,7 +214,7 @@ TOML 解析要求：
 
 ## 6. 进程执行模型
 
-所有 FFmpeg 调用通过 `internal/core/ffexec`：
+所有 FFmpeg 调用通过 `internal/ffexec`：
 
 - `exec.CommandContext`；
 - 不使用 shell；
@@ -198,9 +223,16 @@ TOML 解析要求：
 - 输出上限；
 - 独立 timeout；
 - 取消时杀进程；
-- Windows 预留 Job Object；
-- Linux 使用 process group；
+- Windows：`taskkill /T /F`（3s 超时）+ `Process.Kill` 兜底；Job Object 推迟到 Phase 5（D7，见下）；
+- Linux：`Setpgid` + 进程组 `SIGKILL`；
 - 记录 exit code、耗时、stdout hash、stderr 摘要。
+
+Windows Job Object（D7）：
+
+- FFmpeg 不派生子进程，现有 `taskkill` + `Kill` 已能覆盖超时/取消场景；
+- 引入 Job Object 需要在启动前后分配进程句柄，且 `CREATE_SUSPENDED` 版本要自定义线程恢复，成本高于收益；
+- 结论：Phase 5 写入类命令（install / env）前再实现，届时必须补 Windows 专测；
+- 在此之前，`ffexec` 的取消语义视为“尽力终止进程树”，文档与 help 不得宣称强保证。
 
 能力命令和校验命令都不得绕过此执行器。
 
@@ -263,7 +295,8 @@ journal rollback → remove temp → restore current/env → report
 - 下载单连接 + 重试；
 - 安装与 env 写入加进程内互斥锁；
 - 同一 data root 跨进程用文件锁；
-- 能力命令可并行，但默认串行，避免 FFmpeg 进程风暴。
+- 能力命令有界并行（默认最多 4 个 FFmpeg 进程，`Collector.MaxParallel`），避免进程风暴；每个命令仍使用独立 timeout/context；
+- 缓存写入使用唯一临时文件 + 原子 rename；取消或全部失败时不写缓存。
 
 ---
 

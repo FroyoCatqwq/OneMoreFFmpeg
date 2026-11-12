@@ -7,3 +7,19 @@ level = "info"
 json = false
 # auto | always | never
 color = "auto"
+
+[network]
+# per-request timeout for GitHub API and asset requests
+timeout = "30s"
+# total attempts per request, including the first one (1..10)
+max_attempts = 3
+# GitHub REST base URL; must be https
+github_api = "https://api.github.com"
+
+[download]
+# hard cap for one downloaded asset in bytes
+max_bytes = 536870912
+# redirects followed per request (0..20)
+max_redirects = 5
+# empty: <data-root>/downloads; otherwise an absolute path
+dir = ""

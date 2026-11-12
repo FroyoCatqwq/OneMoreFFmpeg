@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	urfave "github.com/urfave/cli/v3"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/config"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/logging"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/paths"
 )
 
 type RunOptions struct {
@@ -75,9 +77,10 @@ func New(opts RunOptions) (*urfave.Command, error) {
 			detectCommand(),
 			validateCommand(),
 			capabilitiesCommand(),
+			providerCommand(),
 		},
 		Before: func(ctx context.Context, cmd *urfave.Command) (context.Context, error) {
-			cfg, err := config.Load(cmd.String("config"))
+			cfg, configPath, err := loadConfig(cmd)
 			if err != nil {
 				return ctx, err
 			}
@@ -92,13 +95,16 @@ func New(opts RunOptions) (*urfave.Command, error) {
 				return ctx, err
 			}
 			logger.Debug("configuration loaded",
-				"config", cmd.String("config"),
+				"config", configPath,
 				"log_level", cfg.Log.Level,
 				"log_json", cfg.Log.JSON,
 			)
 			return logging.WithLogger(ctx, logger), nil
 		},
 		Action: func(ctx context.Context, cmd *urfave.Command) error {
+			if cmd.NArg() > 0 {
+				return apperrors.New(apperrors.E7001, "unknown command").WithDetails(map[string]any{"args": cmd.Args().Slice()})
+			}
 			return urfave.ShowRootCommandHelp(cmd)
 		},
 		OnUsageError: func(ctx context.Context, cmd *urfave.Command, err error, isSubcommand bool) error {
@@ -108,11 +114,45 @@ func New(opts RunOptions) (*urfave.Command, error) {
 			// Errors are handled by Run so tests and hosts never call os.Exit.
 		},
 	}
+	var configure func(*urfave.Command)
+	configure = func(command *urfave.Command) {
+		command.Writer = root.Writer
+		command.ErrWriter = root.ErrWriter
+		command.OnUsageError = root.OnUsageError
+		command.ExitErrHandler = root.ExitErrHandler
+		for _, sub := range command.Commands {
+			configure(sub)
+		}
+	}
 	for _, sub := range root.Commands {
-		sub.Writer = root.Writer
-		sub.ErrWriter = root.ErrWriter
-		sub.OnUsageError = root.OnUsageError
-		sub.ExitErrHandler = root.ExitErrHandler
+		configure(sub)
 	}
 	return root, nil
+}
+
+// loadConfig resolves the config source in this order:
+//  1. an explicit --config path (must be readable);
+//  2. <data-root>/config.toml when it exists (missing file is not an error);
+//  3. built-in defaults.
+//
+// An unresolvable data root is ignored here: read-only commands such as
+// `capabilities --no-cache` must work even without HOME/LOCALAPPDATA.
+func loadConfig(cmd *urfave.Command) (config.Config, string, error) {
+	if cmd.IsSet("config") {
+		path := strings.TrimSpace(cmd.String("config"))
+		if path == "" {
+			return config.Default(), "", nil
+		}
+		cfg, err := config.Load(path)
+		return cfg, path, err
+	}
+	path, err := paths.ConfigFile()
+	if err != nil {
+		return config.Default(), "", nil
+	}
+	cfg, err := config.LoadOptional(path)
+	if err != nil {
+		return config.Config{}, path, err
+	}
+	return cfg, path, nil
 }

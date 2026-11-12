@@ -1,6 +1,7 @@
 package detect
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
@@ -104,22 +105,54 @@ func isExecutable(path string, fi os.FileInfo) bool {
 	}
 	if runtime.GOOS == "windows" {
 		ext := strings.ToLower(filepath.Ext(path))
-		return ext == ".exe" || ext == ".com" || ext == ""
+		// Extensionless files on Windows are almost never PE binaries; a
+		// stray file named "ffmpeg" must not shadow a real ffmpeg.exe.
+		return ext == ".exe" || ext == ".com"
 	}
 	return fi.Mode().Perm()&0o111 != 0
 }
 
-func hashFile(path string) (string, error) {
+// hashFile hashes a binary and stays responsive to cancellation so a stale
+// context cannot leave detection blocked on a large or network-bound file.
+func hashFile(ctx context.Context, path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
 	defer f.Close()
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return "", err
+	hasher := sha256.New()
+	buffer := make([]byte, 256*1024)
+	for {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+		n, readErr := f.Read(buffer)
+		if n > 0 {
+			if _, err := hasher.Write(buffer[:n]); err != nil {
+				return "", err
+			}
+		}
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			return "", readErr
+		}
 	}
-	return hex.EncodeToString(h.Sum(nil)), nil
+	return hex.EncodeToString(hasher.Sum(nil)), nil
+}
+
+// pathError maps filesystem failures to stable codes instead of reporting
+// every unreadable path as "does not exist".
+func pathError(err error) (apperrors.Code, string) {
+	switch {
+	case os.IsNotExist(err):
+		return apperrors.E1001, "source path does not exist"
+	case os.IsPermission(err):
+		return apperrors.E1005, "source path is not readable"
+	default:
+		return apperrors.E1009, "source path is invalid or unreadable"
+	}
 }
 
 func sha256Hex(data []byte) string {

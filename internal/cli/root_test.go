@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -13,8 +14,22 @@ import (
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/buildinfo"
 	appcli "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/cli"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/paths"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/testutil"
 )
+
+// TestMain isolates every CLI test from a developer's real data root so the
+// default config lookup stays deterministic.
+func TestMain(m *testing.M) {
+	dir, err := os.MkdirTemp("", "omf-cli-test-")
+	if err != nil {
+		panic(err)
+	}
+	_ = os.Setenv(paths.HomeEnv, dir)
+	code := m.Run()
+	_ = os.RemoveAll(dir)
+	os.Exit(code)
+}
 
 func testOptions(args ...string) (appcli.RunOptions, *bytes.Buffer, *bytes.Buffer) {
 	stdout := &bytes.Buffer{}
@@ -109,6 +124,161 @@ func TestUsageErrorJSON(t *testing.T) {
 	require.Equal(t, "OMF-E7001", obj.Code)
 }
 
+func TestUnknownCommandIsUsageError(t *testing.T) {
+	opts, stdout, _ := testOptions("bogus", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 2, code)
+
+	var obj model.ErrorObject
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
+	require.Equal(t, "OMF-E7001", obj.Code)
+}
+
+func TestExtraPositionalArgumentsRejected(t *testing.T) {
+	for _, args := range [][]string{
+		{"version", "extra", "--json"},
+		{"detect", "--json", "--no-path", "--no-env", "--no-common", "--no-validate", "oops"},
+		{"capabilities", "--json", "oops"},
+	} {
+		opts, stdout, _ := testOptions(args...)
+		code := appcli.Run(context.Background(), opts)
+		require.Equal(t, 2, code, args)
+
+		var obj model.ErrorObject
+		require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj), args)
+		require.Equal(t, "OMF-E7001", obj.Code, args)
+	}
+}
+
+func TestValidateRejectsNoValidateAndDiscoveryFlags(t *testing.T) {
+	cases := [][]string{
+		{"validate", "--dir", t.TempDir(), "--no-validate", "--json"},
+		{"validate", "--installation-id", "inst-x", "--scan", "--json"},
+		{"validate", "--installation-id", "inst-x", "--roots", t.TempDir(), "--json"},
+		{"validate", "--installation-id", "inst-x", "--recursive", "--json"},
+	}
+	for _, args := range cases {
+		opts, stdout, _ := testOptions(args...)
+		code := appcli.Run(context.Background(), opts)
+		require.Equal(t, 2, code, args)
+
+		var obj model.ErrorObject
+		require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj), args)
+		require.Equal(t, "OMF-E7001", obj.Code, args)
+	}
+}
+
+func TestCapabilitiesHelpHidesNoValidate(t *testing.T) {
+	opts, stdout, _ := testOptions("capabilities", "--help")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 0, code)
+	require.NotContains(t, stdout.String(), "--no-validate")
+}
+
+func TestProbeTimeoutMustNotExceedTimeout(t *testing.T) {
+	opts, stdout, _ := testOptions("detect", "--timeout", "10", "--probe-timeout", "20", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 2, code)
+
+	var obj model.ErrorObject
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
+	require.Equal(t, "OMF-E7005", obj.Code)
+}
+
+func TestTimeoutOverflowRejected(t *testing.T) {
+	opts, stdout, _ := testOptions("detect", "--timeout", "10000000000", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 2, code)
+
+	var obj model.ErrorObject
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
+	require.Equal(t, "OMF-E7005", obj.Code)
+}
+
+func TestIncludeFlagsRequireScan(t *testing.T) {
+	opts, stdout, _ := testOptions("detect", "--include-network", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 2, code)
+
+	var obj model.ErrorObject
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
+	require.Equal(t, "OMF-E7001", obj.Code)
+}
+
+func TestDefaultConfigAtDataRootIsLoaded(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv(paths.HomeEnv, root)
+	body := "schema = \"onemoreffmpeg.config/v1\"\n[log]\nlevel = \"bogus\"\n"
+	require.NoError(t, os.WriteFile(filepath.Join(root, "config.toml"), []byte(body), 0o644))
+
+	opts, stdout, _ := testOptions("version", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 2, code)
+
+	var obj model.ErrorObject
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
+	require.Equal(t, "OMF-E7005", obj.Code)
+}
+
+func TestMissingDefaultConfigIsIgnored(t *testing.T) {
+	t.Setenv(paths.HomeEnv, t.TempDir())
+	opts, stdout, _ := testOptions("version", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 0, code)
+	require.True(t, json.Valid(stdout.Bytes()))
+}
+
+func TestExplicitEmptyConfigUsesDefaults(t *testing.T) {
+	t.Setenv(paths.HomeEnv, "relative-root")
+	opts, stdout, _ := testOptions("--config", "", "version", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 0, code)
+	require.True(t, json.Valid(stdout.Bytes()))
+}
+
+func TestProviderListJSON(t *testing.T) {
+	opts, stdout, _ := testOptions("provider", "list", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 0, code)
+
+	var result model.Result
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &result))
+	require.Equal(t, "provider.list", result.Command)
+	data, ok := result.Data.(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, model.ProviderListSchema, data["schema"])
+
+	providers, ok := data["providers"].([]any)
+	require.True(t, ok)
+	require.Len(t, providers, 2)
+	first := providers[0].(map[string]any)
+	require.Equal(t, "btbn", first["id"])
+	require.Equal(t, true, first["redistributable"])
+	second := providers[1].(map[string]any)
+	require.Equal(t, "bnqdzj-nonfree", second["id"])
+	require.Equal(t, false, second["redistributable"])
+}
+
+func TestProviderUnknownSubcommand(t *testing.T) {
+	opts, stdout, _ := testOptions("provider", "bogus", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 2, code)
+
+	var obj model.ErrorObject
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
+	require.Equal(t, "OMF-E7001", obj.Code)
+}
+
+func TestProviderListRejectsExtraArgs(t *testing.T) {
+	opts, stdout, _ := testOptions("provider", "list", "extra", "--json")
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 2, code)
+
+	var obj model.ErrorObject
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
+	require.Equal(t, "OMF-E7001", obj.Code)
+}
+
 func TestRootsRequireScan(t *testing.T) {
 	opts, stdout, _ := testOptions("detect", "--roots", "/tmp", "--json")
 	code := appcli.Run(context.Background(), opts)
@@ -193,6 +363,24 @@ func TestCapabilitiesHappyPath(t *testing.T) {
 	commands, ok := data["commands"].(map[string]any)
 	require.True(t, ok)
 	require.Len(t, commands, 13)
+}
+
+func TestCapabilitiesDirRejectsScanFlags(t *testing.T) {
+	for _, extra := range [][]string{
+		{"--scan"},
+		{"--recursive"},
+		{"--scan", "--roots", t.TempDir()},
+	} {
+		args := append([]string{"capabilities", "--dir", t.TempDir()}, extra...)
+		args = append(args, "--json")
+		opts, stdout, _ := testOptions(args...)
+		code := appcli.Run(context.Background(), opts)
+		require.Equal(t, 2, code, extra)
+
+		var obj model.ErrorObject
+		require.NoError(t, json.Unmarshal(stdout.Bytes(), &obj))
+		require.Equal(t, "OMF-E7001", obj.Code)
+	}
 }
 
 func setCapabilityEnv(t *testing.T, fake *testutil.FakeFFmpeg) {

@@ -16,6 +16,9 @@ func detectCommand() *urfave.Command {
 		Usage: "discover existing FFmpeg trio installations (read-only)",
 		Flags: detectionFlags(),
 		Action: func(ctx context.Context, cmd *urfave.Command) error {
+			if err := rejectExtraArgs(cmd); err != nil {
+				return err
+			}
 			opts, err := parseDetectOptions(cmd)
 			if err != nil {
 				return err

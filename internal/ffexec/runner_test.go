@@ -47,6 +47,8 @@ func TestRunnerTimeoutReturnsPartialOutput(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, apperrors.E1006, typed.Code)
 	require.Contains(t, result.Stdout, "before-timeout")
+	require.Equal(t, ffexec.ExitCodeNotStarted, result.ExitCode)
+	require.Equal(t, -1, result.ExitCode)
 }
 
 func TestRunnerGrandchildPipeDoesNotHang(t *testing.T) {
@@ -87,10 +89,11 @@ func TestRunnerContextCanceled(t *testing.T) {
 
 func TestRunnerMissingExecutable(t *testing.T) {
 	runner := ffexec.Runner{}
-	_, err := runner.Run(context.Background(), "does-not-exist-omf")
+	result, err := runner.Run(context.Background(), "does-not-exist-omf")
 	typed, ok := apperrors.As(err)
 	require.True(t, ok)
-	require.Equal(t, apperrors.E1004, typed.Code)
+	require.Equal(t, apperrors.E1012, typed.Code)
+	require.Equal(t, ffexec.ExitCodeNotStarted, result.ExitCode)
 }
 
 func TestRunnerEmptyExecutable(t *testing.T) {

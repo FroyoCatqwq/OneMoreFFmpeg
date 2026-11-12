@@ -21,6 +21,7 @@ const (
 	E1009 Code = "OMF-E1009"
 	E1010 Code = "OMF-E1010"
 	E1011 Code = "OMF-E1011"
+	E1012 Code = "OMF-E1012"
 
 	E2001 Code = "OMF-E2001"
 	E2002 Code = "OMF-E2002"
@@ -84,6 +85,7 @@ const (
 	W1004 Code = "OMF-W1004"
 	W1005 Code = "OMF-W1005"
 	W1006 Code = "OMF-W1006"
+	W1007 Code = "OMF-W1007"
 )
 
 type Entry struct {
@@ -108,6 +110,7 @@ var codeInfo = map[Code]struct {
 	E1009: {"SCAN_ROOT_INVALID", "scan root invalid or unreadable"},
 	E1010: {"SYMLINK_LOOP", "symlink loop detected"},
 	E1011: {"CANCELED", "user canceled"},
+	E1012: {"EXEC_FAILED", "process could not be started"},
 
 	E2001: {"CAPABILITY_COMMAND_FAILED", "capability command failed"},
 	E2002: {"CAPABILITY_PARSE_FAILED", "capability output cannot be parsed"},
@@ -167,10 +170,11 @@ var codeInfo = map[Code]struct {
 
 	W1001: {"FFPLAY_MISSING", "ffplay missing"},
 	W1002: {"CAPABILITY_PARSE_WARNING", "capability parse warning"},
-	W1003: {"CACHE_STALE", "cache stale"},
+	W1003: {"CACHE_STALE", "cache stale or unusable"},
 	W1004: {"NETWORK_DRIVE_SKIPPED", "network drive skipped"},
 	W1005: {"ENV_NOT_EFFECTIVE_CURRENT_PROCESS", "new PATH not effective in current process"},
 	W1006: {"NONFREE_BINARY", "nonfree binary compliance warning"},
+	W1007: {"CACHE_WRITE_FAILED", "cache write failed"},
 }
 
 func exitFor(code Code) int {

@@ -5,10 +5,8 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"os"
 
 	"github.com/lmittmann/tint"
-	"github.com/mattn/go-isatty"
 
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/config"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
@@ -56,11 +54,7 @@ func colorEnabled(w io.Writer, mode string) bool {
 	case "never", "":
 		return false
 	default:
-		f, ok := w.(*os.File)
-		if !ok {
-			return false
-		}
-		return isatty.IsTerminal(f.Fd())
+		return supportsColor(w)
 	}
 }
 

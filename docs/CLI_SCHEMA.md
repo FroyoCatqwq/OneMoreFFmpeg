@@ -67,9 +67,39 @@
 
 ---
 
+## 3.1 全局参数
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--json` | false | stdout 输出 v1 JSON；错误也输出错误对象 |
+| `--config <PATH>` / `-c` | `<data-root>/config.toml`（存在时） | 显式指定 TOML；显式路径不存在 → `OMF-E7007` |
+| `--log-level <LEVEL>` | 配置值或 `info` | 覆盖 `[log] level`；当前 `trace` 与 `debug` 输出相同（保留级别，写入类命令实现后再区分） |
+| `--quiet` | false | 强制 `error` 级；与 `--log-level` 同时出现时 `--quiet` 优先 |
+
+配置加载顺序（已实现）：
+
+1. 显式 `--config`（`--config ""` 表示只用内置默认值）；
+2. `<data-root>/config.toml` 存在则加载，不存在则使用默认值；
+3. 内置默认值。
+
+未知子命令、未知 flag、多余位置参数都会返回 `OMF-E7001` 且退出码 2，不会退化为“打印帮助并退出 0”。
+
+---
+
 ## 4. 命令专属 data
 
 > 以下每张表都隐含第一行 `schema` 字段；具体值以示例或章节标题中的 schema 名为准，统一规则见 §2/§5。
+
+实现状态：
+
+| 命令 | 状态 |
+|---|---|
+| `version` / `detect` / `validate` / `capabilities` | 已实现 |
+| `provider list` | 已实现（离线，Phase 4 基础件） |
+| `provider add` / `resolve` / `download` | 未实现（Phase 4） |
+| `install` / `env.*` / `doctor` | 未实现（Phase 5/6） |
+
+未实现命令的 data 表与示例仍是**计划契约**，用于冻结字段形状；调用会得到 `OMF-E7001`。
 
 ### 4.1 `version`
 
@@ -112,11 +142,11 @@
 | `--scan` | false | 显式扫描默认根或 `--roots` |
 | `--roots <CSV>` | 无 | 逗号分隔扫描根；必须配合 `--scan` |
 | `--max-depth <N>` | 8 | 扫描最大深度 |
-| `--max-files <N>` | 200000 | 每个扫描根最大文件数 |
-| `--timeout <SEC>` | 10 | 整体 detection 超时 |
-| `--probe-timeout <SEC>` | 5 | 单个 ffmpeg 进程超时 |
-| `--include-removable` | false | Windows 默认根包含可移动盘 |
-| `--include-network` | false | Windows 默认根包含网络盘 |
+| `--max-files <N>` | 200000 | 一次扫描（所有 root 合计）的最大文件数，超限记 `OMF-E1008` |
+| `--timeout <SEC>` | 10 | 扫描/发现预算；必须 ≥ `--probe-timeout` |
+| `--probe-timeout <SEC>` | 5 | 单个 ffmpeg 进程超时；不占用扫描预算 |
+| `--include-removable` | false | Windows 默认根包含可移动盘；必须配合 `--scan` |
+| `--include-network` | false | Windows 默认根包含网络盘；必须配合 `--scan` |
 | `--no-path` | false | 跳过 PATH 发现 |
 | `--no-env` | false | 跳过环境变量发现 |
 | `--no-common` | false | 跳过常见目录发现 |
@@ -152,9 +182,11 @@ one-more-ffmpeg validate --dir <PATH>
 one-more-ffmpeg validate --installation-id <ID>
 ```
 
-- `--dir` 只校验该目录；
-- `--installation-id` 会重新做一次默认发现（不启用 `--scan`）并匹配 ID；
-- `validate` 继承 detect 的发现参数；`--no-validate` 对 validate 命令无意义，不建议使用。
+- `--dir` 只校验该目录，且与 `--scan` / `--recursive` / `--roots` 互斥（`OMF-E7001`）；父目录下的 `bin/` 会被自动发现；
+- `--installation-id` 会重新做一次默认发现并匹配 ID，与 `--scan` / `--recursive` / `--roots` 互斥（`OMF-E7001`）；
+- `--no-validate` 对 validate 无意义，使用即返回 `OMF-E7001`；
+- 只要生成了报告就退出 0；判定结果在 `data.status`，脚本必须显式检查；
+- `status=unusable` 时报告仍完整返回，不映射成整体错误码。
 
 `data` 字段：
 
@@ -183,13 +215,14 @@ one-more-ffmpeg capabilities --installation-id <ID>
 | 参数 | 默认 | 说明 |
 |---|---|---|
 | `--help-topic` | `full` | `full` 或 `decoder=<name>` / `encoder=<name>` / `filter=<name>` / `muxer=<name>` / `demuxer=<name>` |
-| `--cache-dir` | 用户缓存目录 | capability cache 目录 |
+| `--cache-dir` | `<data-root>/cache/capabilities` | capability cache 目录 |
 | `--refresh` | false | 忽略旧缓存并重新执行 |
 | `--no-cache` | false | 不读不写缓存 |
+| `--probe-timeout` | 5 | 显式传入时覆盖每个能力命令的单命令超时（秒） |
 | `--no-path` / `--no-env` / `--no-common` | false | 控制 `--installation-id` 的重新发现范围 |
-| `--scan` / `--roots` | false / 无 | 可选重新发现范围 |
+| `--scan` / `--roots` | false / 无 | 可选重新发现范围；与 `--dir` 互斥 |
 
-`--no-validate` 在 `capabilities` 中禁止。
+`capabilities` 不提供 `--no-validate`（help 中也不显示），因为能力采集必须先完成校验。`--dir` 只使用该目录，与 `--scan` / `--recursive` / `--roots` 同时出现时返回 `OMF-E7001`。`--timeout` 只约束 detect 的发现预算；能力命令超时由 `--probe-timeout` 显式覆盖，未显式传入时使用 `CAPABILITIES.md` §7 的默认值。生效的单命令超时与输出上限参与缓存键。
 
 `data` 遵循 [`CAPABILITIES.md`](CAPABILITIES.md) 中的 `onemoreffmpeg.capabilities/v1`，必须包含：
 
@@ -205,8 +238,10 @@ one-more-ffmpeg capabilities --installation-id <ID>
 | `version` | object | raw / version / configuration |
 | `license` | object | raw / summary |
 | `muxers` / `demuxers` / `devices` / `decoders` / `encoders` / `filters` / `pixel_formats` / `channel_layouts` / `sample_formats` | array | `CapabilityEntry[]` |
-| `help` | object | key 为 help topic |
+| `help` | object | key 为 help topic；值为 `{topic, raw, stdout_sha256, found}` |
 | `warnings` | array | `OMF-W*` 列表 |
+
+`help[topic].found=false` 表示 FFmpeg 未识别该 topic：对应命令 `ok=false`、`error="help topic not found"`、`warnings` 含 `OMF-W1002`。13 个命令全部失败时命令整体返回 `OMF-E2001`，不写缓存。
 
 `CapabilityEntry`：
 
@@ -223,7 +258,7 @@ one-more-ffmpeg capabilities --installation-id <ID>
 
 ---
 
-### 4.5 `provider list`
+### 4.5 `provider list`（已实现，离线）
 
 `data` 字段：
 
@@ -248,7 +283,7 @@ provider 摘要：
 
 ---
 
-### 4.6 `provider add`
+### 4.6 `provider add`（未实现，Phase 4）
 
 `data` 字段：
 
@@ -263,7 +298,7 @@ provider 摘要：
 
 ---
 
-### 4.7 `resolve`
+### 4.7 `resolve`（未实现，Phase 4）
 
 `data` 字段遵循 `onemoreffmpeg.release/v1`：
 
@@ -272,8 +307,10 @@ provider 摘要：
 | `provider` | string | provider id |
 | `repository` | string | `owner/repo` 或自定义来源标识 |
 | `channel` | string | `stable` / `daily` |
-| `release_tag` | string | 具体 tag，不能是 `latest` |
+| `release_tag` | string | 具体 tag；`latest` 仅允许同时携带 `release_id` + `published_at` + `asset_sha256`（D1） |
+| `release_id` | string | 可选；GitHub release 不可变 id，`release_tag=latest` 时必填 |
 | `published_at` | string | RFC 3339 UTC |
+| `pinned_at` | string | 可选；本次 pin 的 RFC 3339 时间 |
 | `asset_name` | string | 资产名 |
 | `asset_url` | string | HTTPS URL |
 | `asset_sha256` | string | SHA-256 |
@@ -285,13 +322,28 @@ provider 摘要：
 | `license_hint` | string | gpl / lgpl / nonfree / custom |
 | `redistributable` | boolean | nonfree 必须为 false |
 
+`resolve` 选项（Phase 4 实现时按此冻结）：
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--provider <ID>` | `btbn` | 内置或已登记 provider |
+| `--channel <CH>` | `daily` | `stable` / `daily` |
+| `--target <T>` | 当前平台 | `win64` / `linux64`；其他平台 `OMF-E3003` |
+| `--variant <V>` | `gpl` | `gpl` / `lgpl` / `nonfree` / `nonfree-shared` |
+| `--linkage <L>` | `static` | `static` / `shared` |
+| `--release-line <X>` | 最高 `nX.Y` | 仅 btbn stable；`master` 只用于 daily |
+| `--release-tag <TAG>` | 无 | 显式 pin；与 `--release-line` 互斥 |
+| `--allow-nonfree` | false | nonfree provider 必填，缺失返回 `OMF-E7001`；成功时输出 `OMF-W1006` |
+
+`release_tag=latest` 的合法条件是同时具备 `release_id`、`published_at` 与非空 `asset_sha256`；缺少任一字段返回 `OMF-E3010`。其他 channel/tag 组合按 `PROVIDER_RESOLVER.md` §7。
+
 示例：[`schemas/examples/provider-resolve.example.json`](schemas/examples/provider-resolve.example.json)
 
 详见 [`PROVIDER_RESOLVER.md`](PROVIDER_RESOLVER.md)。
 
 ---
 
-### 4.8 `download`
+### 4.8 `download`（未实现，Phase 4）
 
 `data` 字段遵循 `onemoreffmpeg.artifact/v1`：
 
@@ -310,7 +362,7 @@ provider 摘要：
 
 ---
 
-### 4.9 `install`
+### 4.9 `install`（未实现，Phase 5）
 
 `data` 字段遵循 `onemoreffmpeg.install/v1`：
 
@@ -334,7 +386,7 @@ provider 摘要：
 
 ---
 
-### 4.10 `env status`
+### 4.10 `env status`（未实现，Phase 6）
 
 `data` 字段：
 
@@ -351,7 +403,7 @@ provider 摘要：
 
 ---
 
-### 4.11 `env set` / `env unset` / `env rollback`
+### 4.11 `env set` / `env unset` / `env rollback`（未实现，Phase 6）
 
 `data` 字段：
 
@@ -367,7 +419,7 @@ provider 摘要：
 
 ---
 
-### 4.12 `doctor`
+### 4.12 `doctor`（未实现，Phase 6）
 
 `data` 字段：
 

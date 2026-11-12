@@ -3,17 +3,23 @@ package contracts
 
 import (
 	"encoding/json"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
+	"unicode/utf8"
 
 	appcaps "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/capabilities"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 )
 
-var codePattern = regexp.MustCompile(`OMF-[EW][0-9]{4}`)
+var (
+	codePattern   = regexp.MustCompile(`\bOMF-[EW][0-9]{4}\b`)
+	sha256Pattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+)
 
 var knownCommands = map[string]struct{}{
 	"version":       {},
@@ -85,18 +91,42 @@ func ValidateExample(path string) error {
 		if _, ok := model.KnownDataSchemas[dataSchema]; !ok {
 			return apperrors.New(apperrors.E7003, "unknown result.data.schema").WithDetails(map[string]any{"schema": dataSchema})
 		}
+		if err := validateDataFields(dataSchema, data); err != nil {
+			return err
+		}
 		if dataSchema == model.CapabilitiesSchema {
 			commands, ok := data["commands"].(map[string]any)
 			if !ok {
 				return apperrors.New(apperrors.E7003, "capabilities.commands is required")
 			}
-			if len(commands) != len(appcaps.CommandKeys("full")) {
-				return apperrors.New(apperrors.E7003, "capabilities.commands must contain all 13 commands")
+			expected := appcaps.CommandKeys("full")
+			if len(commands) != len(expected) {
+				return apperrors.New(apperrors.E7003, "capabilities.commands must contain 13 commands").WithDetails(map[string]any{"expected": len(expected), "actual": len(commands)})
 			}
-			for _, key := range appcaps.CommandKeys("full") {
+			for _, key := range expected {
+				if strings.HasPrefix(key, "-h ") {
+					continue
+				}
 				if _, ok := commands[key]; !ok {
 					return apperrors.New(apperrors.E7003, "capabilities command missing").WithDetails(map[string]any{"command": key})
 				}
+			}
+			helpCommands := 0
+			for key := range commands {
+				if strings.HasPrefix(key, "-h ") {
+					helpCommands++
+					topic := strings.TrimPrefix(key, "-h ")
+					help, ok := data["help"].(map[string]any)
+					if !ok {
+						return apperrors.New(apperrors.E7003, "capabilities.help is required")
+					}
+					if _, ok := help[topic]; !ok {
+						return apperrors.New(apperrors.E7003, "capabilities help entry missing").WithDetails(map[string]any{"topic": topic})
+					}
+				}
+			}
+			if helpCommands != 1 {
+				return apperrors.New(apperrors.E7003, "capabilities.commands must contain exactly one -h <topic> key").WithDetails(map[string]any{"count": helpCommands})
 			}
 			for _, field := range []string{
 				"installation_id", "fingerprint", "version", "license",
@@ -121,7 +151,7 @@ func ValidateExample(path string) error {
 			return apperrors.New(apperrors.E7003, "unknown error.code").WithDetails(map[string]any{"code": code})
 		}
 		message, ok := obj["message"].(string)
-		if !ok || message == "" || len(message) > 200 {
+		if !ok || message == "" || utf8.RuneCountInString(message) > 200 {
 			return apperrors.New(apperrors.E7003, "error.message must be 1..200 characters")
 		}
 		if _, ok := obj["details"].(map[string]any); !ok {
@@ -149,6 +179,168 @@ func ValidateExamplesDir(dir string) (int, error) {
 		count++
 	}
 	return count, nil
+}
+
+func validateDataFields(schema string, data map[string]any) error {
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return apperrors.New(apperrors.E7003, "data cannot be serialized").WithCause(err.Error())
+	}
+	switch schema {
+	case model.ProviderListSchema:
+		var list model.ProviderListData
+		if err := json.Unmarshal(raw, &list); err != nil {
+			return apperrors.New(apperrors.E7003, "provider list is malformed").WithCause(err.Error())
+		}
+		if len(list.Providers) == 0 {
+			return apperrors.New(apperrors.E7003, "provider list must contain at least one provider")
+		}
+		for _, provider := range list.Providers {
+			if provider.ID == "" || provider.Repository == "" {
+				return apperrors.New(apperrors.E7003, "provider id and repository are required")
+			}
+			if len(provider.Channels) == 0 || len(provider.Variants) == 0 || len(provider.Linkages) == 0 {
+				return apperrors.New(apperrors.E7003, "provider channels, variants and linkages are required").WithDetails(map[string]any{"provider": provider.ID})
+			}
+		}
+	case model.ProviderAddSchema:
+		var added model.ProviderAddData
+		if err := json.Unmarshal(raw, &added); err != nil {
+			return apperrors.New(apperrors.E7003, "provider add is malformed").WithCause(err.Error())
+		}
+		if added.ID == "" || added.URL == "" {
+			return apperrors.New(apperrors.E7003, "provider add id and url are required")
+		}
+		if !isHTTPS(added.URL) {
+			return apperrors.New(apperrors.E7003, "provider add url must be https")
+		}
+		switch added.Status {
+		case "added", "dry-run":
+		default:
+			return apperrors.New(apperrors.E7003, "provider add status must be added or dry-run")
+		}
+		if added.SHA256 != "" && !sha256Pattern.MatchString(added.SHA256) {
+			return apperrors.New(apperrors.E7003, "provider add sha256 must be lowercase hex")
+		}
+	case model.ReleaseSchema:
+		return validateRelease(raw)
+	case model.ArtifactSchema:
+		return validateArtifact(raw, data)
+	}
+	return nil
+}
+
+func validateRelease(raw []byte) error {
+	var release model.Release
+	if err := json.Unmarshal(raw, &release); err != nil {
+		return apperrors.New(apperrors.E7003, "release is malformed").WithCause(err.Error())
+	}
+	for field, value := range map[string]string{
+		"provider":     release.Provider,
+		"repository":   release.Repository,
+		"release_tag":  release.ReleaseTag,
+		"published_at": release.PublishedAt,
+		"asset_name":   release.AssetName,
+		"asset_url":    release.AssetURL,
+		"asset_sha256": release.AssetSHA256,
+		"variant":      release.Variant,
+		"linkage":      release.Linkage,
+		"target":       release.Target,
+		"license_hint": release.LicenseHint,
+	} {
+		if value == "" {
+			return apperrors.New(apperrors.E7003, "release field is required").WithDetails(map[string]any{"field": field})
+		}
+	}
+	switch release.Channel {
+	case "stable", "daily":
+	default:
+		return apperrors.New(apperrors.E7003, "release channel must be stable or daily")
+	}
+	// D1: a floating `latest` tag is only acceptable when the record also
+	// carries an immutable release id plus the published time and asset hash.
+	if release.ReleaseTag == "latest" {
+		if release.ReleaseID == "" || release.PublishedAt == "" || !sha256Pattern.MatchString(release.AssetSHA256) {
+			return apperrors.New(apperrors.E7003, "release_tag=latest requires release_id, published_at and asset_sha256")
+		}
+	}
+	if release.PinnedAt != "" {
+		if _, err := time.Parse(time.RFC3339, release.PinnedAt); err != nil {
+			return apperrors.New(apperrors.E7003, "release pinned_at must be RFC 3339").WithCause(err.Error())
+		}
+	}
+	if _, err := time.Parse(time.RFC3339, release.PublishedAt); err != nil {
+		return apperrors.New(apperrors.E7003, "release published_at must be RFC 3339").WithCause(err.Error())
+	}
+	if !isHTTPS(release.AssetURL) {
+		return apperrors.New(apperrors.E7003, "release asset_url must be https")
+	}
+	if !sha256Pattern.MatchString(release.AssetSHA256) {
+		return apperrors.New(apperrors.E7003, "release asset_sha256 must be lowercase hex")
+	}
+	switch release.Linkage {
+	case "static", "shared", "unknown":
+	default:
+		return apperrors.New(apperrors.E7003, "release linkage must be static, shared or unknown")
+	}
+	switch release.Target {
+	case "win64", "linux64":
+	default:
+		return apperrors.New(apperrors.E7003, "release target must be win64 or linux64")
+	}
+	switch release.LicenseHint {
+	case "gpl", "lgpl", "nonfree", "custom":
+	default:
+		return apperrors.New(apperrors.E7003, "release license_hint is invalid")
+	}
+	if release.LicenseHint == "nonfree" && release.Redistributable {
+		return apperrors.New(apperrors.E7003, "nonfree release must not be redistributable")
+	}
+	if release.ChecksumsURL != "" && !isHTTPS(release.ChecksumsURL) {
+		return apperrors.New(apperrors.E7003, "release checksums_url must be https")
+	}
+	if release.ChecksumsSHA256 != "" && !sha256Pattern.MatchString(release.ChecksumsSHA256) {
+		return apperrors.New(apperrors.E7003, "release checksums_sha256 must be lowercase hex")
+	}
+	return nil
+}
+
+func validateArtifact(raw []byte, data map[string]any) error {
+	var artifact model.Artifact
+	if err := json.Unmarshal(raw, &artifact); err != nil {
+		return apperrors.New(apperrors.E7003, "artifact is malformed").WithCause(err.Error())
+	}
+	for field, value := range map[string]string{
+		"artifact_id":   artifact.ArtifactID,
+		"provider":      artifact.Provider,
+		"release_tag":   artifact.ReleaseTag,
+		"asset_name":    artifact.AssetName,
+		"asset_sha256":  artifact.AssetSHA256,
+		"local_path":    artifact.LocalPath,
+		"downloaded_at": artifact.DownloadedAt,
+	} {
+		if value == "" {
+			return apperrors.New(apperrors.E7003, "artifact field is required").WithDetails(map[string]any{"field": field})
+		}
+	}
+	if !sha256Pattern.MatchString(artifact.AssetSHA256) {
+		return apperrors.New(apperrors.E7003, "artifact asset_sha256 must be lowercase hex")
+	}
+	if _, err := time.Parse(time.RFC3339, artifact.DownloadedAt); err != nil {
+		return apperrors.New(apperrors.E7003, "artifact downloaded_at must be RFC 3339").WithCause(err.Error())
+	}
+	if _, ok := data["verified"].(bool); !ok {
+		return apperrors.New(apperrors.E7003, "artifact verified must be a boolean")
+	}
+	if !artifact.Verified {
+		return apperrors.New(apperrors.E7003, "artifact verified must be true")
+	}
+	return nil
+}
+
+func isHTTPS(value string) bool {
+	parsed, err := url.Parse(value)
+	return err == nil && parsed.Scheme == "https" && parsed.Host != ""
 }
 
 func ValidateErrorRegistryDocs(path string, isKnown func(string) bool) error {

@@ -20,7 +20,7 @@
 | Windows 默认根 | 固定盘，可选可移动盘 / 网络盘 |
 | Linux 默认根 | `/`、`/home`、`/opt`、`/usr/local` |
 | 扫描保护 | max-depth、max-files、timeout、排除目录、symlink dir 跳过 |
-| 候选去重 | canonical root + 二进制 SHA-256，Windows 大小写不敏感 |
+| 候选去重 | canonical root（Windows 大小写不敏感）；SHA-256 只用于 fingerprint/ID |
 | 来源合并 | `explicit_dir` / `env` / `PATH` / `common_dir` / `scan` |
 | 三件套路径查找 | `ffmpeg` / `ffprobe` / `ffplay`，Windows `.exe` |
 | 执行权限判断 | 已实现 |

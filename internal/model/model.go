@@ -179,6 +179,7 @@ type HelpInfo struct {
 	Topic        string `json:"topic,omitempty"`
 	Raw          string `json:"raw"`
 	StdoutSHA256 string `json:"stdout_sha256,omitempty"`
+	Found        bool   `json:"found"`
 }
 
 type CapabilitySet struct {
@@ -204,7 +205,9 @@ type CapabilitySet struct {
 	Warnings                []Warning                    `json:"warnings"`
 }
 
-func (c CapabilitySet) MarshalJSON() ([]byte, error) {
+// Normalize replaces nil collections with empty ones so JSON output is
+// stable (`[]` / `{}` instead of `null`).
+func (c CapabilitySet) Normalize() CapabilitySet {
 	if c.Commands == nil {
 		c.Commands = map[string]CapabilityCommand{}
 	}
@@ -241,6 +244,10 @@ func (c CapabilitySet) MarshalJSON() ([]byte, error) {
 	if c.Warnings == nil {
 		c.Warnings = []Warning{}
 	}
+	return c
+}
+
+func (c CapabilitySet) MarshalJSON() ([]byte, error) {
 	type alias CapabilitySet
-	return json.Marshal(alias(c))
+	return json.Marshal(alias(c.Normalize()))
 }

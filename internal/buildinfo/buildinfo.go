@@ -4,6 +4,7 @@ package buildinfo
 import (
 	"runtime"
 	"runtime/debug"
+	"time"
 )
 
 type Info struct {
@@ -19,12 +20,14 @@ func New(version, commit, buildTime string) Info {
 	if version == "" {
 		version = "dev"
 	}
-	if commit == "" || commit == "unknown" {
+	if commit == "" || commit == "unknown" || buildTime == "" || buildTime == "unknown" {
 		if info, ok := debug.ReadBuildInfo(); ok {
 			for _, setting := range info.Settings {
-				if setting.Key == "vcs.revision" && setting.Value != "" {
+				switch {
+				case setting.Key == "vcs.revision" && setting.Value != "" && (commit == "" || commit == "unknown"):
 					commit = setting.Value
-					break
+				case setting.Key == "vcs.time" && setting.Value != "" && (buildTime == "" || buildTime == "unknown"):
+					buildTime = setting.Value
 				}
 			}
 		}
@@ -32,7 +35,7 @@ func New(version, commit, buildTime string) Info {
 	if commit == "" {
 		commit = "unknown"
 	}
-	if buildTime == "" {
+	if !isRFC3339(buildTime) {
 		buildTime = "unknown"
 	}
 	return Info{
@@ -43,4 +46,12 @@ func New(version, commit, buildTime string) Info {
 		OS:        runtime.GOOS,
 		Arch:      runtime.GOARCH,
 	}
+}
+
+func isRFC3339(value string) bool {
+	if value == "" {
+		return false
+	}
+	_, err := time.Parse(time.RFC3339, value)
+	return err == nil
 }

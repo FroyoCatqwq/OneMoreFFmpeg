@@ -30,9 +30,12 @@ func (d *Detector) buildInstallation(ctx context.Context, candidate *Candidate, 
 		if path == "" {
 			continue
 		}
-		sum, err := hashFile(path)
+		sum, err := hashFile(ctx, path)
 		if err != nil {
 			hashFail = true
+			// Keep a stable placeholder so a transient read failure does not
+			// silently produce a different installation ID.
+			hashes[name] = "unavailable"
 			continue
 		}
 		hashes[name] = sum
@@ -51,21 +54,21 @@ func (d *Detector) buildInstallation(ctx context.Context, candidate *Candidate, 
 	if opts.NoValidate {
 		checks = append(checks, model.Check{Name: "validation_skipped", OK: true, Detail: "validation disabled by --no-validate"})
 	} else {
-		ffmpegResult, ffmpegVersion, ffmpegOK := runVersionCheck(ctx, runner, ffmpegPath)
-		_, ffprobeVersion, ffprobeOK := runVersionCheck(ctx, runner, ffprobePath)
-		_, ffplayVersion, ffplayOK := runVersionCheck(ctx, runner, ffplayPath)
+		ffmpegResult, ffmpegVersion, ffmpegOK, ffmpegDetail := runVersionCheck(ctx, runner, ffmpegPath)
+		_, ffprobeVersion, ffprobeOK, ffprobeDetail := runVersionCheck(ctx, runner, ffprobePath)
+		_, ffplayVersion, ffplayOK, ffplayDetail := runVersionCheck(ctx, runner, ffplayPath)
 
 		checks = append(checks,
 			model.Check{Name: "ffmpeg_exists", OK: ffmpegPath != "", Detail: detailPath(ffmpegPath)},
 			model.Check{Name: "ffprobe_exists", OK: ffprobePath != "", Detail: detailPath(ffprobePath)},
 			model.Check{Name: "ffplay_exists", OK: ffplayPath != "", Detail: detailPath(ffplayPath)},
 		)
-		checks = append(checks, checkFromRun("ffmpeg_version", ffmpegOK, ffmpegVersion))
-		checks = append(checks, checkFromRun("ffprobe_version", ffprobeOK, ffprobeVersion))
+		checks = append(checks, model.Check{Name: "ffmpeg_version", OK: ffmpegOK, Detail: ffmpegDetail})
+		checks = append(checks, model.Check{Name: "ffprobe_version", OK: ffprobeOK, Detail: ffprobeDetail})
 		if ffplayPath == "" {
 			checks = append(checks, model.Check{Name: "ffplay_version", OK: true, Detail: "skipped: ffplay missing (warning)"})
 		} else {
-			checks = append(checks, checkFromRun("ffplay_version", ffplayOK, ffplayVersion))
+			checks = append(checks, model.Check{Name: "ffplay_version", OK: ffplayOK, Detail: ffplayDetail})
 		}
 
 		licenseResult, licenseOK, licenseDetail := runLicenseCheck(ctx, runner, ffmpegPath)
@@ -125,15 +128,22 @@ func (d *Detector) buildInstallation(ctx context.Context, candidate *Candidate, 
 	return installation, report
 }
 
-func runVersionCheck(ctx context.Context, runner ffexec.Runner, path string) (ffexec.Result, string, bool) {
+func runVersionCheck(ctx context.Context, runner ffexec.Runner, path string) (ffexec.Result, string, bool, string) {
 	if path == "" {
-		return ffexec.Result{}, "", false
+		return ffexec.Result{}, "", false, "path missing"
 	}
 	result, err := runner.Run(ctx, path, "-version")
 	if err != nil {
-		return result, "", false
+		return result, "", false, err.Error()
 	}
-	return result, versionFromOutput(result.Stdout), result.ExitCode == 0
+	if result.ExitCode != 0 {
+		return result, "", false, fmt.Sprintf("exit=%d", result.ExitCode)
+	}
+	version := versionFromOutput(result.Stdout)
+	if version == "" {
+		return result, "", false, "version banner not found"
+	}
+	return result, version, true, "version=" + version
 }
 
 func runLicenseCheck(ctx context.Context, runner ffexec.Runner, path string) (ffexec.Result, bool, string) {
@@ -148,14 +158,6 @@ func runLicenseCheck(ctx context.Context, runner ffexec.Runner, path string) (ff
 		return result, false, fmt.Sprintf("exit=%d", result.ExitCode)
 	}
 	return result, true, fmt.Sprintf("stdout=%d bytes", len(result.Stdout))
-}
-
-func checkFromRun(name string, ok bool, version string) model.Check {
-	detail := "version=" + version
-	if !ok {
-		detail = "command failed or path missing"
-	}
-	return model.Check{Name: name, OK: ok, Detail: detail}
 }
 
 func versionsConsistent(ffmpegVersion, ffprobeVersion, ffplayVersion string, ffplayRequired bool) (bool, string) {
@@ -192,6 +194,10 @@ func buildFingerprint(root string, hashes map[string]string, version string) str
 	parts := []string{rootKey(root)}
 	for _, key := range keys {
 		parts = append(parts, key+"="+hashes[key])
+	}
+	if version == "" {
+		// Keep the ID stable when validation was skipped or timed out.
+		version = "unavailable"
 	}
 	parts = append(parts, "version="+version)
 	return sha256Hex([]byte(strings.Join(parts, "\n")))

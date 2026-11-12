@@ -10,8 +10,13 @@ import (
 
 func TestRegistryCompleteness(t *testing.T) {
 	codes := apperrors.KnownCodes()
-	require.Len(t, codes, 66)
+	require.GreaterOrEqual(t, len(codes), 67)
+	for code, entry := range codes {
+		require.NotEmpty(t, entry.Name, code)
+		require.NotEmpty(t, entry.Description, code)
+	}
 	require.True(t, apperrors.IsKnown(string(apperrors.E1001)))
+	require.True(t, apperrors.IsKnown(string(apperrors.E1012)))
 	require.False(t, apperrors.IsKnown("OMF-E9999"))
 }
 

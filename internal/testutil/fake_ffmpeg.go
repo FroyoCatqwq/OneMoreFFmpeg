@@ -107,6 +107,13 @@ func main() {
 			time.Sleep(time.Duration(n) * time.Millisecond)
 		}
 	}
+	if s := os.Getenv("OMF_FAKE_FAIL_ARGS"); s != "" {
+		for _, candidate := range strings.Split(s, ",") {
+			if strings.TrimSpace(candidate) == arg {
+				os.Exit(3)
+			}
+		}
+	}
 	if s := os.Getenv("OMF_FAKE_EXIT"); s != "" {
 		if n, err := strconv.Atoi(s); err == nil {
 			os.Exit(n)
@@ -116,12 +123,23 @@ func main() {
 `
 
 func NewFakeFFmpeg(t testing.TB) *FakeFFmpeg {
+	return NewFakeFFmpegAt(t, "")
+}
+
+// NewFakeFFmpegAt places the fake trio in dir (created when needed). An empty
+// dir uses a fresh temporary directory.
+func NewFakeFFmpegAt(t testing.TB, dir string) *FakeFFmpeg {
 	t.Helper()
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skip("go toolchain not found in PATH")
 	}
-	dir := t.TempDir()
-	src := filepath.Join(dir, "fake_main.go")
+	if dir == "" {
+		dir = t.TempDir()
+	} else if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create fake dir: %v", err)
+	}
+	buildDir := t.TempDir()
+	src := filepath.Join(buildDir, "fake_main.go")
 	if err := os.WriteFile(src, []byte(fakeSource), 0o644); err != nil {
 		t.Fatalf("write fake source: %v", err)
 	}
@@ -129,9 +147,9 @@ func NewFakeFFmpeg(t testing.TB) *FakeFFmpeg {
 	if runtime.GOOS == "windows" {
 		ext = ".exe"
 	}
-	buildPath := filepath.Join(dir, "fake-ffmpeg"+ext)
+	buildPath := filepath.Join(buildDir, "fake-ffmpeg"+ext)
 	build := exec.Command("go", "build", "-o", buildPath, src)
-	build.Dir = dir
+	build.Dir = buildDir
 	build.Env = buildEnv()
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build fake ffmpeg: %v\n%s", err, string(out))

@@ -219,6 +219,7 @@ DoD：
 ### Phase 3：能力检查（已完成）
 
 > 实施与验证结果见 [`PHASE3_STATUS.md`](PHASE3_STATUS.md)。
+> 代码审查与 P1 修复见 [`PHASE3_CODE_REVIEW.md`](PHASE3_CODE_REVIEW.md)。
 
 目标：结构化输出用户列出的 13 项能力。
 
@@ -246,6 +247,9 @@ DoD：
 ---
 
 ### Phase 4：Provider / Resolve / Download
+
+> 准入清单、真实上游事实与决策项见 [`PHASE4_READINESS.md`](PHASE4_READINESS.md)。
+> 状态：基础设施与决策 D1–D7 就绪（`paths` / `checksum` / `model` / `config` / `contracts` / provider 注册表 / GitHub client / `provider list` / pin 字段 / nonfree 同意）；`resolve` / `download` / `provider add` 未开始，无阻塞决策。
 
 目标：解析 BtbN、BnqDzj、自定义 URL，并安全下载。
 
@@ -437,6 +441,10 @@ M0 不通过，不进入下载/安装/环境变量写入实现。
 - Phase 1 代码审查与 P0/P1 修复完成，详见 [`PHASE1_CODE_REVIEW.md`](PHASE1_CODE_REVIEW.md)；
 - Phase 2 真实发现与校验完成，详见 [`PHASE2_STATUS.md`](PHASE2_STATUS.md)；
 - Phase 3 13 项能力检查、解析、缓存与 `capabilities` CLI 完成，详见 [`PHASE3_STATUS.md`](PHASE3_STATUS.md)；
+- Phase 3 代码审查完成，修复真实 `-pix_fmts` / `-layouts` 解析、`-h` 未命中、全失败语义与缓存污染，详见 [`PHASE3_CODE_REVIEW.md`](PHASE3_CODE_REVIEW.md)；
+- Phase 4 契约与真实 GitHub 资产事实已核对，准入清单见 [`PHASE4_READINESS.md`](PHASE4_READINESS.md)；
+- Phase 4 基础设施（paths / checksum / model / config / contracts / provider 注册表 / GitHub client / `provider list`）已完成；
+- 全量审查与缺陷修复见 [`FULL_AUDIT_2026-11-11.md`](FULL_AUDIT_2026-11-11.md)；
 - `go.sum` 已生成；
 - `version --json` / `detect --json` / `validate --json` / `capabilities --json` / `--help` 已验证；
 - 本地单测、`go vet`、Windows/Linux 交叉编译通过；

@@ -21,7 +21,7 @@
 7. 全盘扫描（仅 --scan 显式触发）
 ```
 
-结果按“可信度 + 路径 + 二进制 hash”排序；不自动选择最高优先级安装，除非 CLI 明确要求 `--select`。
+结果排序（已实现）：先按“是否找到 ffmpeg”，再按来源优先级（`explicit_dir` < `env` < `PATH` < `common_dir` < `scan`），最后按 `root_dir` 字典序。`detect` 返回全部候选，不自动选中；`validate --dir` / `capabilities --dir` 取排序后的第一个含 `ffmpeg` 的安装。
 
 ### 1.1 当前不做的发现源
 
@@ -176,8 +176,8 @@ one-more-ffmpeg detect --scan --roots /,/home,/opt --json
 - 无权限目录；
 - 特殊文件系统；
 - 超过 `--max-depth` 的目录；
-- 超过 `--max-files` 后停止并 warning；
-- 单次扫描超过 `--timeout` 后取消。
+- 超过 `--max-files`（所有 root 合计）后停止，写入 `data.errors[]` 的 `OMF-E1008`；
+- 扫描超过 `--timeout` 后停止发现，写入 `OMF-E1008`；校验阶段不受该预算影响，每个进程单独使用 `--probe-timeout`。
 
 只匹配文件名：
 
@@ -193,18 +193,18 @@ ffplay / ffplay.exe
 
 ## 7. 去重
 
-去重 key：
+去重 key（已实现）：
 
 ```text
-canonical(root_dir) + ffmpeg_sha256 + ffprobe_sha256 + ffplay_sha256
+rootKey(canonical(root_dir))     # canonical 解析 symlink；Windows 转小写
 ```
 
 规则：
 
-- symlink 解析为真实路径；
-- Windows 大小写不敏感；
+- 只按根目录去重，不把二进制 hash 放进 key；hash 只用于 `fingerprint` / `id`；
 - 同一目录多个硬链接只保留一个；
-- 同一 trio 被多个 source 发现时合并 `sources[]`；
+- 同一目录被多个 source 发现时合并 `sources[]`，priority 取最小值；
+- 无任何 ffmpeg/ffprobe/ffplay 的候选会被丢弃，不产出“幽灵安装”；
 - 不删除任何文件。
 
 ---

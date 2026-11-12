@@ -94,7 +94,7 @@
     "pixel_formats": [],
     "channel_layouts": [],
     "sample_formats": [],
-    "help": { "full": { "topic": "full", "raw": "...", "stdout_sha256": "..." } },
+    "help": { "full": { "topic": "full", "raw": "...", "stdout_sha256": "...", "found": true } },
     "warnings": []
   }
 }
@@ -104,6 +104,7 @@
 
 - `commands` 固定包含 13 个键；`-h <topic>` 的键由 `--help-topic` 决定，例如 `-h full`、`-h decoder=h264`。
 - 每个 command result 还可选包含 `stdout_bytes` / `stderr_bytes` / `truncated` / `stderr_summary` / `error`。
+- `help[topic].found` 表示该 topic 是否真的被 FFmpeg 命中；未命中时 `help[topic].found=false`、对应 command `ok=false`、`error="help topic not found"`，并记录 `OMF-W1002`。
 - `cache_hit` 为 `true` 时表示结果来自缓存，未重新执行 13 个命令。
 - `created_at` 为 RFC 3339 UTC；缓存命中时保留首次生成时间。
 - `fingerprint` 为 capabilities cache fingerprint；`installation_fingerprint` 为 Phase 2 `Installation.fingerprint`。
@@ -132,19 +133,22 @@
 4. **未知行警告**：无法解析的行计数并进入 `warnings`；
 5. **去重排序**：同名能力稳定排序，避免缓存漂移；
 6. **不猜能力**：没出现就是没有，不按 provider 名称推断；
-7. **不硬编码 provider 差异**：BtbN 与 BnqDzj 的能力差异以实际输出为准。
+7. **不硬编码 provider 差异**：BtbN 与 BnqDzj 的能力差异以实际输出为准；
+8. **跳过表格表头**：`-pix_fmts` 的 `FLAGS NAME NB_COMPONENTS ...` 表头不是能力条目，必须跳过；
+9. **分节解析**：`-layouts` 同时输出 `Individual channels` 与 `Standard channel layouts`，`channel_layouts[]` 只取后者，避免把 `FL` / `FR` 当成布局；
+10. **不把错误文本当帮助**：`-h` 未命中时 FFmpeg 仍以 0 退出并输出 `Codec '...' is not recognized by FFmpeg.` / `Unknown filter|format '...'`，必须识别为未命中。
 
 ---
 
 ## 5. 缓存
 
-默认 `<data-root>` 为 `os.UserCacheDir()/OneMoreFFmpeg`，实际缓存路径：
+data root 由 [`ENVIRONMENT.md`](ENVIRONMENT.md) §1.1 定义，实际缓存路径：
 
 ```text
-<user-cache-dir>/OneMoreFFmpeg/cache/capabilities/<capabilities_fingerprint>.json
+<data-root>/cache/capabilities/<capabilities_fingerprint>.json
 ```
 
-可用 `--cache-dir <PATH>` 覆盖目录。
+Windows 默认 `<LOCALAPPDATA>\\OneMoreFFmpeg\\cache\\capabilities`；Linux 默认 `~/.local/share/onemoreffmpeg/cache/capabilities`。可用 `--cache-dir <PATH>` 覆盖目录。
 
 `capabilities_fingerprint` 由以下字段生成：
 
@@ -167,9 +171,19 @@ onemoreffmpeg.capabilities/v1
 - CLI 强制 `--refresh`；
 - schema 主版本变化；
 - 缓存文件 JSON 损坏；
-- 缓存缺少 13 个命令键。
+- 缓存缺少 13 个命令键；
+- 缓存缺少当前 help topic 的 `help[topic]` 条目；
+- 缓存记录的 `installation_id` 与目标安装不符。
 
 `--no-cache` 完全不读不写缓存；`--refresh` 忽略旧缓存但会写入新结果。缓存损坏或过期时输出 `OMF-W1003`，缓存命中时 `cache_hit=true`。
+
+缓存只在结果可用时写入：
+
+- 父 context 被取消或超时（`OMF-E9004` / `OMF-E1006`）不写缓存；
+- 13 个命令全部失败（`OMF-E2001`）不写缓存，避免把损坏安装的空结果长期缓存；
+- 部分命令失败仍会写缓存，失败项以 `ok=false` + `OMF-W1002` 记录，供下次命中时审计。
+
+命令规格版本从 `capability-commands-v1` 升为 `capability-commands-v3`（表头/分节解析、`help.found`、生效超时/输出上限进入缓存键），旧缓存按 fingerprint 不匹配自动失效。
 
 ---
 
@@ -200,6 +214,10 @@ ffmpeg -hide_banner -buildconf
 默认 stdout 上限：8 MiB。
 超过上限：截断、记录 warning、命令仍返回可解析结果。
 
+并发：13 个命令默认以最多 4 个并发进程执行（`Collector.MaxParallel`），每个命令仍有独立 timeout 与 context；并发上限只影响墙钟时间，不影响输出内容和缓存键。
+
+超时覆盖：显式传入 `--probe-timeout <秒>` 时，该值会覆盖所有能力命令的单命令超时（`Options.CommandTimeout`）；未显式传入时使用上表默认值。`--timeout` 只约束 detect 的整体发现，不改变能力命令超时。
+
 ---
 
 ## 8. 错误语义
@@ -210,11 +228,15 @@ ffmpeg -hide_banner -buildconf
 | ffmpeg 无执行权限 | `OMF-E1005`，整体失败 |
 | `--dir` / `--installation-id` 缺失或同时给出 | `OMF-E7001` |
 | help topic 非法 | `OMF-E2005` |
+| help topic 未命中 | 该命令 `ok=false`，`found=false`，记录 `OMF-W1002`，整体仍成功 |
 | 单个命令超时 | 该命令 `ok=false`，其他继续，记录 `OMF-W1002` |
 | 单个命令非零退出 | 该命令 `ok=false`，继续，记录 `OMF-W1002` |
+| 13 个命令全部失败 | 整体 `OMF-E2001`，不写缓存 |
+| 父 context 取消/超时 | `OMF-E9004` / `OMF-E1006`，不写缓存 |
 | stdout 截断 | warning `OMF-W1002`，仍尝试解析 |
 | 解析异常 | `OMF-W1002`，保留 raw hash |
-| 缓存损坏/过期 | 重新探测，记录 `OMF-W1003` |
+| 缓存损坏/过期/不可读 | 重新探测，记录 `OMF-W1003` |
+| 缓存写入失败 | 仍返回结果，记录 `OMF-W1007` |
 | ffplay 缺失 | `OMF-W1001`，不误判 ffmpeg 不可用 |
 
 `capabilities` 不修改任何文件，除了缓存目录；`--no-cache` 可完全只读。
@@ -235,6 +257,7 @@ one-more-ffmpeg capabilities --dir <PATH> --no-cache --json
 
 - `--dir` 与 `--installation-id` 必须二选一；
 - `--installation-id` 会重新做发现以得到 `Installation`，可配合 `--no-path` / `--no-env` / `--no-common` / `--scan`；
+- `--dir` 表示“只使用该目录”，不接受 `--scan` / `--recursive` / `--roots`，冲突时返回 `OMF-E7001`；
 - `--no-validate` 在 capabilities 中禁用，必须得到 version/license stdout hash 才能算缓存指纹；
 - 输出 `onemoreffmpeg.result/v1` + `onemoreffmpeg.capabilities/v1`；
 - 所有能力命令都复用 `ffexec` 的 timeout、WaitDelay、进程树与输出上限。

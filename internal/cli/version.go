@@ -15,6 +15,9 @@ func versionCommand(info buildinfo.Info) *urfave.Command {
 		Name:  "version",
 		Usage: "show build and runtime information",
 		Action: func(ctx context.Context, cmd *urfave.Command) error {
+			if err := rejectExtraArgs(cmd); err != nil {
+				return err
+			}
 			data := model.VersionData{
 				Schema:    model.VersionSchema,
 				Name:      "OneMoreFFmpeg",

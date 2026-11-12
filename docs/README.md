@@ -1,9 +1,9 @@
 # 文档索引与权威顺序
 
 > 项目：OneMoreFFmpeg
-> 状态：Phase 3 能力检查已完成，Phase 4 尚未开始
+> 状态：Phase 3 已完成并通过代码审查，Phase 4 准备中
 > 日期：2026-11-11
-> 更新：完成 Phase 3 的 13 项能力命令、解析、缓存与 `capabilities` CLI
+> 更新：完成 Phase 3 真实输出解析修复与 Phase 4 准入清单
 
 ---
 
@@ -32,8 +32,11 @@
 | 19 | [`PHASE2_STATUS.md`](PHASE2_STATUS.md) | Phase 2 实施状态与验证结果 |
 | 20 | [`PHASE2_CODE_REVIEW.md`](PHASE2_CODE_REVIEW.md) | Phase 2 代码审查、缺陷修复与残留 tech debt |
 | 21 | [`PHASE3_STATUS.md`](PHASE3_STATUS.md) | Phase 3 实施状态与验证结果 |
-| 22 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
-| 23 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
+| 22 | [`PHASE3_CODE_REVIEW.md`](PHASE3_CODE_REVIEW.md) | Phase 3 代码审查、P1 修复与残留 tech debt |
+| 23 | [`PHASE4_READINESS.md`](PHASE4_READINESS.md) | Phase 4 准入清单、真实上游事实、决策项与缺口 |
+| 24 | [`FULL_AUDIT_2026-11-11.md`](FULL_AUDIT_2026-11-11.md) | 全量审查、缺陷修复与残留风险 |
+| 25 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
+| 26 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
 
 冲突时：
 
@@ -80,13 +83,14 @@
 | nonfree | 元数据可公开，二进制不可随公开 Release 分发 |
 | Phase 1 | 骨架、契约、错误码、进程执行器、测试与交叉编译已完成 |
 | Phase 2 | 真实发现源、三件套校验、`detect` / `validate` 已完成 |
-| Phase 3 | 13 项能力检查、解析、缓存、`capabilities` CLI 已完成 |
+| Phase 3 | 13 项能力检查、解析、缓存、`capabilities` CLI 已完成并通过代码审查 |
+| Phase 4 | 基础设施与决策（D1–D7）就绪：`paths` / `checksum` / `model` / `config` / `contracts` / provider 注册表 / GitHub client / `provider list` / pin 字段 / nonfree 同意策略；`resolve` / `download` 未开始 |
 
 ---
 
 ## 3. 尚未完成
 
-- provider resolver / download 实现（Phase 4）；
+- `resolve` 资产匹配、`download`、`provider add`（Phase 4，无阻塞决策）；
 - install / env / rollback 实现（Phase 5）；
 - GitHub Actions / 发布 CI（Phase 7）；
 - 公开二进制发布与完整许可证复核；
@@ -111,3 +115,6 @@
 - [`PHASE2_STATUS.md`](PHASE2_STATUS.md)：Phase 2 实施状态与验证结果。
 - [`PHASE2_CODE_REVIEW.md`](PHASE2_CODE_REVIEW.md)：Phase 2 代码审查、缺陷修复与残留 tech debt。
 - [`PHASE3_STATUS.md`](PHASE3_STATUS.md)：Phase 3 实施状态与验证结果。
+- [`PHASE3_CODE_REVIEW.md`](PHASE3_CODE_REVIEW.md)：Phase 3 真实输出解析修复、错误语义与缓存写入审查。
+- [`PHASE4_READINESS.md`](PHASE4_READINESS.md)：Phase 4 准入清单、真实 GitHub 资产事实与决策项。
+- [`FULL_AUDIT_2026-11-11.md`](FULL_AUDIT_2026-11-11.md)：全量审查、缺陷修复与残留风险。

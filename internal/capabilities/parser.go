@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	flagPattern    = regexp.MustCompile(`^[A-Za-z.]{1,8}$`)
-	versionPattern = regexp.MustCompile(`(?im)^(?:ffmpeg|ffprobe|ffplay)\s+version\s+(\S+)`)
+	flagPattern     = regexp.MustCompile(`^[A-Za-z.]{1,8}$`)
+	versionPattern  = regexp.MustCompile(`(?im)^(?:ffmpeg|ffprobe|ffplay)\s+version\s+(\S+)`)
+	helpMissPattern = regexp.MustCompile(`^(?:Codec '[^']+' is not recognized by FFmpeg\.|Unknown (?:filter|format|decoder|encoder) '[^']+'\.)`)
 )
 
 func parseVersion(raw string) model.VersionInfo {
@@ -37,23 +38,73 @@ func parseLicense(primary, fallback string) model.LicenseInfo {
 	info := model.LicenseInfo{Raw: raw}
 	for _, line := range strings.Split(raw, "\n") {
 		trimmed := strings.TrimSpace(line)
-		if trimmed != "" {
-			info.Summary = trimmed
-			break
+		if trimmed == "" || isBannerLine(trimmed) {
+			continue
 		}
+		info.Summary = trimmed
+		break
 	}
 	return info
+}
+
+// isBannerLine keeps a leaked build banner from being reported as the license.
+func isBannerLine(line string) bool {
+	lower := strings.ToLower(line)
+	for _, prefix := range []string{"ffmpeg version ", "ffprobe version ", "ffplay version ", "built with ", "configuration:", "libav", "libsw", "libpostproc"} {
+		if strings.HasPrefix(lower, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// helpTopicMissing reports whether FFmpeg answered a help topic with a
+// "not found" message instead of help text. FFmpeg exits 0 in that case and
+// has written the diagnostic to stdout or stderr depending on version.
+func helpTopicMissing(stdout, stderr string) bool {
+	if firstContentLineMatches(stdout) || firstContentLineMatches(stderr) {
+		return true
+	}
+	// A successful help command always prints something; empty stdout means
+	// the topic produced no help at all.
+	return strings.TrimSpace(stdout) == ""
+}
+
+func firstContentLineMatches(raw string) bool {
+	for _, line := range strings.Split(raw, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		return helpMissPattern.MatchString(trimmed)
+	}
+	return false
 }
 
 func parseList(kind, raw string) ([]model.CapabilityEntry, int) {
 	switch kind {
 	case "muxers", "demuxers", "devices", "decoders", "encoders", "filters", "pixel_formats":
 		return parseFlagList(raw)
-	case "channel_layouts", "sample_formats":
+	case "channel_layouts":
+		return parseChannelLayouts(raw)
+	case "sample_formats":
 		return parseSimpleList(raw)
 	default:
 		return []model.CapabilityEntry{}, 0
 	}
+}
+
+// parseChannelLayouts keeps only the "Standard channel layouts" section.
+// FFmpeg prints individual channels and standard layouts in one output; mixing
+// them would report FL/FR as if they were standalone layouts.
+func parseChannelLayouts(raw string) ([]model.CapabilityEntry, int) {
+	lines := strings.Split(raw, "\n")
+	for index, line := range lines {
+		if strings.EqualFold(strings.Join(strings.Fields(line), " "), "standard channel layouts:") {
+			return parseSimpleList(strings.Join(lines[index+1:], "\n"))
+		}
+	}
+	return parseSimpleList(raw)
 }
 
 func parseFlagList(raw string) ([]model.CapabilityEntry, int) {
@@ -71,25 +122,27 @@ func parseFlagList(raw string) ([]model.CapabilityEntry, int) {
 			unknown++
 			continue
 		}
+		if isColumnHeader(fields) {
+			continue
+		}
 		flags := fields[0]
 		if flagPattern.MatchString(flags) {
-			name := fields[1]
-			description := strings.TrimSpace(strings.TrimPrefix(line, flags+" "+name))
 			entries = append(entries, model.CapabilityEntry{
-				Name:        name,
+				Name:        fields[1],
 				Flags:       flags,
-				Description: description,
+				Description: strings.Join(fields[2:], " "),
 				Raw:         rawLine,
 			})
 			continue
 		}
-		name := fields[0]
-		description := strings.TrimSpace(strings.TrimPrefix(line, name))
 		entries = append(entries, model.CapabilityEntry{
-			Name:        name,
-			Description: description,
+			Name:        fields[0],
+			Description: strings.Join(fields[1:], " "),
 			Raw:         rawLine,
 		})
+	}
+	if scanner.Err() != nil {
+		unknown++
 	}
 	return normalizeEntries(entries), unknown
 }
@@ -109,15 +162,23 @@ func parseSimpleList(raw string) ([]model.CapabilityEntry, int) {
 			unknown++
 			continue
 		}
-		name := fields[0]
-		description := strings.TrimSpace(strings.TrimPrefix(line, name))
 		entries = append(entries, model.CapabilityEntry{
-			Name:        name,
-			Description: description,
+			Name:        fields[0],
+			Description: strings.Join(fields[1:], " "),
 			Raw:         rawLine,
 		})
 	}
+	if scanner.Err() != nil {
+		unknown++
+	}
 	return normalizeEntries(entries), unknown
+}
+
+// isColumnHeader matches table headers such as
+// "FLAGS NAME            NB_COMPONENTS BITS_PER_PIXEL BIT_DEPTHS".
+// FFmpeg prints them to the same stream as data rows.
+func isColumnHeader(fields []string) bool {
+	return len(fields) >= 2 && strings.EqualFold(fields[0], "flags") && strings.EqualFold(fields[1], "name")
 }
 
 func newScanner(raw string) *bufio.Scanner {

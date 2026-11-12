@@ -16,8 +16,38 @@
 | `LAE_FFMPEG_DIR` | 与 LAE / VideoDamage 兼容 | 默认不写，除非 `--lae-compat` |
 | `GITHUB_TOKEN` | GitHub API 可选 token | 只读，不持久化 |
 | `HTTPS_PROXY` / `HTTP_PROXY` | 网络代理 | 只读，不持久化 |
+| `ONE_MORE_FFMPEG_HOME` | data root 覆盖 | 只读，本项目不写 |
 
 不覆盖用户已有变量，除非 CLI 明确 `--overwrite`。
+
+### 1.1 data root 解析
+
+所有下载、缓存、安装、journal 与默认配置都位于同一个 data root，解析顺序固定：
+
+1. `ONE_MORE_FFMPEG_HOME`：必须为绝对路径，相对路径直接 `OMF-E7007`，不做“相对当前目录”猜测；
+2. Windows：`%LOCALAPPDATA%\OneMoreFFmpeg`；
+3. Linux：`$XDG_DATA_HOME/onemoreffmpeg`（仅接受绝对路径），否则 `~/.local/share/onemoreffmpeg`。
+
+目录布局：
+
+```text
+<data-root>/
+├─ downloads/
+├─ cache/
+│  └─ capabilities/
+├─ apps/
+├─ current
+├─ journal/
+└─ config.toml
+```
+
+规则：
+
+- `internal/paths` 是唯一解析入口，命令不得自行拼接平台路径；
+- `--cache-dir`（CLI）优先于默认值；下载目录由 `[download] dir` 覆盖 `<data-root>/downloads`；
+- data root 不可判定时返回 `OMF-E9003`，不静默回退到当前工作目录；
+- Windows 不使用 `XDG_*`；Linux 不读 `LOCALAPPDATA`；
+- 配置：显式 `--config` > `<data-root>/config.toml`（存在时）> 内置默认值，详见 `CLI_SCHEMA.md` §3.1。
 
 ---
 

@@ -101,6 +101,7 @@ snap / flatpak 专门适配
 ## Phase 3：能力检查（已完成）
 
 > 实施与验证结果见 [`PHASE3_STATUS.md`](PHASE3_STATUS.md)。
+> 代码审查与真实输出修复见 [`PHASE3_CODE_REVIEW.md`](PHASE3_CODE_REVIEW.md)。
 
 内容：
 
@@ -137,6 +138,8 @@ snap / flatpak 专门适配
 ---
 
 ## Phase 4：Provider / Resolve / Download
+
+> 状态：基础设施与决策 D1–D7 就绪（`paths` / `checksum` / `model` / `config` / `contracts` / provider 注册表 / GitHub client / `provider list` / pin 字段 / nonfree 同意）；`resolve` / `download` / `provider add` 未开始，无阻塞决策。见 [`PHASE4_READINESS.md`](PHASE4_READINESS.md)。
 
 内容：
 

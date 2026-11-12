@@ -24,3 +24,10 @@ func TestNewExplicit(t *testing.T) {
 	require.Equal(t, "abc123", info.Commit)
 	require.Equal(t, "2026-11-10T00:00:00Z", info.BuildTime)
 }
+
+func TestNewNormalizesMalformedBuildTime(t *testing.T) {
+	for _, value := range []string{"2026-11-10", "yesterday", "not-a-time"} {
+		info := buildinfo.New("1.2.3", "abc123", value)
+		require.Equal(t, "unknown", info.BuildTime, value)
+	}
+}

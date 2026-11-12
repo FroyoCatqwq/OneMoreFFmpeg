@@ -1,0 +1,3 @@
+Codec 'nosuchcodec' is not recognized by FFmpeg.
+
+Exiting with exit code 0

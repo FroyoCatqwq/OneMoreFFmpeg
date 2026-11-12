@@ -116,10 +116,12 @@ func (s *session) addPath(raw, source string, fatal bool, details map[string]any
 		for key, value := range details {
 			info[key] = value
 		}
+		code, message := pathError(err)
 		if fatal {
-			return apperrors.New(apperrors.E1001, "explicit directory does not exist").WithCause(err.Error()).WithDetails(info)
+			return apperrors.New(code, "explicit directory is not usable").WithCause(err.Error()).WithDetails(info)
 		}
-		s.errors = append(s.errors, newDetectError(apperrors.E1001, "source path does not exist", info))
+		info["message"] = message
+		s.errors = append(s.errors, newDetectError(code, message, info))
 		return nil
 	}
 	for _, dir := range dirs {
@@ -186,8 +188,11 @@ func (d *Detector) Detect(ctx context.Context, opts Options) (Result, error) {
 		scanRoots(scanCtx, opts, s.addDir, &s.errors)
 	}
 
-	if stderrors.Is(scanCtx.Err(), context.Canceled) {
+	if stderrors.Is(ctx.Err(), context.Canceled) {
 		return Result{}, apperrors.New(apperrors.E9004, "context canceled")
+	}
+	if stderrors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return Result{}, apperrors.New(apperrors.E1006, "detection timed out").WithCause(ctx.Err().Error())
 	}
 	if stderrors.Is(scanCtx.Err(), context.DeadlineExceeded) {
 		s.errors = append(s.errors, newDetectError(apperrors.E1008, "detection timeout", nil))
@@ -212,10 +217,29 @@ func (d *Detector) Detect(ctx context.Context, opts Options) (Result, error) {
 	items := make([]ordered, 0, len(keys))
 	for _, key := range keys {
 		candidate := s.candidates[key]
-		installation, report := d.buildInstallation(scanCtx, candidate, opts, runner)
+		// Probing has its own per-process timeout, so it must not inherit the
+		// scanning budget: an exhausted scan budget used to mark healthy
+		// installations as unusable.
+		installation, report := d.buildInstallation(ctx, candidate, opts, runner)
+		if installation.FFmpeg == "" && installation.FFprobe == "" && installation.FFplay == "" {
+			// Directories from env vars or --dir that contain no FFmpeg binary
+			// are not installations; reporting them as "unusable" is noise.
+			continue
+		}
 		items = append(items, ordered{installation: installation, report: report, priority: candidate.Priority})
 	}
+	if err := ctx.Err(); err != nil {
+		if stderrors.Is(err, context.Canceled) {
+			return Result{}, apperrors.New(apperrors.E9004, "context canceled")
+		}
+		return Result{}, apperrors.New(apperrors.E1006, "detection timed out").WithCause(err.Error())
+	}
 	sort.Slice(items, func(i, j int) bool {
+		iHasFFmpeg := items[i].installation.FFmpeg != ""
+		jHasFFmpeg := items[j].installation.FFmpeg != ""
+		if iHasFFmpeg != jHasFFmpeg {
+			return iHasFFmpeg
+		}
 		if items[i].priority != items[j].priority {
 			return items[i].priority < items[j].priority
 		}
@@ -242,15 +266,17 @@ func (d *Detector) ValidateDir(ctx context.Context, dir string, base Options) (m
 	if err != nil {
 		return model.ValidateData{}, err
 	}
-	if len(result.Installations) == 0 {
-		return model.ValidateData{}, apperrors.New(apperrors.E1002, "no FFmpeg binaries found")
+	for _, installation := range result.Installations {
+		if installation.FFmpeg == "" {
+			continue
+		}
+		report, ok := result.Reports[installation.ID]
+		if !ok {
+			return model.ValidateData{}, apperrors.New(apperrors.E9001, "validation report missing")
+		}
+		return report, nil
 	}
-	id := result.Installations[0].ID
-	report, ok := result.Reports[id]
-	if !ok {
-		return model.ValidateData{}, apperrors.New(apperrors.E9001, "validation report missing")
-	}
-	return report, nil
+	return model.ValidateData{}, apperrors.New(apperrors.E1002, "no FFmpeg binaries found").WithDetails(map[string]any{"dir": dir})
 }
 
 func (d *Detector) ValidateID(ctx context.Context, id string, base Options) (model.ValidateData, error) {

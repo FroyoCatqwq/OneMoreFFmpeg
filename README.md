@@ -4,7 +4,7 @@
 
 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg>
 
-状态：**Phase 3 能力检查已完成，Phase 4 尚未开始。**
+状态：**Phase 3 已完成并通过全量审查；Phase 4 基础设施与全部决策（D1–D7）已就绪，`resolve` / `download` / `provider add` 尚未实现。**
 
 > `version` / `detect` / `validate` / `capabilities` 已实现；其余 `one-more-ffmpeg ...` 命令仍是计划命令，尚未实现。
 
@@ -145,6 +145,9 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 | [`docs/PHASE2_STATUS.md`](docs/PHASE2_STATUS.md) | Phase 2 实施状态与验证结果 |
 | [`docs/PHASE2_CODE_REVIEW.md`](docs/PHASE2_CODE_REVIEW.md) | Phase 2 代码审查、缺陷修复与残留 tech debt |
 | [`docs/PHASE3_STATUS.md`](docs/PHASE3_STATUS.md) | Phase 3 实施状态与验证结果 |
+| [`docs/PHASE3_CODE_REVIEW.md`](docs/PHASE3_CODE_REVIEW.md) | Phase 3 代码审查、真实输出解析修复与残留 tech debt |
+| [`docs/PHASE4_READINESS.md`](docs/PHASE4_READINESS.md) | Phase 4 准入清单、真实上游事实与决策项 |
+| [`docs/FULL_AUDIT_2026-11-11.md`](docs/FULL_AUDIT_2026-11-11.md) | 全量审查、缺陷修复与残留风险 |
 | [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) | 第三方依赖许可证清单初稿 |
 
 ---
@@ -165,6 +168,13 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 - Phase 1 代码审查与 P0/P1 修复：已完成；
 - Phase 2 真实 FFmpeg 发现、三件套校验、`detect` / `validate`：已完成；
 - Phase 3 13 项能力检查、解析、缓存、`capabilities`：已完成；
+- Phase 3 代码审查与真实 FFmpeg 输出解析修复：已完成；
+- Phase 4 契约核对与准入清单：已完成；
+- Phase 4 基础件 `internal/paths` / `internal/checksum` / `model.Release` / 配置网络段 / 契约字段校验：已完成；
+- Phase 4 provider 注册表、GitHub Releases 客户端、`provider list`：已完成；
+- Phase 4 决策 D1（stable pin）/ D5（nonfree 同意）/ D7（Job Object 推迟）：已定并落文；
+- Phase 4 `resolve` 资产匹配、`download`、`provider add`：未开始（无阻塞决策）；
+- 全量审查与缺陷修复：见 [`docs/FULL_AUDIT_2026-11-11.md`](docs/FULL_AUDIT_2026-11-11.md)；
 - CLI：`version` / `detect` / `validate` / `capabilities` 已实现；
 - 本地单测 / `go vet` / Windows+Linux 交叉编译：通过；
 - 第三方许可证清单 / `THIRD_PARTY_NOTICES`：初稿完成，许可证文本已复制；

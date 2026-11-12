@@ -13,7 +13,7 @@
 Resolver 的输出必须是：
 
 ```text
-具体 release tag
+不可变 release pin（具体 tag，或 latest + release_id + published_at + asset_sha256）
 + 具体 asset
 + asset SHA-256
 + checksums SHA-256（若有）
@@ -52,7 +52,7 @@ linkage: static | shared | unknown
 |---|---|---|---|
 | `btbn` | 支持 | 支持 | stable 为当前 stable line（示例 `n9.0`）；daily 为 `latest` / autobuild |
 | `bnqdzj-nonfree` | 视上游 | 支持 | 若上游无稳定 release line，`stable` 返回 `OMF-E3004` |
-| `custom` | 由 manifest 声明 | 由 manifest 声明 | direct URL 无 channel 概念，可标 `pinned` |
+| `custom` | 由 manifest 声明 | 由 manifest 声明 | direct URL 没有 channel 概念；输出 `channel=daily`，用 `release_tag` + `asset_sha256` 表达 pin，不写 `pinned` |
 
 ---
 
@@ -104,7 +104,7 @@ browser_download_url
 - 超过上限返回 `OMF-E3006`；
 - 其他 API 失败返回 `OMF-E3007`。
 
-实现层使用 `net/http` + `github.com/sethvargo/go-retry`；不引入过旧的 retry 库。
+实现层使用 `net/http` + 自带指数退避与 `Retry-After` 解析（`internal/provider/github`）；`sethvargo/go-retry` 仍保留在 `go.mod` 的 deps 工具链中，当前未参与运行时重试，避免两套退避语义并存。
 
 ### 4.4 下载限制
 
@@ -186,10 +186,10 @@ checksums.sha256
 
 规则：
 
-- 只接受 64 位小写 hex；
-- 文件名必须做干净路径检查，拒绝绝对路径与 `..`；
-- 只匹配目标 asset name；
-- 不匹配返回 `OMF-E4002`。
+- 接受 64 位 hex（大小写均可，统一归一化为小写）；
+- 文件名必须做干净路径检查，拒绝绝对路径与 `..`；行内的相对前缀（`./name`、`dist/name`）允许，按 `filepath.Base` 比较；
+- 只匹配目标 asset name；同名条目摘要冲突时返回 `OMF-E4002`；
+- 不匹配返回 `OMF-E4002`；读取失败返回 `OMF-E4001`。
 
 ### 6.3 校验
 
@@ -211,10 +211,12 @@ checksums.sha256
   "provider": "btbn",
   "repository": "FFmpeg-Builds/FFmpeg-Builds",
   "channel": "stable",
-  "release_tag": "autobuild-...",
-  "published_at": "...",
-  "asset_name": "...",
-  "asset_url": "...",
+  "release_tag": "latest",
+  "release_id": "441698707",
+  "published_at": "2026-11-11T13:00:32Z",
+  "pinned_at": "2026-11-12T00:00:00Z",
+  "asset_name": "ffmpeg-n9.0-latest-win64-gpl-9.0.zip",
+  "asset_url": "https://github.com/.../releases/download/latest/ffmpeg-n9.0-latest-win64-gpl-9.0.zip",
   "asset_sha256": "...",
   "checksums_url": "...",
   "checksums_sha256": "...",
@@ -226,15 +228,24 @@ checksums.sha256
 }
 ```
 
+pin 判定（D1）：
+
+```text
+release_tag != "latest"  -> OK（tag 不可变）
+release_tag == "latest"  -> 需要 release_id + published_at + asset_sha256
+缺任一字段               -> OMF-E3010 RELEASE_NOT_PINNED
+```
+
 禁止：
 
-- `release_tag = "latest"`；
+- `release_tag = "latest"` 且缺少 `release_id` / `published_at` / `asset_sha256`；
 - `asset_url` 为最终版本记录；
 - 用发布时间代替 tag；
 - 用 provider 名代替 release；
-- 不记录 asset SHA-256。
+- 不记录 asset SHA-256；
+- 让 `pinned_at` 参与完整性判定（它只是审计时间）。
 
-`RELEASE_NOT_PINNED` 对应 `OMF-E3010`。
+`RELEASE_NOT_PINNED` 对应 `OMF-E3010`；示例见 `docs/schemas/examples/provider-resolve.example.json`（真实 release id 与发布时间）。
 
 ---
 
@@ -271,7 +282,7 @@ checksums.sha256
 owner/repo
 ```
 
-然后走 GitHub API；仍要求具体 release tag + asset SHA-256。
+然后走 GitHub API；仍要求不可变 pin（具体 tag，或 `latest` + `release_id` + asset SHA-256）。
 
 ### 8.3 自定义 provider manifest
 

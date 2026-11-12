@@ -46,8 +46,14 @@ type Result struct {
 	Signal           string   `json:"signal,omitempty"`
 	DurationMs       int64    `json:"duration_ms"`
 	Truncated        bool     `json:"truncated"`
+	StdoutTruncated  bool     `json:"stdout_truncated"`
+	StderrTruncated  bool     `json:"stderr_truncated"`
 	MaxOutputBytes   int      `json:"max_output_bytes"`
 }
+
+// ExitCodeNotStarted marks a process that never produced an exit status
+// (timeout, cancellation, I/O failure or start failure).
+const ExitCodeNotStarted = -1
 
 func (r Result) Summary() string {
 	return fmt.Sprintf(
@@ -113,7 +119,10 @@ func buildEnv(base, overrides, unset []string, clean bool) []string {
 	if !clean {
 		for _, pair := range base {
 			key, value, ok := strings.Cut(pair, "=")
-			if !ok {
+			// Windows drive-relative entries look like "=C:=C:\dir" and have
+			// an empty key. They cannot be rebuilt unambiguously, so drop them
+			// instead of collapsing several drives into one entry.
+			if !ok || key == "" {
 				continue
 			}
 			entries[envKey(key)] = key + "=" + value
@@ -187,12 +196,15 @@ func (r Runner) Run(ctx context.Context, executable string, args ...string) (Res
 
 	result := r.result(executable, args, stdout, stderr, duration, maxOutput)
 	if stderrors.Is(ctx.Err(), context.Canceled) {
+		result.ExitCode = ExitCodeNotStarted
 		return result, apperrors.New(apperrors.E9004, "context canceled")
 	}
 	if stderrors.Is(runCtx.Err(), context.DeadlineExceeded) {
+		result.ExitCode = ExitCodeNotStarted
 		return result, apperrors.New(apperrors.E1006, "process timeout").WithCause(runCtx.Err().Error())
 	}
 	if stderrors.Is(err, exec.ErrWaitDelay) {
+		result.ExitCode = ExitCodeNotStarted
 		return result, apperrors.New(apperrors.E1006, "process I/O did not complete").WithCause(err.Error())
 	}
 	if err != nil {
@@ -200,12 +212,16 @@ func (r Runner) Run(ctx context.Context, executable string, args ...string) (Res
 		if stderrors.As(err, &exitErr) {
 			result.ExitCode = exitErr.ExitCode()
 			if result.ExitCode < 0 {
-				result.ExitCode = 1
-				result.Signal = exitErr.String()
+				result.ExitCode = ExitCodeNotStarted
+				result.Signal = processSignal(exitErr)
 			}
-		} else {
-			return result, apperrors.New(apperrors.E1004, "process could not be started").WithCause(err.Error())
+			return result, nil
 		}
+		result.ExitCode = ExitCodeNotStarted
+		if stderrors.Is(err, os.ErrPermission) {
+			return result, apperrors.New(apperrors.E1005, "process is not executable").WithCause(err.Error())
+		}
+		return result, apperrors.New(apperrors.E1012, "process could not be started").WithCause(err.Error())
 	}
 	return result, nil
 }
@@ -224,6 +240,8 @@ func (r Runner) result(executable string, args []string, stdout, stderr *limited
 		StderrTotalBytes: stderr.total,
 		DurationMs:       duration.Milliseconds(),
 		Truncated:        stdout.truncated || stderr.truncated,
+		StdoutTruncated:  stdout.truncated,
+		StderrTruncated:  stderr.truncated,
 		MaxOutputBytes:   maxOutput,
 	}
 }

@@ -20,3 +20,16 @@ func configureProcess(cmd *exec.Cmd) {
 		return err
 	}
 }
+
+// processSignal returns the signal name when the process was killed by a
+// signal instead of exiting normally.
+func processSignal(exitErr *exec.ExitError) string {
+	if exitErr == nil || exitErr.ProcessState == nil {
+		return ""
+	}
+	status, ok := exitErr.ProcessState.Sys().(syscall.WaitStatus)
+	if !ok || !status.Signaled() {
+		return ""
+	}
+	return status.Signal().String()
+}

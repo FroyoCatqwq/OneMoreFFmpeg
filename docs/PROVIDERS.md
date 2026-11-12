@@ -36,8 +36,8 @@ daily
 
 | Channel | 含义 | 运行时要求 |
 |---|---|---|
-| `stable` | 稳定 release line，例如 BtbN `n9.0` | 必须解析为具体 release tag |
-| `daily` | 每日/最新浮动 release，例如 `latest` / autobuild | 必须解析为具体 release tag，不允许记录 `latest` |
+| `stable` | 稳定 release line，例如 BtbN `n9.0` | 优先 pin 到具体 tag；上游把稳定线资产放在 `latest` release 时，允许 `release_tag=latest` 但必须带 `release_id` + `published_at` + `asset_sha256`（D1） |
+| `daily` | 每日/最新浮动 release，例如 autobuild | 必须解析为具体 autobuild tag，不允许只记录 `latest` |
 
 支持矩阵：
 
@@ -45,7 +45,7 @@ daily
 |---|---|---|---|
 | `btbn` | 支持 | 支持 | stable 为当前 stable line（示例 `n9.0`）；daily 为 `latest` / autobuild |
 | `bnqdzj-nonfree` | 视上游 | 支持 | 若上游无稳定 release line，`stable` 返回 `OMF-E3004` |
-| `custom` | 由 manifest 声明 | 由 manifest 声明 | direct URL 无 channel 概念，可标 `pinned` |
+| `custom` | 由 manifest 声明 | 由 manifest 声明 | direct URL 没有 channel 概念；输出 `channel=daily` 以匹配枚举，pin 由 `release_tag` + `asset_sha256` 表达，不写 `pinned` |
 
 GitHub API、限流、重试、资产匹配、checksums 与 pin 细则见 [`PROVIDER_RESOLVER.md`](PROVIDER_RESOLVER.md)。
 
@@ -70,7 +70,9 @@ Provider
 Channel
 Repository
 ReleaseTag
+ReleaseID        # 可选；release_tag=latest 时必填
 PublishedAt
+PinnedAt         # 可选；本次 pin 时间
 AssetName
 AssetURL
 AssetSHA256
@@ -83,7 +85,17 @@ LicenseHint
 Redistributable
 ```
 
-安装记录必须包含以上字段；缺一不可。
+安装记录必须包含以上字段；缺一不可，但 `ChecksumsURL` / `ChecksumsSHA256` 有例外：GitHub Release 来源必须同时记录两者；自定义直链只有 `asset_sha256` pin 时这两个字段可以为空（`CLI_SCHEMA.md` §4.7 与 `contracts` 的校验一致）。
+
+pin 规则（D1）：
+
+```text
+release_tag != latest  -> tag 本身不可变，release_id 可选
+release_tag == latest  -> 必须同时有 release_id、published_at、asset_sha256
+缺少任一 pin 字段      -> OMF-E3010
+```
+
+`pinned_at` 只用于审计“什么时候解析到该 release”，不参与完整性判定。
 
 `Linkage`：
 
@@ -155,6 +167,15 @@ https://github.com/BnqDzj/FFmpeg-Builds-nonfree
 - `install.json` 明确标记 `redistributable = false`；
 - 公开 CI 可以跑元数据解析，但不把 nonfree 资产上传为 artifact。
 
+显式同意（D5）：
+
+```text
+resolve --provider bnqdzj-nonfree ...             -> OMF-E7001（缺少同意）
+resolve --provider bnqdzj-nonfree --allow-nonfree -> 成功 + OMF-W1006
+```
+
+`--allow-nonfree` 只对 nonfree variant 生效；缺失时不得发起下载，也不得静默降级到其他 provider。
+
 法律边界：
 
 - nonfree 二进制不能随 GPL 项目公开分发；
@@ -172,10 +193,10 @@ https://github.com/BnqDzj/FFmpeg-Builds-nonfree
 one-more-ffmpeg provider add \
   --id my-ffmpeg \
   --url https://example.com/ffmpeg.zip \
-  --sha256 <64-hex> \
-  --variant gpl \
-  --linkage static
+  --sha256 <64-hex>
 ```
+
+`provider add` 只登记来源与身份（`id` / `url` / `sha256` / `status`）；`variant` / `linkage` / `target` 属于 `resolve` 的参数，不在 add 阶段固定，避免同一来源无法解析不同变体。
 
 支持两类 URL：
 
@@ -223,6 +244,7 @@ SHA-256 校验
 ```json
 {
   "schema": "onemoreffmpeg.artifact/v1",
+  "artifact_id": "art-0123456789abcdef",
   "provider": "btbn",
   "release_tag": "autobuild-...",
   "asset_name": "...",

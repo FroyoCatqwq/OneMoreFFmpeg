@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -35,9 +36,13 @@ func scanRoots(ctx context.Context, opts Options, add addCandidate, errs *[]mode
 	}
 
 	scannedRoots := make([]string, 0, len(roots))
+	// MaxFiles is a global budget; previously it restarted for every root,
+	// so a multi-drive scan visited roots × MaxFiles entries.
+	files := 0
 	for _, root := range roots {
 		if ctx.Err() != nil {
-			emit(newDetectError(apperrors.E1008, "scan timeout or canceled", map[string]any{"root": root}))
+			// Detect reports the overall timeout once; per-root duplicates
+			// only made errors[] noisy.
 			return
 		}
 		canon := canonicalRoot(root)
@@ -45,11 +50,13 @@ func scanRoots(ctx context.Context, opts Options, add addCandidate, errs *[]mode
 			continue
 		}
 		scannedRoots = append(scannedRoots, canon)
-		err := scanOne(ctx, root, opts, add, emit)
+		err := scanOne(ctx, root, opts, add, emit, &files)
 		if err != nil {
 			switch {
-			case stderrors.Is(err, errScanLimit), stderrors.Is(err, context.DeadlineExceeded), stderrors.Is(err, context.Canceled):
-				emit(newDetectError(apperrors.E1008, "scan limit or timeout exceeded", map[string]any{"root": root}))
+			case stderrors.Is(err, errScanLimit):
+				emit(newDetectError(apperrors.E1008, "scan limit exceeded", map[string]any{"root": root, "max_files": opts.MaxFiles}))
+			case ctx.Err() != nil:
+				return
 			case os.IsPermission(err):
 				emit(newDetectError(apperrors.E1005, "scan permission denied", map[string]any{"root": root}))
 			default:
@@ -59,7 +66,7 @@ func scanRoots(ctx context.Context, opts Options, add addCandidate, errs *[]mode
 	}
 }
 
-func scanOne(ctx context.Context, root string, opts Options, add addCandidate, emit emitError) error {
+func scanOne(ctx context.Context, root string, opts Options, add addCandidate, emit emitError, files *int) error {
 	abs := canonicalRoot(root)
 	fi, err := os.Stat(abs)
 	if err != nil {
@@ -69,7 +76,6 @@ func scanOne(ctx context.Context, root string, opts Options, add addCandidate, e
 		return os.ErrInvalid
 	}
 	visitedDirs := map[string]bool{}
-	files := 0
 	return filepath.WalkDir(abs, func(path string, entry fs.DirEntry, walkErr error) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -89,15 +95,17 @@ func scanOne(ctx context.Context, root string, opts Options, add addCandidate, e
 			if opts.MaxDepth >= 0 && relativeDepth(abs, path) > opts.MaxDepth {
 				return filepath.SkipDir
 			}
-			key := rootKey(path)
+			// WalkDir never follows symlinks, so a cheap lexical key is enough;
+			// EvalSymlinks per directory dominated full-disk scan time.
+			key := cheapKey(path)
 			if visitedDirs[key] {
 				return filepath.SkipDir
 			}
 			visitedDirs[key] = true
 			return nil
 		}
-		files++
-		if opts.MaxFiles > 0 && files > opts.MaxFiles {
+		*files++
+		if opts.MaxFiles > 0 && *files > opts.MaxFiles {
 			return errScanLimit
 		}
 		if isFFmpegBinaryName(entry.Name()) {
@@ -105,6 +113,14 @@ func scanOne(ctx context.Context, root string, opts Options, add addCandidate, e
 		}
 		return nil
 	})
+}
+
+func cheapKey(path string) string {
+	key := filepath.Clean(path)
+	if runtime.GOOS == "windows" {
+		return strings.ToLower(key)
+	}
+	return key
 }
 
 func isFFmpegBinaryName(name string) bool {

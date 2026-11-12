@@ -13,14 +13,34 @@ import (
 )
 
 func capabilitiesFlags() []urfave.Flag {
-	flags := append(detectionFlags(),
+	flags := make([]urfave.Flag, 0, len(detectionFlags())+5)
+	for _, flag := range detectionFlags() {
+		// capabilities always validates, so advertising --no-validate would
+		// only lead users into an E7001 error.
+		if flagName(flag) == "no-validate" {
+			continue
+		}
+		flags = append(flags, flag)
+	}
+	return append(flags,
 		&urfave.StringFlag{Name: "installation-id", Usage: "capabilities target installation id"},
 		&urfave.StringFlag{Name: "help-topic", Value: "full", Usage: "help topic: full|decoder=<name>|encoder=<name>|filter=<name>|muxer=<name>|demuxer=<name>"},
 		&urfave.StringFlag{Name: "cache-dir", Usage: "capability cache directory"},
 		&urfave.BoolFlag{Name: "refresh", Usage: "ignore existing capability cache"},
 		&urfave.BoolFlag{Name: "no-cache", Usage: "do not read or write capability cache"},
 	)
-	return flags
+}
+
+func flagName(flag urfave.Flag) string {
+	switch typed := flag.(type) {
+	case *urfave.StringFlag:
+		return typed.Name
+	case *urfave.BoolFlag:
+		return typed.Name
+	case *urfave.IntFlag:
+		return typed.Name
+	}
+	return ""
 }
 
 func capabilitiesCommand() *urfave.Command {
@@ -29,8 +49,8 @@ func capabilitiesCommand() *urfave.Command {
 		Usage: "query FFmpeg capabilities from a detected installation",
 		Flags: capabilitiesFlags(),
 		Action: func(ctx context.Context, cmd *urfave.Command) error {
-			if cmd.Bool("no-validate") {
-				return apperrors.New(apperrors.E7001, "capabilities requires validation; --no-validate is not allowed")
+			if err := rejectExtraArgs(cmd); err != nil {
+				return err
 			}
 			topic := cmd.String("help-topic")
 			if err := appcaps.ValidateHelpTopic(topic); err != nil {
@@ -42,17 +62,25 @@ func capabilitiesCommand() *urfave.Command {
 			}
 			dir := cmd.String("dir")
 			id := cmd.String("installation-id")
+			if err := rejectDirDiscoveryConflict(cmd, dir); err != nil {
+				return err
+			}
 			installation, err := selectInstallationForCapabilities(ctx, detectOptions, dir, id)
 			if err != nil {
 				return err
 			}
+			commandTimeout := detectOptions.ProbeTimeout
+			if !cmd.IsSet("probe-timeout") {
+				commandTimeout = 0
+			}
 			collector := appcaps.New()
 			set, err := collector.Collect(ctx, appcaps.Options{
-				Installation: installation,
-				HelpTopic:    cmd.String("help-topic"),
-				Refresh:      cmd.Bool("refresh"),
-				NoCache:      cmd.Bool("no-cache"),
-				CacheDir:     cmd.String("cache-dir"),
+				Installation:   installation,
+				HelpTopic:      cmd.String("help-topic"),
+				Refresh:        cmd.Bool("refresh"),
+				NoCache:        cmd.Bool("no-cache"),
+				CacheDir:       cmd.String("cache-dir"),
+				CommandTimeout: commandTimeout,
 			})
 			if err != nil {
 				return err

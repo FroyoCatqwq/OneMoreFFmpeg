@@ -20,6 +20,12 @@ func validateCommand() *urfave.Command {
 		Usage: "validate one FFmpeg installation (read-only)",
 		Flags: flags,
 		Action: func(ctx context.Context, cmd *urfave.Command) error {
+			if err := rejectExtraArgs(cmd); err != nil {
+				return err
+			}
+			if cmd.Bool("no-validate") {
+				return apperrors.New(apperrors.E7001, "validate cannot skip validation; remove --no-validate")
+			}
 			opts, err := parseDetectOptions(cmd)
 			if err != nil {
 				return err
@@ -28,6 +34,12 @@ func validateCommand() *urfave.Command {
 			id := cmd.String("installation-id")
 			if (dir == "") == (id == "") {
 				return apperrors.New(apperrors.E7001, "use exactly one of --dir or --installation-id")
+			}
+			if err := rejectDirDiscoveryConflict(cmd, dir); err != nil {
+				return err
+			}
+			if id != "" && (cmd.Bool("scan") || cmd.Bool("recursive") || cmd.String("roots") != "") {
+				return apperrors.New(apperrors.E7001, "--installation-id cannot be combined with --scan, --recursive or --roots")
 			}
 
 			detector := appdetect.New()
