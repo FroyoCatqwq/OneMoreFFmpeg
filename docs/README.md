@@ -42,8 +42,10 @@
 | 29 | [`USAGE.md`](USAGE.md) | 首次使用详细教程 |
 | 30 | [`man/one-more-ffmpeg.1`](man/one-more-ffmpeg.1) | Linux man 页 |
 | 31 | [`FULL_AUDIT_2026-11-13.md`](FULL_AUDIT_2026-11-13.md) | 2026-11-13 全量审查与二次修复 |
-| 32 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
-| 33 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
+| 32 | [`VERSIONING.md`](VERSIONING.md) | SemVer 版本与发布规范 |
+| 33 | [`releases/release-v0.6.0.md`](releases/release-v0.6.0.md) | v0.6.0 release notes |
+| 34 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
+| 35 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
 
 冲突时：
 
@@ -132,5 +134,7 @@
 - [`PHASE5_STATUS.md`](PHASE5_STATUS.md)：Phase 5 安装、current 与 journal 实施状态。
 - [`E2E_TESTING.md`](E2E_TESTING.md)：Windows/Linux e2e、远程服务器与 CI。
 - [`FULL_AUDIT_2026-11-13.md`](FULL_AUDIT_2026-11-13.md)：本轮全量审查、二次检查与修复记录。
+- [`VERSIONING.md`](VERSIONING.md)：SemVer 版本与发布规范。
+- [`releases/release-v0.6.0.md`](releases/release-v0.6.0.md)：v0.6.0 release notes。
 - [`USAGE.md`](USAGE.md)：首次使用详细教程。
 - [`man/one-more-ffmpeg.1`](man/one-more-ffmpeg.1)：Linux man 页。

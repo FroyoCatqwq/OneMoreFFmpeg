@@ -156,6 +156,8 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 | [`docs/USAGE.md`](docs/USAGE.md) | 首次使用详细教程 |
 | [`docs/man/one-more-ffmpeg.1`](docs/man/one-more-ffmpeg.1) | Linux man 页（`man ./docs/man/one-more-ffmpeg.1`） |
 | [`docs/FULL_AUDIT_2026-11-13.md`](docs/FULL_AUDIT_2026-11-13.md) | 2026-11-13 全量审查与二次修复记录 |
+| [`docs/VERSIONING.md`](docs/VERSIONING.md) | SemVer 版本与发布规范 |
+| [`docs/releases/release-v0.6.0.md`](docs/releases/release-v0.6.0.md) | v0.6.0 release notes |
 | [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) | 第三方依赖许可证清单初稿 |
 
 ---
