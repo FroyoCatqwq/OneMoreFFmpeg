@@ -35,9 +35,11 @@
 ├─ downloads/
 ├─ cache/
 │  └─ capabilities/
-├─ apps/
-├─ current
-├─ journal/
+├─ apps/<provider>/<release-tag>/<sha256[:16]>/
+├─ current -> apps/<...>
+├─ current.pointer          # Windows 无 symlink 权限时的回退
+├─ journal/<id>.json
+├─ tmp/<journal-id>/        # 安装临时目录
 ├─ config.toml
 └─ providers.toml
 ```

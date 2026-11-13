@@ -96,7 +96,8 @@
 |---|---|
 | `version` / `detect` / `validate` / `capabilities` | 已实现 |
 | `provider list` / `provider add` / `resolve` / `download` | 已实现（Phase 4） |
-| `install` / `env.*` / `doctor` | 未实现（Phase 5/6） |
+| `install` | 已实现（Phase 5，默认 dry-run） |
+| `env.*` / `doctor` | 未实现（Phase 6） |
 
 未实现命令的 data 表与示例仍是**计划契约**，用于冻结字段形状；调用会得到 `OMF-E7001`。
 
@@ -413,7 +414,7 @@ provider 摘要：
 
 ---
 
-### 4.9 `install`（未实现，Phase 5）
+### 4.9 `install`（已实现，默认 dry-run）
 
 `data` 字段遵循 `onemoreffmpeg.install/v1`：
 
@@ -432,6 +433,38 @@ provider 摘要：
 | `lock_path` | string | 由 `--emit-trio-lock` 触发时的可选输出 |
 | `journal_id` | string | 安装事务 ID |
 | `dry_run` | boolean | 是否只预览 |
+
+参数：
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--release <PATH>` | 无 | 离线 release JSON；未提供时按 provider 参数在线 resolve |
+| `--artifact <PATH>` | 自动下载 | 已下载归档；必须绝对路径且 SHA-256 与 pin 一致（`E4002`） |
+| `--apply` | false | 实际安装；不带该参数为 dry-run，不写任何文件 |
+| `--force` | false | 目标目录已存在时先隔离旧目录再安装 |
+| `--no-current` | false | 不更新 `current` 指针 |
+| `--emit-trio-lock` | false | 在安装目录写 `ffmpeg-trio.lock` |
+| `--allow-nonfree` | false | nonfree release 必填 |
+
+落盘与事务：
+
+```text
+<data-root>/apps/<provider>/<release-tag>/<sha256[:16]>/
+  ├─ bin/ffmpeg[.exe]
+  ├─ bin/ffprobe[.exe]
+  ├─ bin/ffplay[.exe]（若归档包含）
+  ├─ install.json
+  └─ ffmpeg-trio.lock（可选）
+<data-root>/current                  symlink -> apps/...（Windows 无权限时 current.pointer）
+<data-root>/journal/<id>.json        pending -> committed / failed
+<data-root>/tmp/<journal-id>/        解压临时目录，成功后删除
+```
+
+- 归档只接受 `.zip` / `.tar.xz` / `.tar.gz` / `.tgz` / `.tar.zst`；其他 `E5001`；
+- 拒绝绝对路径、`..`、盘符、symlink、非普通 tar 条目（`E5002`）；
+- 安装后运行 `ffmpeg -version` / `ffprobe -version`（`E5008`）；
+- 同一 asset 重复安装幂等；不同 asset 需 `--force`（`E5003`）；
+- `current` 是真实目录时拒绝覆盖（`E5004`）；旧目录隔离失败 `E5007`。
 
 示例：[`schemas/examples/install.example.json`](schemas/examples/install.example.json)
 

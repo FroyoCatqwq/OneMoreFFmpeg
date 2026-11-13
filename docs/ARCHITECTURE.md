@@ -44,6 +44,9 @@ internal/model    internal/errors  internal/errors
 | `internal/provider` | provider 注册表、资产匹配、pin 解析、nonfree 同意、自定义 provider 存储 |
 | `internal/provider/github` | GitHub Releases API 客户端（重试/限流/脱敏） |
 | `internal/download` | 流式下载、双重校验、原子落盘、artifact.json |
+| `internal/archive` | zip / tar.xz / tar.gz / tar.zst 安全解压 |
+| `internal/install` | 版本化安装、install.json、current 指针、安装后校验 |
+| `internal/journal` | 安装/切换事务 journal |
 | `internal/contracts` | JSON 示例与错误码注册表校验 |
 | `internal/config` | 严格 TOML 1.1 配置 |
 | `internal/model` | JSON 契约结构体 |

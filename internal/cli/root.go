@@ -93,6 +93,7 @@ func New(opts RunOptions) (*urfave.Command, error) {
 			providerCommand(),
 			resolveCommand(),
 			downloadCommand(),
+			installCommand(),
 		},
 		Before: func(ctx context.Context, cmd *urfave.Command) (context.Context, error) {
 			cfg, configPath, err := loadConfig(cmd)

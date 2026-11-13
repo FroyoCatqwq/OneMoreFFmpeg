@@ -205,8 +205,72 @@ func validateDataFields(schema string, data map[string]any) error {
 		return validateArtifact(raw, data)
 	case model.CapabilitiesSchema:
 		return validateCapabilities(data)
+	case model.InstallSchema:
+		return validateInstall(raw)
 	}
 	return nil
+}
+
+func validateInstall(raw []byte) error {
+	var data model.InstallData
+	if err := json.Unmarshal(raw, &data); err != nil {
+		return apperrors.New(apperrors.E7003, "install data is malformed").WithCause(err.Error())
+	}
+	for field, value := range map[string]string{
+		"installation_id": data.InstallationID,
+		"root_dir":        data.RootDir,
+		"provider":        data.Provider,
+		"repository":      data.Repository,
+		"release_tag":     data.ReleaseTag,
+		"asset_sha256":    data.AssetSHA256,
+		"license_hint":    data.LicenseHint,
+	} {
+		if value == "" {
+			return apperrors.New(apperrors.E7003, "install field is required").WithDetails(map[string]any{"field": field})
+		}
+	}
+	if !isAbsoluteLike(data.RootDir) {
+		return apperrors.New(apperrors.E7003, "install root_dir must be absolute")
+	}
+	switch data.CurrentPointer {
+	case model.CurrentJunction, model.CurrentSymlink, model.CurrentPointerFile, model.CurrentMissing:
+	default:
+		return apperrors.New(apperrors.E7003, "install current_pointer is invalid")
+	}
+	if !sha256Pattern.MatchString(data.AssetSHA256) {
+		return apperrors.New(apperrors.E7003, "install asset_sha256 must be lowercase hex")
+	}
+	dryRun, _ := rawField(raw, "dry_run")
+	isDryRun, _ := dryRun.(bool)
+	if !isDryRun {
+		if !sha256Pattern.MatchString(data.Binaries.FFmpegSHA256) || !sha256Pattern.MatchString(data.Binaries.FFprobeSHA256) {
+			return apperrors.New(apperrors.E7003, "install binary hashes must be lowercase hex")
+		}
+		if data.Binaries.FFplaySHA256 != "" && !sha256Pattern.MatchString(data.Binaries.FFplaySHA256) {
+			return apperrors.New(apperrors.E7003, "install ffplay hash must be lowercase hex")
+		}
+	}
+	switch data.LicenseHint {
+	case "gpl", "lgpl", "nonfree", "custom":
+	default:
+		return apperrors.New(apperrors.E7003, "install license_hint is invalid")
+	}
+	if data.LicenseHint == "nonfree" && data.Redistributable {
+		return apperrors.New(apperrors.E7003, "nonfree install must not be redistributable")
+	}
+	if _, ok := rawField(raw, "dry_run"); !ok {
+		return apperrors.New(apperrors.E7003, "install dry_run is required")
+	}
+	return nil
+}
+
+func rawField(raw []byte, name string) (any, bool) {
+	var object map[string]any
+	if err := json.Unmarshal(raw, &object); err != nil {
+		return nil, false
+	}
+	value, ok := object[name]
+	return value, ok
 }
 
 func validateCapabilities(data map[string]any) error {

@@ -45,6 +45,7 @@ func wantsJSON(args []string) bool {
 		"--checksums-url":   true,
 		"--license-hint":    true,
 		"--max-bytes":       true,
+		"--artifact":        true,
 	}
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
