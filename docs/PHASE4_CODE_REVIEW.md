@@ -121,6 +121,6 @@ go build -tags deps / windows / linux 通过
 
 1. 只尝试最新 autobuild，不回退旧 autobuild；
 2. release 列表最多 100 条，无分页；
-3. `provider add` 无跨进程写锁；
+3. `provider add` 锁文件有 30 秒陈旧锁清理策略，极长并发事务仍可能竞争；常规单进程 CLI 不受影响；
 4. digest 降级后下载不再做第二源校验；
 5. Windows Job Object 仍按 D7 推迟 Phase 5。

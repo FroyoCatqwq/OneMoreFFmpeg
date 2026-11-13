@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	urfave "github.com/urfave/cli/v3"
@@ -46,6 +47,10 @@ func Run(ctx context.Context, opts RunOptions) (code int) {
 	if len(opts.Args) == 0 {
 		opts.Args = []string{"one-more-ffmpeg"}
 	}
+	if hasInDetailUsage(opts.Args) {
+		_, _ = fmt.Fprint(opts.Stdout, detailedUsage)
+		return 0
+	}
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			writeFailure(opts.Stdout, opts.Stderr, wantsJSON(opts.Args),
@@ -66,6 +71,19 @@ func Run(ctx context.Context, opts RunOptions) (code int) {
 	return 0
 }
 
+func showFirstUseNotice(stderr io.Writer) {
+	root, err := paths.DataRoot()
+	if err == nil {
+		marker := filepath.Join(root, ".first-use")
+		if _, statErr := os.Stat(marker); statErr == nil {
+			return
+		}
+		_ = os.MkdirAll(root, 0o755)
+		_ = os.WriteFile(marker, []byte("seen\n"), 0o644)
+	}
+	_, _ = fmt.Fprint(stderr, firstUseNotice)
+}
+
 func New(opts RunOptions) (*urfave.Command, error) {
 	if opts.Stdout == nil {
 		opts.Stdout = os.Stdout
@@ -84,6 +102,7 @@ func New(opts RunOptions) (*urfave.Command, error) {
 			&urfave.StringFlag{Name: "config", Aliases: []string{"c"}, Usage: "TOML config path"},
 			&urfave.StringFlag{Name: "log-level", Usage: "error|warn|info|debug|trace"},
 			&urfave.BoolFlag{Name: "quiet", Usage: "only log errors"},
+			&urfave.BoolFlag{Name: "in-detail-usage", Usage: "print the full built-in usage guide"},
 		},
 		Commands: []*urfave.Command{
 			versionCommand(opts.Version),
@@ -94,6 +113,11 @@ func New(opts RunOptions) (*urfave.Command, error) {
 			resolveCommand(),
 			downloadCommand(),
 			installCommand(),
+			envCommand(),
+			doctorCommand(),
+			uninstallCommand(),
+			journalCommand(),
+			releaseCommand(),
 		},
 		Before: func(ctx context.Context, cmd *urfave.Command) (context.Context, error) {
 			cfg, configPath, err := loadConfig(cmd)
@@ -115,6 +139,9 @@ func New(opts RunOptions) (*urfave.Command, error) {
 				"log_level", cfg.Log.Level,
 				"log_json", cfg.Log.JSON,
 			)
+			if configPath == "" {
+				showFirstUseNotice(opts.Stderr)
+			}
 			ctx = withConfig(ctx, cfg)
 			return logging.WithLogger(ctx, logger), nil
 		},
@@ -147,6 +174,33 @@ func New(opts RunOptions) (*urfave.Command, error) {
 	return root, nil
 }
 
+var globalValueFlags = map[string]bool{
+	"--config": true, "-c": true, "--log-level": true,
+	"--provider": true, "--channel": true, "--target": true, "--variant": true,
+	"--linkage": true, "--release-line": true, "--release-tag": true,
+	"--release": true, "--artifact": true, "--root": true, "--journal": true,
+	"--id": true, "--url": true, "--sha256": true, "--checksums-url": true,
+	"--license-hint": true, "--max-bytes": true, "--days": true, "--count": true,
+	"--releases-url": true, "--version": true, "--snapshot": true, "--only": true,
+	"--installation-id": true, "--help-topic": true, "--cache-dir": true,
+}
+
+// hasInDetailUsage avoids treating a flag value such as
+// `--config --in-detail-usage` as the usage flag itself.
+func hasInDetailUsage(args []string) bool {
+	for index := 0; index < len(args); index++ {
+		arg := args[index]
+		if arg == "--in-detail-usage" || arg == "-in-detail-usage" {
+			return true
+		}
+		name, _, hasEquals := strings.Cut(arg, "=")
+		if globalValueFlags[name] && !hasEquals {
+			index++
+		}
+	}
+	return false
+}
+
 // loadConfig resolves the config source in this order:
 //  1. an explicit --config path (must be readable);
 //  2. <data-root>/config.toml when it exists (missing file is not an error);
@@ -170,6 +224,9 @@ func loadConfig(cmd *urfave.Command) (config.Config, string, error) {
 			return config.Default(), "", nil
 		}
 		return config.Config{}, "", err
+	}
+	if _, err := os.Stat(path); err != nil && os.IsNotExist(err) {
+		return config.Default(), "", nil
 	}
 	cfg, err := config.LoadOptional(path)
 	if err != nil {

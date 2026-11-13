@@ -147,8 +147,16 @@ func relativeDepth(root, path string) int {
 }
 
 func isExcludedDir(root, path string) bool {
-	if filepath.Clean(root) == filepath.Clean(path) {
+	cleanRoot := filepath.Clean(root)
+	cleanPath := filepath.Clean(path)
+	if cleanRoot == cleanPath {
 		return false
+	}
+	if cleanRoot != string(filepath.Separator) && cleanRoot != "/" && cleanRoot != `\` {
+		if rel, err := filepath.Rel(cleanRoot, cleanPath); err == nil &&
+			rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return false
+		}
 	}
 	base := strings.ToLower(filepath.Base(path))
 	switch base {

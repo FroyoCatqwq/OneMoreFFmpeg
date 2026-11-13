@@ -364,6 +364,30 @@ func TestCapabilitiesRequiresInput(t *testing.T) {
 	require.Equal(t, "OMF-E7001", obj.Code)
 }
 
+func TestCapabilitiesOnlyReturnsSingleList(t *testing.T) {
+	fake := testutil.NewFakeFFmpeg(t)
+	setCapabilityEnv(t, fake)
+
+	opts, stdout, _ := testOptions(
+		"capabilities",
+		"--dir", fake.Dir,
+		"--only", "encoders",
+		"--no-cache",
+		"--json",
+	)
+	code := appcli.Run(context.Background(), opts)
+	require.Equal(t, 0, code)
+
+	var object map[string]any
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &object))
+	data := object["data"].(map[string]any)
+	require.Equal(t, "onemoreffmpeg.capability-list/v1", data["schema"])
+	require.Equal(t, "encoders", data["kind"])
+	require.NotEmpty(t, data["entries"])
+	require.NotContains(t, data, "muxers")
+	require.NotContains(t, data, "decoders")
+}
+
 func TestCapabilitiesNoValidateRejected(t *testing.T) {
 	opts, stdout, _ := testOptions("capabilities", "--dir", t.TempDir(), "--no-validate", "--json")
 	code := appcli.Run(context.Background(), opts)

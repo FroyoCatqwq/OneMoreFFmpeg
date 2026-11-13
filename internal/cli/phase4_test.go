@@ -95,7 +95,7 @@ func TestProviderAddAndList(t *testing.T) {
 	sha := strings.Repeat("c", 64)
 
 	code, object, raw := runJSON(t, "provider", "add", "--id", "my-ffmpeg",
-		"--url", "https://example.invalid/ffmpeg.zip", "--sha256", sha, "--json")
+		"--url", "https://example.invalid/ffmpeg.zip", "--sha256", sha, "--apply", "--json")
 	require.Equal(t, 0, code, raw)
 	data := object["data"].(map[string]any)
 	require.Equal(t, "my-ffmpeg", data["id"])

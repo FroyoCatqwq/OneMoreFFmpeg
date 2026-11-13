@@ -92,7 +92,10 @@ func findBinary(dir, base string) string {
 		if err != nil || fi.IsDir() {
 			continue
 		}
-		if isExecutable(path, fi) {
+		// On POSIX an existing but non-executable ffmpeg must still be
+		// discovered so validation can report status=unusable instead of
+		// pretending the installation does not exist (E1002).
+		if runtime.GOOS != "windows" || isExecutable(path, fi) {
 			return path
 		}
 	}

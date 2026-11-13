@@ -270,6 +270,29 @@ func TestCacheKeyIncludesCommandTimeout(t *testing.T) {
 	require.Len(t, files, 2)
 }
 
+func TestCollectListUsesCache(t *testing.T) {
+	fake := testutil.NewFakeFFmpeg(t)
+	collector := newCollector(fake)
+	cacheDir := t.TempDir()
+	opts := appcaps.Options{
+		Installation: testInstallation(fake),
+		CacheDir:     cacheDir,
+	}
+	first, err := collector.CollectList(context.Background(), opts, "encoders")
+	require.NoError(t, err)
+	require.NotEmpty(t, first.Entries)
+
+	collector.Runner.Env = append(fake.CapabilityEnv(), "OMF_FAKE_FAIL_ARGS=-encoders")
+	second, err := collector.CollectList(context.Background(), opts, "encoders")
+	require.NoError(t, err, "second call must be served from cache")
+	require.Equal(t, first.Fingerprint, second.Fingerprint)
+	require.Equal(t, first.Entries, second.Entries)
+
+	files, err := os.ReadDir(cacheDir)
+	require.NoError(t, err)
+	require.Len(t, files, 1)
+}
+
 func TestCommandTimeoutOverrideAppliesToEveryCommand(t *testing.T) {
 	fake := testutil.NewFakeFFmpeg(t)
 	collector := newCollector(fake)

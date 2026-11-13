@@ -70,7 +70,8 @@ func providerAddCommand() *urfave.Command {
 			&urfave.StringFlag{Name: "sha256", Usage: "asset sha256 pin (64 hex)"},
 			&urfave.StringFlag{Name: "checksums-url", Usage: "optional https checksums url"},
 			&urfave.StringFlag{Name: "license-hint", Usage: "gpl|lgpl|nonfree|custom"},
-			&urfave.BoolFlag{Name: "dry-run", Usage: "validate without writing providers.toml"},
+			&urfave.BoolFlag{Name: "apply", Usage: "actually write providers.toml (default is dry-run)"},
+			&urfave.BoolFlag{Name: "dry-run", Usage: "force a preview without writing providers.toml"},
 		},
 		Action: func(ctx context.Context, cmd *urfave.Command) error {
 			if err := rejectExtraArgs(cmd); err != nil {
@@ -87,20 +88,20 @@ func providerAddCommand() *urfave.Command {
 			if err != nil {
 				return err
 			}
-			existing, err := provider.LoadCustomFile(path)
-			if err != nil {
-				return err
-			}
-			updated, err := provider.AddCustom(existing, entry)
-			if err != nil {
-				return err
-			}
 			status := "dry-run"
-			if !cmd.Bool("dry-run") {
-				if err := provider.SaveCustomFile(path, updated); err != nil {
+			if cmd.Bool("apply") && !cmd.Bool("dry-run") {
+				if _, err := provider.AddAndSaveCustomFile(path, entry); err != nil {
 					return err
 				}
 				status = "added"
+			} else {
+				existing, err := provider.LoadCustomFile(path)
+				if err != nil {
+					return err
+				}
+				if _, err := provider.AddCustom(existing, entry); err != nil {
+					return err
+				}
 			}
 			data := model.ProviderAddData{
 				Schema: model.ProviderAddSchema,

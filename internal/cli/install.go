@@ -39,8 +39,6 @@ func installCommand() *urfave.Command {
 			if err := rejectExtraArgs(cmd); err != nil {
 				return err
 			}
-			cfg := configFrom(ctx)
-
 			var release model.Release
 			var err error
 			if path := strings.TrimSpace(cmd.String("release")); path != "" {
@@ -51,44 +49,48 @@ func installCommand() *urfave.Command {
 			if err != nil {
 				return err
 			}
-			if release.LicenseHint == "nonfree" || provider.IsNonfreeVariant(release.Variant) {
-				if !cmd.Bool("allow-nonfree") {
-					return apperrors.New(apperrors.E7001, "nonfree binaries require --allow-nonfree").WithDetails(map[string]any{
-						"provider": release.Provider,
-						"asset":    release.AssetName,
-					})
-				}
-			}
-			dataRoot, err := paths.DataRoot()
-			if err != nil {
-				return err
-			}
-			apply := cmd.Bool("apply")
-			archivePath, err := installArchivePath(ctx, cmd, cfg, release, apply)
-			if err != nil {
-				return err
-			}
-			result, err := install.Run(ctx, install.Options{
-				DataRoot:    dataRoot,
-				Release:     release,
-				ArchivePath: archivePath,
-				Apply:       apply,
-				Force:       cmd.Bool("force"),
-				NoCurrent:   cmd.Bool("no-current"),
-				EmitLock:    cmd.Bool("emit-trio-lock"),
-				Runner:      newInstallRunner(),
-			})
-			if err != nil {
-				return err
-			}
-			human := fmt.Sprintf("root: %s\ncurrent: %s\ninstallation: %s\n",
-				result.RootDir, result.CurrentPointer, result.InstallationID)
-			if result.DryRun {
-				human = "dry-run (use --apply to install)\n" + human
-			}
-			return writeResult(cmd, "install", result, human)
+			return installRelease(ctx, cmd, release)
 		},
 	}
+}
+
+func installRelease(ctx context.Context, cmd *urfave.Command, release model.Release) error {
+	if release.LicenseHint == "nonfree" || provider.IsNonfreeVariant(release.Variant) {
+		if !cmd.Bool("allow-nonfree") {
+			return apperrors.New(apperrors.E7001, "nonfree binaries require --allow-nonfree").WithDetails(map[string]any{
+				"provider": release.Provider,
+				"asset":    release.AssetName,
+			})
+		}
+	}
+	dataRoot, err := paths.DataRoot()
+	if err != nil {
+		return err
+	}
+	apply := cmd.Bool("apply")
+	archivePath, err := installArchivePath(ctx, cmd, configFrom(ctx), release, apply)
+	if err != nil {
+		return err
+	}
+	result, err := install.Run(ctx, install.Options{
+		DataRoot:    dataRoot,
+		Release:     release,
+		ArchivePath: archivePath,
+		Apply:       apply,
+		Force:       cmd.Bool("force"),
+		NoCurrent:   cmd.Bool("no-current"),
+		EmitLock:    cmd.Bool("emit-trio-lock"),
+		Runner:      newInstallRunner(),
+	})
+	if err != nil {
+		return err
+	}
+	human := fmt.Sprintf("root: %s\ncurrent: %s\ninstallation: %s\n",
+		result.RootDir, result.CurrentPointer, result.InstallationID)
+	if result.DryRun {
+		human = "dry-run (use --apply to install)\n" + human
+	}
+	return writeResult(cmd, "install", result, human)
 }
 
 func installArchivePath(ctx context.Context, cmd *urfave.Command, cfg config.Config, release model.Release, apply bool) (string, error) {

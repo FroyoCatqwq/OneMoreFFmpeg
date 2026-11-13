@@ -75,6 +75,7 @@
 | `--config <PATH>` / `-c` | `<data-root>/config.toml`（存在时） | 显式指定 TOML；显式路径不存在、或 `ONE_MORE_FFMPEG_HOME` 非绝对路径 → `OMF-E7007` |
 | `--log-level <LEVEL>` | 配置值或 `info` | 覆盖 `[log] level`；当前 `trace` 与 `debug` 输出相同（保留级别，写入类命令实现后再区分） |
 | `--quiet` | false | 强制 `error` 级；与 `--log-level` 同时出现时 `--quiet` 优先 |
+| `--in-detail-usage` | false | 打印内置完整使用指南并退出 0；首次使用注意事项写 stderr，并以 `<data-root>/.first-use` 标记只提示一次 |
 
 配置加载顺序（已实现）：
 
@@ -83,6 +84,8 @@
 3. 内置默认值。
 
 未知子命令、未知 flag、多余位置参数都会返回 `OMF-E7001` 且退出码 2，不会退化为“打印帮助并退出 0”。
+
+`--release <FILE>` 接受 UTF-8（可带 BOM）以及 UTF-16LE/BE（PowerShell 5 `>` 默认编码）；仍建议使用 PowerShell 7 的 `Out-File -Encoding utf8`。写入类命令中 `install` / `uninstall` / `env set|unset|rollback` / `journal rollback` / `provider add` 默认 dry-run；`download` 与 capabilities 缓存会立即写文件，脚本可用 `--no-cache` 关闭能力缓存。stdout 输出前会校验 `command` 与 `data` 契约，非法输出返回 `OMF-E7003`。
 
 ---
 
@@ -97,7 +100,12 @@
 | `version` / `detect` / `validate` / `capabilities` | 已实现 |
 | `provider list` / `provider add` / `resolve` / `download` | 已实现（Phase 4） |
 | `install` | 已实现（Phase 5，默认 dry-run） |
-| `env.*` / `doctor` | 未实现（Phase 6） |
+| `env status` / `doctor` | 已实现（只读） |
+| `env set` / `env unset` / `env rollback` | 已实现（默认 dry-run） |
+| `uninstall` | 已实现（默认 dry-run，隔离到 quarantine，可回滚） |
+| `journal list` / `journal rollback` | 已实现（rollback 默认 dry-run） |
+| `release list` / `release install` | 已实现（动态官方版本 + 近 7 天快照） |
+| `capabilities --only <kind>` | 已实现（单命令、单列表输出） |
 
 未实现命令的 data 表与示例仍是**计划契约**，用于冻结字段形状；调用会得到 `OMF-E7001`。
 
@@ -299,11 +307,14 @@ provider 摘要：
 | 参数 | 默认 | 说明 |
 |---|---|---|
 | `--id` | 无 | 必填；`^[a-z0-9][a-z0-9-]{0,63}$`，不能是 `btbn` / `bnqdzj-nonfree` / `custom` |
-| `--url` | 无 | 必填；仅 https，且必须指向 `.zip` / `.tar.xz` / `.tar.gz` / `.7z` |
+| `--url` | 无 | 必填；仅 https，格式必须与 `archive.FormatFor` 支持的一致：`.zip` / `.tar.xz` / `.tar.gz` / `.tgz` / `.tar.zst` |
 | `--sha256` | 无 | 必填；缺失 `OMF-E3009`，格式错误同码 |
 | `--checksums-url` | 无 | 可选；仅 https |
 | `--license-hint` | `custom` | `gpl` / `lgpl` / `nonfree` / `custom` |
-| `--dry-run` | false | 只校验并返回 `status=dry-run`，不写文件 |
+| `--apply` | false | 实际写入；不带时默认 dry-run |
+| `--dry-run` | false | 强制预览；与 `--apply` 同时出现时以 dry-run 为准 |
+
+整个 `LoadCustomFile → AddCustom → Save` 链路持有 `providers.toml.lock`；锁超时 `OMF-E7005`。
 
 存储：`<data-root>/providers.toml`，schema `onemoreffmpeg.providers/v1`；重复 id 返回 `OMF-E7005`，不覆盖旧 pin。文件写入为临时文件 + rename。
 
@@ -470,7 +481,7 @@ provider 摘要：
 
 ---
 
-### 4.10 `env status`（未实现，Phase 6）
+### 4.10 `env status`（已实现，只读）
 
 `data` 字段：
 
@@ -483,11 +494,19 @@ provider 摘要：
 | `variables` | object | 关键变量当前值摘要 |
 | `warnings` | array | `OMF-W*` |
 
+实现行为：
+
+- `current_type` 由 `current` symlink / 真实目录 / `current.pointer` / 缺失判定；
+- `path_contains_current` 检查进程 PATH 是否包含 `<data-root>/current/bin`（Windows 大小写不敏感）；
+- `resolved_ffmpeg` 只在 `current/bin` 可访问时给出；
+- `current.pointer` 模式会带 `OMF-W1005`（PATH 无法跟随 pointer）；
+- `variables` 中未设置的变量输出 `null`。
+
 示例：[`schemas/examples/env-status.example.json`](schemas/examples/env-status.example.json)
 
 ---
 
-### 4.11 `env set` / `env unset` / `env rollback`（未实现，Phase 6）
+### 4.11 `env set` / `env unset` / `env rollback`（已实现，默认 dry-run）
 
 `data` 字段：
 
@@ -499,11 +518,13 @@ provider 摘要：
 | `journal_id` | string | 事务 ID |
 | `rollback_supported` | boolean | 是否可回滚 |
 
+参数：`--apply`（默认 dry-run）、`--no-path`、`--no-variables`、`--lae-compat`、`--no-shell-rc`；`env rollback --journal <id> --apply` 恢复备份，默认 dry-run。Windows 写入后广播 `WM_SETTINGCHANGE`；Linux 维护 `~/.profile` 托管块与 `~/.local/bin` shim，并支持 `--no-path` / `--no-variables` / `--lae-compat` 控制托管块内容。
+
 示例：[`schemas/examples/env-set.example.json`](schemas/examples/env-set.example.json)
 
 ---
 
-### 4.12 `doctor`（未实现，Phase 6）
+### 4.12 `doctor`（已实现，只读）
 
 `data` 字段：
 
@@ -514,7 +535,41 @@ provider 摘要：
 | `warnings` | array | `OMF-W*` |
 | `journal_pending` | array | 未提交/未回滚 journal |
 
+检查项：`data_root`、`current_exists`、`trio_valid`、`path_contains_current`、`no_pending_journal`。报告整体仍退出 0，脚本必须读取 `healthy`；`journal_pending` 为未完成 journal 的 ID 列表。
+
 示例：[`schemas/examples/doctor.example.json`](schemas/examples/doctor.example.json)
+
+---
+
+### 4.13 `uninstall`（已实现，默认 dry-run）
+
+`data` 遵循 `onemoreffmpeg.uninstall/v1`：`root_dir` / `dry_run` / `applied` / `journal_id`。
+
+- `--root <ABS>`：必须是 `<data-root>/apps/` 下的安装目录，否则 `OMF-E6007`；也可用 `--release <json>` 或 `--provider` + `--release-tag` 定位；
+- `--apply`：实际删除；不带时为 dry-run；
+- 删除后若 `current` 指向该目录，同时移除 current / current.pointer；
+- 不删除下载归档、provider、配置或非本项目管理的目录。
+
+---
+
+### 4.14 `capabilities --only <kind>`（已实现）
+
+`data` 遵循 `onemoreffmpeg.capability-list/v1`：`kind` / `entries` / `command` / `installation_id` / `fingerprint` / `warnings`。只执行该类别所需的 FFmpeg 命令，不输出其他类别。`--cache-dir` / `--no-cache` / `--refresh` 同样生效：缓存文件为 `list-<kind>-<fingerprint>.json`，写入失败记录 `OMF-W1007`。
+
+### 4.15 `release list` / `release install`（已实现）
+
+`release list` 的 `data` 遵循 `onemoreffmpeg.release-catalog/v1`：
+
+- `channel=stable`：版本号来自 FFmpeg 官网 release 页，9.0 线展示其最后一个补丁（如 9.0.2），8.1 线展示 8.1.3；下载资产从 provider release URL 解析；`--days` 对 stable 不适用并输出 0，`--count` 会截断排序后的版本；
+- `channel=daily`：默认展示最近 7 天的 `autobuild-*` 快照；`--days` 改变窗口，`--count` 限制数量；版本从资产名解析，无法解析时回退为 snapshot tag（覆盖 `master` / `nX.Y-latest` 资产）；
+- `release install`：`--version` 或 `--snapshot` 选择（二者互斥），未指定时安装列表第一个；为支持选择旧版本，内部会忽略 `--count` 并扩大查找窗口；默认 dry-run，`--apply` 才安装；nonfree provider 需 `--allow-nonfree`，未显式指定 `--variant` 时自动使用 `nonfree`。
+
+### 4.16 `journal list` / `journal rollback`（已实现）
+
+- `journal list`：`onemoreffmpeg.journal-list/v1`，输出全部 record 摘要与 pending ID；
+- `journal rollback --journal <id> --apply`：`onemoreffmpeg.journal-action/v1`，支持 `install` / `uninstall` / `env-set` / `env-unset`；默认 dry-run，只返回预览；
+- uninstall 先把安装目录移入 `<data-root>/quarantine/<journal-id>/`，回滚时恢复目录与 current；
+- journal id 强制执行白名单，拒绝 `..` 与路径分隔符。
 
 ---
 

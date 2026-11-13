@@ -479,7 +479,7 @@ resolve（或读取 --release）
 | 3 | ~~`internal/model/provider.go` + 示例字段级校验~~ | **已完成** |
 | 4 | ~~`internal/checksum` + 真实 checksums 测试~~ | **已完成** |
 | 5 | ~~`internal/provider/github` + 重试/限流/脱敏测试~~ | **已完成** |
-| 6 | ~~`provider list` + registry~~；`provider add` 待做 | **provider list 已完成** |
+| 6 | ~~`provider list` + registry~~；~~`provider add`~~ | **已完成（默认 dry-run，全链路锁）** |
 | 7 | ~~`btbn`、`bnqdzj-nonfree`、`custom`~~ | **已完成**（stable/daily/nonfree/custom 均有真实解析验证） |
 | 8 | ~~`internal/download` + `artifact.json`~~ | **已完成** |
 | 9 | 文档、示例、`PHASE4_STATUS.md`、DoD 对照 | Phase 4 收尾 |

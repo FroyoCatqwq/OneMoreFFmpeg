@@ -2,12 +2,14 @@ package cli
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf16"
 
 	urfave "github.com/urfave/cli/v3"
 
@@ -108,6 +110,7 @@ func loadReleaseFile(path string) (model.Release, error) {
 	if err != nil {
 		return model.Release{}, apperrors.New(apperrors.E7007, "release file cannot be read").WithCause(err.Error())
 	}
+	raw = normalizeJSONInput(raw)
 	// Accept either a raw release object or a `resolve --json` result wrapper.
 	var envelope struct {
 		Schema string          `json:"schema"`
@@ -134,6 +137,36 @@ func loadReleaseFile(path string) (model.Release, error) {
 		return model.Release{}, err
 	}
 	return release, nil
+}
+
+// normalizeJSONInput accepts UTF-8 (with or without BOM) and UTF-16LE/BE,
+// which Windows PowerShell 5 `>` redirection commonly produces.
+func normalizeJSONInput(raw []byte) []byte {
+	if len(raw) >= 3 && raw[0] == 0xEF && raw[1] == 0xBB && raw[2] == 0xBF {
+		return raw[3:]
+	}
+	little := false
+	if len(raw) >= 2 && raw[0] == 0xFF && raw[1] == 0xFE {
+		little, raw = true, raw[2:]
+	} else if len(raw) >= 2 && raw[0] == 0xFE && raw[1] == 0xFF {
+		raw = raw[2:]
+	} else if len(raw) > 3 && raw[1] == 0 && (raw[0] == '{' || raw[0] == '[') {
+		little = true
+	} else {
+		return raw
+	}
+	if len(raw) < 2 {
+		return raw
+	}
+	units := make([]uint16, len(raw)/2)
+	for index := range units {
+		if little {
+			units[index] = binary.LittleEndian.Uint16(raw[index*2:])
+		} else {
+			units[index] = binary.BigEndian.Uint16(raw[index*2:])
+		}
+	}
+	return []byte(string(utf16.Decode(units)))
 }
 
 func hasWarning(warnings []model.Warning, code apperrors.Code) bool {

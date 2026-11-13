@@ -1,0 +1,110 @@
+name: e2e
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            binary: dist/one-more-ffmpeg-windows-amd64.exe
+            goos: windows
+          - os: ubuntu-latest
+            binary: dist/one-more-ffmpeg-linux-amd64
+            goos: linux
+    env:
+      CGO_ENABLED: "0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+          cache: true
+
+      - uses: astral-sh/setup-uv@v6
+
+      - uses: jdx/mise-action@v2
+
+      - name: Go unit tests
+        run: go test -count=1 ./...
+
+      - name: Build CLI
+        shell: bash
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: amd64
+        run: |
+          mkdir -p dist
+          go build -trimpath -o "${{ matrix.binary }}" ./cmd/one-more-ffmpeg
+
+      - name: pytest e2e (asyncio + subprocess + xdist)
+        shell: bash
+        env:
+          OMF_BINARY: ${{ github.workspace }}/${{ matrix.binary }}
+        run: >-
+          uv run --python 3.14 --with-requirements tests/e2e/requirements.txt
+          pytest -n auto --timeout=180 -v tests/e2e/test_cli_e2e.py
+
+      - name: Robot Framework e2e
+        shell: bash
+        env:
+          OMF_BINARY: ${{ github.workspace }}/${{ matrix.binary }}
+        run: >-
+          uv run --python 3.14 --with-requirements tests/e2e/requirements.txt
+          robot --outputdir tests/e2e/results/robot tests/e2e/robot
+
+      - name: Bats e2e (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          OMF_BINARY: ${{ github.workspace }}/${{ matrix.binary }}
+        run: |
+          git clone --depth 1 https://github.com/bats-core/bats-core.git "$RUNNER_TEMP/bats-core"
+          "$RUNNER_TEMP/bats-core/bin/bats" tests/e2e/bats
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.os }}
+          path: tests/e2e/results
+          if-no-files-found: ignore
+
+  linux-server:
+    name: configured Linux server
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    env:
+      OMF_LINUX_SERVER_INFO_B64: ${{ secrets.OMF_LINUX_SERVER_INFO }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+      - uses: astral-sh/setup-uv@v6
+      - name: Deploy and run e2e on the configured Linux server
+        shell: bash
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+        run: |
+          if [ -z "$OMF_LINUX_SERVER_INFO_B64" ]; then
+            echo "OMF_LINUX_SERVER_INFO secret is required for linux-server e2e" >&2
+            exit 1
+          fi
+          echo "$OMF_LINUX_SERVER_INFO_B64" | base64 -d > "$RUNNER_TEMP/Linux-Server-Info.txt"
+          export OMF_LINUX_SERVER_INFO="$RUNNER_TEMP/Linux-Server-Info.txt"
+          mkdir -p dist
+          go build -trimpath -o dist/one-more-ffmpeg-linux-amd64 ./cmd/one-more-ffmpeg
+          uv run --python 3 --with-requirements tests/e2e/requirements.txt \
+            python tests/e2e/remote_linux.py all

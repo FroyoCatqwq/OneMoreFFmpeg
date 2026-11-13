@@ -163,7 +163,7 @@ snap / flatpak 专门适配
 
 ## Phase 5：Install / Env / Rollback
 
-> 状态：install / 安全解压 / current / journal 已完成；env / doctor / uninstall 转入 Phase 6。见 [`PHASE5_STATUS.md`](PHASE5_STATUS.md)。
+> 状态：Phase 5 全部核心（install / env / journal / uninstall / release catalog / 单类能力探测 / doctor）已完成并通过全量审查与 e2e。见 [`PHASE5_STATUS.md`](PHASE5_STATUS.md) 与 [`FULL_AUDIT_2026-11-13.md`](FULL_AUDIT_2026-11-13.md)。
 
 内容：
 

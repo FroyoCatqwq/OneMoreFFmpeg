@@ -39,7 +39,7 @@ resolve --provider bnqdzj-nonfree --channel daily --variant nonfree --target win
   -> OMF-E7001（缺 --allow-nonfree）
   + --allow-nonfree -> autobuild-2026-11-11-19-37 / nonfree.zip / W1006
 
-provider add --id omf-e2e --url <checksums.sha256> --sha256 <hash> --license-hint gpl
+provider add --id omf-e2e --url <ffmpeg.zip> --sha256 <hash> --license-hint gpl --apply
 resolve --provider omf-e2e -> release_tag=direct-3fcaed06e00b, repository=custom
 download --release <resolve.json> --dir <tmp>
   -> downloads/3fcaed06e00b94dd/checksums.sha256（5296 bytes）+ artifact.json
@@ -90,7 +90,7 @@ GOOS=windows / linux       go build 通过
 4. stable 依赖上游 `latest` release 内的 `nX.Y` 资产；若上游改结构，返回 `E3003` 而不是猜测。
 5. Windows Job Object 按 D7 推迟到 Phase 5；当前 `taskkill` + `Kill` 为尽力终止。
 6. 未实现 `--select` / provider 优先级；`resolve` 每次显式指定 provider。
-7. `provider add` 的读-改-写没有跨进程锁；并发添加同一文件时后写覆盖先写（单进程 CLI 场景不受影响）。文件提交已改为“备份旧文件 + rename + 失败回滚”，不会再删除唯一的好副本。
+7. `provider add` 的全链路 `Load → AddCustom → Save` 使用 `providers.toml.lock` 跨进程锁；文件提交为“备份旧文件 + rename + 失败回滚”。锁文件超过 30 秒会被视为陈旧锁并清理，因此极长事务仍可能遇到锁竞争。
 8. `download` 复用已有文件时会完整重算 SHA-256，并重新拉取 `checksums_url`（若存在）；195 MB 资产约需一次全量读取。
 9. daily 只尝试最新 `autobuild-*`；若该 release 缺目标资产，不会回退到上一个 autobuild（返回 `E3003`）。
 10. GitHub asset digest 存在但 `checksums.sha256` 拉取失败时，resolve 降级为仅 digest，并留空 `checksums_url` / `checksums_sha256`；下载阶段因此不再做第二源校验。

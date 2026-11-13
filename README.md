@@ -4,9 +4,10 @@
 
 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg>
 
-状态：**Phase 3 已完成并通过全量审查；Phase 4（provider / resolve / download）已实现；Phase 5 安装与 current 切换已实现（默认 dry-run）。**
+状态：**Phase 1–5 已完成；已通过全量审查、二次修复与 Windows/Linux e2e。**
 
-> `version` / `detect` / `validate` / `capabilities` / `provider list|add` / `resolve` / `download` / `install` 已实现；`env` / `doctor` 仍是计划命令。
+> 已实现：`version` / `detect` / `validate` / `capabilities [--only]` / `provider list|add` / `resolve` / `download` / `install` / `uninstall` / `release list|install` / `journal list|rollback` / `env status|set|unset|rollback` / `doctor`。
+> install/uninstall/rollback/provider add 默认 dry-run；download 与能力缓存会立即写文件。
 
 ---
 
@@ -95,7 +96,7 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 | 项 | 决策 |
 |---|---|
 | 语言 | Go，仅 Go |
-| Go 版本 | `go1.27.3`，CI 精确锁定 |
+| Go 版本 | `go 1.27`（允许 1.27.x 补丁版本） |
 | 平台 | Windows x64 + Linux x86_64 |
 | 构建 | `CGO_ENABLED=0` 优先，纯 Go 交叉编译 |
 | CLI | `one-more-ffmpeg`；`omf` 为未来候选，当前未提供 |
@@ -151,6 +152,10 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 | [`docs/PHASE4_STATUS.md`](docs/PHASE4_STATUS.md) | Phase 4 实施状态、真实验证与已知限制 |
 | [`docs/PHASE4_CODE_REVIEW.md`](docs/PHASE4_CODE_REVIEW.md) | Phase 4 代码审查、缺陷修复与残留限制 |
 | [`docs/PHASE5_STATUS.md`](docs/PHASE5_STATUS.md) | Phase 5 安装、current 与 journal 实施状态 |
+| [`docs/E2E_TESTING.md`](docs/E2E_TESTING.md) | Windows/Linux e2e、远程服务器与 CI 说明 |
+| [`docs/USAGE.md`](docs/USAGE.md) | 首次使用详细教程 |
+| [`docs/man/one-more-ffmpeg.1`](docs/man/one-more-ffmpeg.1) | Linux man 页（`man ./docs/man/one-more-ffmpeg.1`） |
+| [`docs/FULL_AUDIT_2026-11-13.md`](docs/FULL_AUDIT_2026-11-13.md) | 2026-11-13 全量审查与二次修复记录 |
 | [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) | 第三方依赖许可证清单初稿 |
 
 ---
@@ -158,7 +163,7 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 ## 5. 当前进度
 
 - GitHub 仓库：已创建；
-- `go.mod`：已创建，锁定 Go 1.27.3；
+- `go.mod`：已创建，限制 Go 大版本 1.27；
 - `go.sum`：已生成；
 - 项目计划与文档：已写入；
 - Go 依赖库评估：已完成；
@@ -190,7 +195,7 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 
 ## 6. 开发命令
 
-需要 Go 1.27.3：
+需要 Go 1.27：
 
 ```bash
 go mod tidy

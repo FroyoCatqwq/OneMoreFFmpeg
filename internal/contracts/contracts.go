@@ -24,20 +24,32 @@ var (
 )
 
 var knownCommands = map[string]struct{}{
-	"version":       {},
-	"detect":        {},
-	"validate":      {},
-	"capabilities":  {},
-	"provider.list": {},
-	"provider.add":  {},
-	"resolve":       {},
-	"download":      {},
-	"install":       {},
-	"env.status":    {},
-	"env.set":       {},
-	"env.unset":     {},
-	"env.rollback":  {},
-	"doctor":        {},
+	"version":          {},
+	"detect":           {},
+	"validate":         {},
+	"capabilities":     {},
+	"provider.list":    {},
+	"provider.add":     {},
+	"resolve":          {},
+	"download":         {},
+	"install":          {},
+	"env.status":       {},
+	"env.set":          {},
+	"env.unset":        {},
+	"env.rollback":     {},
+	"doctor":           {},
+	"uninstall":        {},
+	"journal.list":     {},
+	"journal.rollback": {},
+	"release.list":     {},
+}
+
+// ValidateCommand checks that a result command is part of the frozen CLI set.
+func ValidateCommand(command string) error {
+	if _, ok := knownCommands[command]; !ok {
+		return apperrors.New(apperrors.E7003, "unknown result.command").WithDetails(map[string]any{"command": command})
+	}
+	return nil
 }
 
 func ValidateData(data any) error {
@@ -207,8 +219,156 @@ func validateDataFields(schema string, data map[string]any) error {
 		return validateCapabilities(data)
 	case model.InstallSchema:
 		return validateInstall(raw)
+	case model.CapabilityListSchema:
+		return validateCapabilityList(raw)
+	case model.ReleaseCatalogSchema:
+		return validateReleaseCatalog(raw)
+	case model.VersionSchema:
+		return validateVersionData(raw)
+	case model.DetectSchema:
+		return validateDetectData(raw)
+	case model.ValidateSchema:
+		return validateValidateData(raw)
+	case model.EnvStatusSchema:
+		return validateEnvStatus(raw)
+	case model.EnvSetSchema:
+		return validateEnvSet(raw)
+	case model.DoctorSchema:
+		return validateDoctorData(raw)
+	case model.UninstallSchema:
+		return validateUninstallData(raw)
+	case model.JournalListSchema:
+		return validateJournalList(raw)
+	case model.JournalActionSchema:
+		return validateJournalAction(raw)
 	}
 	return nil
+}
+
+func validateVersionData(raw []byte) error {
+	var data model.VersionData
+	if err := json.Unmarshal(raw, &data); err != nil || data.Schema != model.VersionSchema || data.Name == "" || data.OS == "" || data.Arch == "" {
+		return apperrors.New(apperrors.E7003, "version data is malformed")
+	}
+	return nil
+}
+
+func validateDetectData(raw []byte) error {
+	var data model.DetectData
+	if err := json.Unmarshal(raw, &data); err != nil || data.Schema != model.DetectSchema {
+		return apperrors.New(apperrors.E7003, "detect data is malformed")
+	}
+	for _, key := range []string{"installations", "errors"} {
+		if _, ok := rawField(raw, key); !ok {
+			return apperrors.New(apperrors.E7003, "detect field is required").WithDetails(map[string]any{"field": key})
+		}
+	}
+	return nil
+}
+
+func validateValidateData(raw []byte) error {
+	var data model.ValidateData
+	if err := json.Unmarshal(raw, &data); err != nil || data.Schema != model.ValidateSchema || data.Status == "" {
+		return apperrors.New(apperrors.E7003, "validate data is malformed")
+	}
+	return validateWarnings(data.Warnings)
+}
+
+func validateEnvStatus(raw []byte) error {
+	var data model.EnvStatusData
+	if err := json.Unmarshal(raw, &data); err != nil || data.Schema != model.EnvStatusSchema || data.CurrentType == "" || data.Variables == nil {
+		return apperrors.New(apperrors.E7003, "env status data is malformed")
+	}
+	return validateWarnings(data.Warnings)
+}
+
+func validateEnvSet(raw []byte) error {
+	var data model.EnvSetData
+	if err := json.Unmarshal(raw, &data); err != nil || data.Schema != model.EnvSetSchema {
+		return apperrors.New(apperrors.E7003, "env set data is malformed")
+	}
+	if _, ok := rawField(raw, "dry_run"); !ok {
+		return apperrors.New(apperrors.E7003, "env set dry_run is required")
+	}
+	if _, ok := rawField(raw, "operations"); !ok {
+		return apperrors.New(apperrors.E7003, "env set operations are required")
+	}
+	return nil
+}
+
+func validateDoctorData(raw []byte) error {
+	var data model.DoctorData
+	if err := json.Unmarshal(raw, &data); err != nil || data.Schema != model.DoctorSchema {
+		return apperrors.New(apperrors.E7003, "doctor data is malformed")
+	}
+	for _, key := range []string{"healthy", "checks", "journal_pending"} {
+		if _, ok := rawField(raw, key); !ok {
+			return apperrors.New(apperrors.E7003, "doctor field is required").WithDetails(map[string]any{"field": key})
+		}
+	}
+	return validateWarnings(data.Warnings)
+}
+
+func validateUninstallData(raw []byte) error {
+	var data model.UninstallData
+	if err := json.Unmarshal(raw, &data); err != nil || data.Schema != model.UninstallSchema || data.RootDir == "" {
+		return apperrors.New(apperrors.E7003, "uninstall data is malformed")
+	}
+	if _, ok := rawField(raw, "dry_run"); !ok {
+		return apperrors.New(apperrors.E7003, "uninstall dry_run is required")
+	}
+	return nil
+}
+
+func validateJournalList(raw []byte) error {
+	var data model.JournalListData
+	if err := json.Unmarshal(raw, &data); err != nil || data.Schema != model.JournalListSchema {
+		return apperrors.New(apperrors.E7003, "journal list is malformed")
+	}
+	for _, key := range []string{"records", "pending"} {
+		if _, ok := rawField(raw, key); !ok {
+			return apperrors.New(apperrors.E7003, "journal list field is required").WithDetails(map[string]any{"field": key})
+		}
+	}
+	return nil
+}
+
+func validateJournalAction(raw []byte) error {
+	var data model.JournalActionData
+	if err := json.Unmarshal(raw, &data); err != nil || data.Schema != model.JournalActionSchema || data.JournalID == "" || data.Action == "" {
+		return apperrors.New(apperrors.E7003, "journal action is malformed")
+	}
+	return nil
+}
+
+func validateReleaseCatalog(raw []byte) error {
+	var data model.ReleaseCatalogData
+	if err := json.Unmarshal(raw, &data); err != nil {
+		return apperrors.New(apperrors.E7003, "release catalog is malformed").WithCause(err.Error())
+	}
+	if data.Provider == "" || (data.Channel != "stable" && data.Channel != "daily") || data.Source == "" {
+		return apperrors.New(apperrors.E7003, "release catalog field is required")
+	}
+	for _, entry := range data.Entries {
+		if entry.Version == "" || entry.ReleaseTag == "" || entry.AssetName == "" || !isHTTPS(entry.AssetURL) {
+			return apperrors.New(apperrors.E7003, "release catalog entry is malformed").WithDetails(map[string]any{"version": entry.Version})
+		}
+	}
+	return nil
+}
+
+func validateCapabilityList(raw []byte) error {
+	var data model.CapabilityListData
+	if err := json.Unmarshal(raw, &data); err != nil {
+		return apperrors.New(apperrors.E7003, "capability list is malformed").WithCause(err.Error())
+	}
+	if data.Kind == "" || data.InstallationID == "" || data.Fingerprint == "" || data.Command == "" {
+		return apperrors.New(apperrors.E7003, "capability list field is required")
+	}
+	if !appcaps.IsCapabilityKind(data.Kind) {
+		return apperrors.New(apperrors.E7003, "capability list kind is invalid").WithDetails(map[string]any{"kind": data.Kind})
+	}
+	return validateWarnings(data.Warnings)
 }
 
 func validateInstall(raw []byte) error {
@@ -349,7 +509,7 @@ func validateRelease(raw []byte) error {
 	// D1: a floating `latest` tag is only acceptable when the record also
 	// carries an immutable release id plus the published time and asset hash.
 	if release.ReleaseTag == "latest" {
-		if release.ReleaseID == "" || release.PublishedAt == "" || !sha256Pattern.MatchString(release.AssetSHA256) {
+		if release.ReleaseID == "" || release.PublishedAt == "" || release.AssetSHA256 == "" {
 			return apperrors.New(apperrors.E3010, "release_tag=latest requires release_id, published_at and asset_sha256")
 		}
 	}

@@ -280,7 +280,7 @@ DoD：
 
 ### Phase 5：安装、环境变量、切换、回滚
 
-> 状态：install / 安全解压 / current / journal 已完成；env / doctor / uninstall 留在 Phase 6。
+> 状态：install / 安全解压 / current / journal / env / doctor / uninstall / release catalog / 单类能力探测 已完成并通过全量审查与 e2e；见 `FULL_AUDIT_2026-11-13.md`。
 > 实施状态见 [`PHASE5_STATUS.md`](PHASE5_STATUS.md)。
 
 目标：完成部署闭环。

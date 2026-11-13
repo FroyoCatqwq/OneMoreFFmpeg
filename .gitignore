@@ -13,3 +13,8 @@ coverage.*
 /.vscode/
 .DS_Store
 Thumbs.db
+.venv/
+.venv-e2e/
+__pycache__/
+.pytest_cache/
+tests/e2e/results/

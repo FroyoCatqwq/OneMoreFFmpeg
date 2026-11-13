@@ -7,12 +7,8 @@
     "dry_run": true,
     "applied": false,
     "operations": [
-      {
-        "type": "user_path_append",
-        "scope": "user",
-        "value": "D:/OneMoreFFmpeg/current/bin",
-        "status": "planned"
-      }
+      "PATH += D:/OneMoreFFmpeg/current/bin",
+      "ONE_MORE_FFMPEG_DIR=D:/OneMoreFFmpeg/current"
     ],
     "journal_id": "journal-0123456789abcdef",
     "rollback_supported": true

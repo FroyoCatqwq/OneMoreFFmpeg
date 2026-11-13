@@ -1,0 +1,26 @@
+[tools]
+python = "3.14"
+go = "1.27"
+
+[env]
+OMF_E2E_PYTHON = "3.14"
+
+[tasks."e2e-pytest"]
+description = "Run cross-platform CLI e2e tests with pytest/asyncio"
+run = "uv run --python 3.14 --with-requirements tests/e2e/requirements.txt pytest -n auto --timeout=180 tests/e2e/test_cli_e2e.py"
+
+[tasks."e2e-robot"]
+description = "Run Robot Framework smoke suite"
+run = "uv run --python 3.14 --with-requirements tests/e2e/requirements.txt robot --outputdir tests/e2e/results/robot tests/e2e/robot"
+
+[tasks."e2e-bats"]
+description = "Run Bats smoke suite (requires bats-core on PATH)"
+run = "bats tests/e2e/bats"
+
+[tasks."e2e-linux-server"]
+description = "Deploy and run Linux e2e on the configured server"
+run = "uv run --python 3.14 --with-requirements tests/e2e/requirements.txt python tests/e2e/remote_linux.py all"
+
+[tasks."e2e-all"]
+description = "Run every e2e suite"
+depends = ["e2e-pytest", "e2e-robot"]

@@ -53,6 +53,16 @@ func TestValidateDataRequiresKnownSchema(t *testing.T) {
 	require.Equal(t, apperrors.E7003, typed.Code)
 }
 
+func TestValidateCommand(t *testing.T) {
+	for _, name := range []string{"journal.list", "journal.rollback", "release.list", "uninstall"} {
+		require.NoError(t, contracts.ValidateCommand(name), name)
+	}
+	err := contracts.ValidateCommand("not-a-command")
+	typed, ok := apperrors.As(err)
+	require.True(t, ok)
+	require.Equal(t, apperrors.E7003, typed.Code)
+}
+
 func TestValidateExampleRejectsInvalidResult(t *testing.T) {
 	cases := []string{
 		`{"schema":"onemoreffmpeg.result/v1","ok":false,"command":"version","data":{"schema":"onemoreffmpeg.version/v1"}}`,

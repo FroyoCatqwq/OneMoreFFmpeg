@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -151,6 +152,98 @@ func TestInstallForceReplacesExistingDirectory(t *testing.T) {
 	require.Equal(t, target, data.RootDir)
 	_, err = os.Stat(filepath.Join(target, "old.txt"))
 	require.True(t, os.IsNotExist(err))
+}
+
+func TestInstallRollbackRestoresPreviousVersion(t *testing.T) {
+	fake := testutil.NewFakeFFmpeg(t)
+	enableFakeVersion(t)
+	archiveOne, shaOne := buildArchive(t, fake)
+	second := filepath.Join(filepath.Dir(archiveOne), "ffmpeg-fake-2.zip")
+	sourceZip, err := zip.OpenReader(archiveOne)
+	require.NoError(t, err)
+	destFile, err := os.Create(second)
+	require.NoError(t, err)
+	destZip := zip.NewWriter(destFile)
+	for _, entry := range sourceZip.File {
+		reader, err := entry.Open()
+		require.NoError(t, err)
+		body, err := io.ReadAll(reader)
+		_ = reader.Close()
+		require.NoError(t, err)
+		writer, err := destZip.Create(entry.Name)
+		require.NoError(t, err)
+		_, err = writer.Write(body)
+		require.NoError(t, err)
+	}
+	writer, err := destZip.Create("ffmpeg-build/version.txt")
+	require.NoError(t, err)
+	_, err = writer.Write([]byte("second"))
+	require.NoError(t, err)
+	require.NoError(t, destZip.Close())
+	require.NoError(t, destFile.Close())
+	require.NoError(t, sourceZip.Close())
+	payload, err := os.ReadFile(second)
+	require.NoError(t, err)
+	secondSHA := sha256.Sum256(payload)
+	shaTwo := hex.EncodeToString(secondSHA[:])
+	require.NotEqual(t, shaOne, shaTwo)
+
+	root := t.TempDir()
+	first, err := install.Run(context.Background(), install.Options{
+		DataRoot: root, Release: testRelease(shaOne), ArchivePath: archiveOne, Apply: true,
+	})
+	require.NoError(t, err)
+	secondData, err := install.Run(context.Background(), install.Options{
+		DataRoot: root, Release: testRelease(shaTwo), ArchivePath: second, Apply: true, Force: true,
+	})
+	require.NoError(t, err)
+	require.NotEqual(t, first.RootDir, secondData.RootDir)
+	require.NoDirExists(t, first.RootDir)
+	require.DirExists(t, secondData.RootDir)
+
+	record, err := journal.Read(filepath.Join(root, "journal"), secondData.JournalID)
+	require.NoError(t, err)
+	require.Equal(t, journal.StatusCommitted, record.Status)
+	require.Equal(t, first.RootDir, record.Details["quarantine_original"])
+
+	detail, err := install.Rollback(root, record)
+	require.NoError(t, err)
+	require.Contains(t, detail, "rolled back")
+	require.DirExists(t, first.RootDir)
+	require.NoDirExists(t, secondData.RootDir)
+}
+
+func TestInstallFailureRestoresQuarantinedVersion(t *testing.T) {
+	fake := testutil.NewFakeFFmpeg(t)
+	enableFakeVersion(t)
+	archive, sha := buildArchive(t, fake)
+	root := t.TempDir()
+	first, err := install.Run(context.Background(), install.Options{
+		DataRoot: root, Release: testRelease(sha), ArchivePath: archive, Apply: true,
+	})
+	require.NoError(t, err)
+
+	bad := filepath.Join(filepath.Dir(archive), "bad.zip")
+	file, err := os.Create(bad)
+	require.NoError(t, err)
+	writer := zip.NewWriter(file)
+	entry, err := writer.Create("readme.txt")
+	require.NoError(t, err)
+	_, err = entry.Write([]byte("no binaries"))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+	require.NoError(t, file.Close())
+	payload, err := os.ReadFile(bad)
+	require.NoError(t, err)
+	badSum := sha256.Sum256(payload)
+	badRelease := testRelease(hex.EncodeToString(badSum[:]))
+
+	_, err = install.Run(context.Background(), install.Options{
+		DataRoot: root, Release: badRelease, ArchivePath: bad, Apply: true, Force: true,
+	})
+	require.Error(t, err)
+	require.DirExists(t, first.RootDir)
+	require.NoDirExists(t, install.TargetDir(root, badRelease))
 }
 
 func TestInstallRejectsMissingBinaries(t *testing.T) {

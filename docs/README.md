@@ -1,9 +1,9 @@
 # 文档索引与权威顺序
 
 > 项目：OneMoreFFmpeg
-> 状态：Phase 3/4 已完成，Phase 5 install 已实现
+> 状态：Phase 1–5 已完成并通过全量审查与 Windows/Linux e2e
 > 日期：2026-11-13
-> 更新：Phase 5 安装与 current 切换完成，见 `PHASE5_STATUS.md`
+> 更新：全量审查、二次修复、e2e 与文档同步完成，见 `FULL_AUDIT_2026-11-13.md`
 
 ---
 
@@ -38,8 +38,12 @@
 | 25 | [`PHASE4_STATUS.md`](PHASE4_STATUS.md) | Phase 4 实施状态、验证与限制 |
 | 26 | [`PHASE4_CODE_REVIEW.md`](PHASE4_CODE_REVIEW.md) | Phase 4 审查、缺陷修复与残留限制 |
 | 27 | [`PHASE5_STATUS.md`](PHASE5_STATUS.md) | Phase 5 安装/current/journal 状态与限制 |
-| 28 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
-| 29 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
+| 28 | [`E2E_TESTING.md`](E2E_TESTING.md) | Windows/Linux e2e、远程服务器与 CI |
+| 29 | [`USAGE.md`](USAGE.md) | 首次使用详细教程 |
+| 30 | [`man/one-more-ffmpeg.1`](man/one-more-ffmpeg.1) | Linux man 页 |
+| 31 | [`FULL_AUDIT_2026-11-13.md`](FULL_AUDIT_2026-11-13.md) | 2026-11-13 全量审查与二次修复 |
+| 32 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
+| 33 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
 
 冲突时：
 
@@ -88,14 +92,15 @@
 | Phase 2 | 真实发现源、三件套校验、`detect` / `validate` 已完成 |
 | Phase 3 | 13 项能力检查、解析、缓存、`capabilities` CLI 已完成并通过代码审查 |
 | Phase 4 | provider / resolve / download 已实现：真实 GitHub 解析与自定义资产下载通过；见 `PHASE4_STATUS.md` |
-| Phase 5 | install（安全解压、版本化目录、install.json、current、journal）已实现，默认 dry-run；见 `PHASE5_STATUS.md` |
+| Phase 5 | install（安全解压、版本化目录、install.json、current、journal）与只读 `env status` / `doctor` 已实现；见 `PHASE5_STATUS.md` |
 
 ---
 
 ## 3. 尚未完成
 
-- `env` / `doctor`（Phase 6）；
+- `env set/unset/rollback`（写环境）；
 - `uninstall` / 自动 rollback；
+- Windows directory junction；
 - GitHub Actions / 发布 CI（Phase 7）；
 - 公开二进制发布与完整许可证复核；
 - 包管理器识别；
@@ -125,3 +130,7 @@
 - [`PHASE4_STATUS.md`](PHASE4_STATUS.md)：Phase 4 实施状态、真实验证与已知限制。
 - [`PHASE4_CODE_REVIEW.md`](PHASE4_CODE_REVIEW.md)：Phase 4 代码审查、缺陷修复与残留限制。
 - [`PHASE5_STATUS.md`](PHASE5_STATUS.md)：Phase 5 安装、current 与 journal 实施状态。
+- [`E2E_TESTING.md`](E2E_TESTING.md)：Windows/Linux e2e、远程服务器与 CI。
+- [`FULL_AUDIT_2026-11-13.md`](FULL_AUDIT_2026-11-13.md)：本轮全量审查、二次检查与修复记录。
+- [`USAGE.md`](USAGE.md)：首次使用详细教程。
+- [`man/one-more-ffmpeg.1`](man/one-more-ffmpeg.1)：Linux man 页。

@@ -1,0 +1,114 @@
+.TH ONE-MORE-FFMPEG 1 "2026-11-13" "OneMoreFFmpeg" "User Commands"
+.SH NAME
+one-more-ffmpeg \- discover, download, install and inspect FFmpeg builds
+.SH SYNOPSIS
+.B one-more-ffmpeg
+.RI [ --json ]
+.RI COMMAND
+.RI [ OPTIONS ]
+.br
+.B one-more-ffmpeg
+.B --in-detail-usage
+.SH DESCRIPTION
+OneMoreFFmpeg is a CLI-first FFmpeg manager. stdout contains JSON when
+.B --json
+is used; diagnostics and first-use notes go to stderr. Write commands are
+dry-run by default and require
+.B --apply
+to change files; download and capability cache writes are immediate.
+.SH FIRST USE
+No configuration file means built-in defaults. On first use a short note is
+printed to stderr once and marked with <data-root>/.first-use. The data root
+is controlled by
+.B ONE_MORE_FFMPEG_HOME
+and defaults to ~/.local/share/onemoreffmpeg on Linux. --in-detail-usage prints
+the built-in full guide.
+.SH COMMANDS
+.TP
+.B version --json
+Show build and runtime information.
+.TP
+.B detect --json
+Discover FFmpeg installations.
+.TP
+.B validate --dir DIR --json
+Validate one installation; always returns a report in data.status.
+.TP
+.B capabilities --dir DIR [--only KIND] --json
+Run all capability probes, or only one list with
+.BR --only .
+KIND may be muxers, demuxers, devices, decoders, encoders, filters,
+pixel_formats, channel_layouts or sample_formats. --cache-dir, --no-cache and
+--refresh also apply to single-list probes.
+.TP
+.B release list --channel stable|daily [--days N] [--count N] --json
+Stable versions are derived from https://ffmpeg.org/download.html#releases;
+a 9.0 line is displayed as its latest patch (for example 9.0.2). Stable
+always reports days=0; --count truncates the sorted versions. Daily
+snapshots default to the last 7 days; --days and --count control the window.
+When a snapshot asset name has no version, the snapshot tag is used.
+.TP
+.B release install [--version V|--snapshot TAG] [--allow-nonfree] --apply
+Install the newest listed version or a selected version/snapshot.
+--version and --snapshot are mutually exclusive; default is dry-run.
+.TP
+.B provider list|add ...
+List or register providers. provider add is dry-run by default and needs
+.BR --apply .
+.TP
+.B resolve --provider ID --channel stable|daily --json
+Resolve a pinned release record.
+.TP
+.B download --release FILE --json
+Download and verify the pinned asset. FILE may be UTF-8 or UTF-16 JSON.
+.TP
+.B install --release FILE [--apply] --json
+Extract into a versioned directory, validate the trio and switch current.
+.TP
+.B uninstall --root DIR [--apply] --json
+Move a managed installation into quarantine; reversible via journal rollback.
+.TP
+.B env status|set|unset|rollback
+Inspect or update PATH/variables/shims. All modifying env subcommands are
+dry-run by default and need
+.BR --apply .
+.TP
+.B doctor --json
+Check data root, current pointer, trio, PATH and pending journals. Always exits
+0 with a report; scripts must read healthy.
+.TP
+.B journal list|rollback
+List transactions or roll back install, uninstall and env transactions.
+journal rollback is dry-run by default and needs
+.BR --apply .
+.SH SAFETY
+nonfree builds require
+.BR --allow-nonfree .
+uninstall never removes unmanaged directories and quarantines managed ones.
+Windows uses a directory junction for current; Linux uses a symlink; a
+pointer file is the fallback. env writes are journaled with pending state and
+can be rolled back. env set writes HKCU environment on Windows and shims plus
+~/.profile on Linux; new terminals are required to see the new PATH.
+provider add uses a cross-process lock around read-modify-write.
+.SH FILES
+.TP
+.I ONE_MORE_FFMPEG_HOME/config.toml
+Optional configuration.
+.TP
+.I ONE_MORE_FFMPEG_HOME/providers.toml
+Custom providers.
+.TP
+.I ONE_MORE_FFMPEG_HOME/apps
+Versioned installations.
+.TP
+.I ONE_MORE_FFMPEG_HOME/journal
+Transaction records.
+.TP
+.I ONE_MORE_FFMPEG_HOME/quarantine
+Uninstalled installations awaiting rollback or cleanup.
+.SH EXIT STATUS
+0 success, 1 runtime error, 2 usage/config/contract error, 130 canceled.
+.SH SEE ALSO
+.BR ffmpeg (1),
+.BR ffprobe (1),
+docs/USAGE.md, docs/E2E_TESTING.md.

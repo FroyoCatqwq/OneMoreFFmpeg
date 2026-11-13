@@ -46,6 +46,41 @@ func TestInstallDryRunJSON(t *testing.T) {
 	require.NotEmpty(t, data["installation_id"])
 }
 
+func TestEnvStatusAndDoctorJSON(t *testing.T) {
+	phase4Home(t)
+
+	code, object, out := runJSON(t, "env", "status", "--json")
+	require.Equal(t, 0, code, out)
+	data := object["data"].(map[string]any)
+	require.Equal(t, model.EnvStatusSchema, data["schema"])
+	require.Equal(t, "missing", data["current_type"])
+
+	code, object, out = runJSON(t, "doctor", "--json")
+	require.Equal(t, 0, code, out)
+	report := object["data"].(map[string]any)
+	require.Equal(t, model.DoctorSchema, report["schema"])
+	require.Equal(t, false, report["healthy"])
+	require.Len(t, report["checks"], 5)
+}
+
+func TestEnvSetDryRunAndUninstallDryRun(t *testing.T) {
+	home := phase4Home(t)
+	code, object, out := runJSON(t, "env", "set", "--json")
+	require.Equal(t, 0, code, out)
+	data := object["data"].(map[string]any)
+	require.Equal(t, true, data["dry_run"])
+	require.Equal(t, false, data["applied"])
+	require.NotEmpty(t, data["operations"])
+
+	root := filepath.Join(home, "apps", "btbn", "tag", strings.Repeat("a", 16))
+	require.NoError(t, os.MkdirAll(root, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(root, "install.json"), []byte(`{"schema":"onemoreffmpeg.install-record/v1"}`), 0o644))
+	code, object, out = runJSON(t, "uninstall", "--root", root, "--json")
+	require.Equal(t, 0, code, out)
+	require.Equal(t, true, object["data"].(map[string]any)["dry_run"])
+	require.DirExists(t, root)
+}
+
 func TestInstallRejectsNonfreeWithoutConsent(t *testing.T) {
 	phase4Home(t)
 	release := model.Release{

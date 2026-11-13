@@ -6,15 +6,27 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 )
 
 const Schema = "onemoreffmpeg.journal/v1"
+
+var idPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
+
+func validateID(id string) error {
+	if !idPattern.MatchString(id) || strings.Contains(id, "..") {
+		return apperrors.New(apperrors.E6005, "invalid journal id").WithDetails(map[string]any{"id": id})
+	}
+	return nil
+}
 
 const (
 	StatusPending    = "pending"
@@ -47,6 +59,9 @@ func NewID() string {
 
 // Write stores the record as <dir>/<id>.json using an atomic replace.
 func Write(dir string, record Record) error {
+	if err := validateID(record.ID); err != nil {
+		return err
+	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return apperrors.New(apperrors.E6005, "journal directory cannot be created").WithCause(err.Error())
 	}
@@ -61,12 +76,19 @@ func Write(dir string, record Record) error {
 		return apperrors.New(apperrors.E6005, "journal cannot be encoded").WithCause(err.Error())
 	}
 	path := filepath.Join(dir, record.ID+".json")
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, payload, 0o644); err != nil {
-		return apperrors.New(apperrors.E6005, "journal cannot be written").WithCause(err.Error())
+	tmp, err := os.CreateTemp(dir, record.ID+".*.tmp")
+	if err != nil {
+		return apperrors.New(apperrors.E6005, "journal temp file cannot be created").WithCause(err.Error())
 	}
-	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(tmp)
+	tmpPath := tmp.Name()
+	_, writeErr := tmp.Write(payload)
+	closeErr := tmp.Close()
+	if writeErr != nil || closeErr != nil {
+		_ = os.Remove(tmpPath)
+		return apperrors.New(apperrors.E6005, "journal cannot be written").WithCause(fmt.Sprint(writeErr, closeErr))
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		_ = os.Remove(tmpPath)
 		return apperrors.New(apperrors.E6005, "journal cannot be committed").WithCause(err.Error())
 	}
 	return nil
@@ -74,6 +96,9 @@ func Write(dir string, record Record) error {
 
 // Read loads one journal record.
 func Read(dir, id string) (Record, error) {
+	if err := validateID(id); err != nil {
+		return Record{}, err
+	}
 	payload, err := os.ReadFile(filepath.Join(dir, id+".json"))
 	if err != nil {
 		return Record{}, apperrors.New(apperrors.E6005, "journal cannot be read").WithCause(err.Error())

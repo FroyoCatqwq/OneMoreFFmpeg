@@ -28,6 +28,7 @@ func capabilitiesFlags() []urfave.Flag {
 		&urfave.StringFlag{Name: "cache-dir", Usage: "capability cache directory"},
 		&urfave.BoolFlag{Name: "refresh", Usage: "ignore existing capability cache"},
 		&urfave.BoolFlag{Name: "no-cache", Usage: "do not read or write capability cache"},
+		&urfave.StringFlag{Name: "only", Usage: "run and output only one list: muxers|demuxers|devices|decoders|encoders|filters|pixel_formats|channel_layouts|sample_formats"},
 	)
 }
 
@@ -74,6 +75,20 @@ func capabilitiesCommand() *urfave.Command {
 				commandTimeout = 0
 			}
 			collector := appcaps.New()
+			if only := cmd.String("only"); only != "" {
+				list, listErr := collector.CollectList(ctx, appcaps.Options{
+					Installation:   installation,
+					Refresh:        cmd.Bool("refresh"),
+					NoCache:        cmd.Bool("no-cache"),
+					CacheDir:       cmd.String("cache-dir"),
+					CommandTimeout: commandTimeout,
+				}, only)
+				if listErr != nil {
+					return listErr
+				}
+				human := fmt.Sprintf("%s: %d entries\n", list.Kind, len(list.Entries))
+				return writeResult(cmd, "capabilities", list, human)
+			}
 			set, err := collector.Collect(ctx, appcaps.Options{
 				Installation:   installation,
 				HelpTopic:      cmd.String("help-topic"),

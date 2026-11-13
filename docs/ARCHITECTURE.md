@@ -47,6 +47,8 @@ internal/model    internal/errors  internal/errors
 | `internal/archive` | zip / tar.xz / tar.gz / tar.zst 安全解压 |
 | `internal/install` | 版本化安装、install.json、current 指针、安装后校验 |
 | `internal/journal` | 安装/切换事务 journal |
+| `internal/env` | current/PATH/变量只读检查 |
+| `internal/doctor` | 安装健康检查 |
 | `internal/contracts` | JSON 示例与错误码注册表校验 |
 | `internal/config` | 严格 TOML 1.1 配置 |
 | `internal/model` | JSON 契约结构体 |

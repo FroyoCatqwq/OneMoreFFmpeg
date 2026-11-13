@@ -4,35 +4,45 @@ package model
 import "encoding/json"
 
 const (
-	ResultSchema       = "onemoreffmpeg.result/v1"
-	ErrorSchema        = "onemoreffmpeg.error/v1"
-	VersionSchema      = "onemoreffmpeg.version/v1"
-	DetectSchema       = "onemoreffmpeg.detect/v1"
-	ValidateSchema     = "onemoreffmpeg.validate/v1"
-	CapabilitiesSchema = "onemoreffmpeg.capabilities/v1"
-	ProviderListSchema = "onemoreffmpeg.provider-list/v1"
-	ProviderAddSchema  = "onemoreffmpeg.provider-add/v1"
-	ReleaseSchema      = "onemoreffmpeg.release/v1"
-	ArtifactSchema     = "onemoreffmpeg.artifact/v1"
-	InstallSchema      = "onemoreffmpeg.install/v1"
-	EnvStatusSchema    = "onemoreffmpeg.env-status/v1"
-	EnvSetSchema       = "onemoreffmpeg.env-set/v1"
-	DoctorSchema       = "onemoreffmpeg.doctor/v1"
+	ResultSchema         = "onemoreffmpeg.result/v1"
+	ErrorSchema          = "onemoreffmpeg.error/v1"
+	VersionSchema        = "onemoreffmpeg.version/v1"
+	DetectSchema         = "onemoreffmpeg.detect/v1"
+	ValidateSchema       = "onemoreffmpeg.validate/v1"
+	CapabilitiesSchema   = "onemoreffmpeg.capabilities/v1"
+	ProviderListSchema   = "onemoreffmpeg.provider-list/v1"
+	ProviderAddSchema    = "onemoreffmpeg.provider-add/v1"
+	ReleaseSchema        = "onemoreffmpeg.release/v1"
+	ArtifactSchema       = "onemoreffmpeg.artifact/v1"
+	InstallSchema        = "onemoreffmpeg.install/v1"
+	EnvStatusSchema      = "onemoreffmpeg.env-status/v1"
+	EnvSetSchema         = "onemoreffmpeg.env-set/v1"
+	DoctorSchema         = "onemoreffmpeg.doctor/v1"
+	UninstallSchema      = "onemoreffmpeg.uninstall/v1"
+	JournalListSchema    = "onemoreffmpeg.journal-list/v1"
+	JournalActionSchema  = "onemoreffmpeg.journal-action/v1"
+	CapabilityListSchema = "onemoreffmpeg.capability-list/v1"
+	ReleaseCatalogSchema = "onemoreffmpeg.release-catalog/v1"
 )
 
 var KnownDataSchemas = map[string]struct{}{
-	VersionSchema:      {},
-	DetectSchema:       {},
-	ValidateSchema:     {},
-	CapabilitiesSchema: {},
-	ProviderListSchema: {},
-	ProviderAddSchema:  {},
-	ReleaseSchema:      {},
-	ArtifactSchema:     {},
-	InstallSchema:      {},
-	EnvStatusSchema:    {},
-	EnvSetSchema:       {},
-	DoctorSchema:       {},
+	VersionSchema:        {},
+	DetectSchema:         {},
+	ValidateSchema:       {},
+	CapabilitiesSchema:   {},
+	ProviderListSchema:   {},
+	ProviderAddSchema:    {},
+	ReleaseSchema:        {},
+	ArtifactSchema:       {},
+	InstallSchema:        {},
+	EnvStatusSchema:      {},
+	EnvSetSchema:         {},
+	DoctorSchema:         {},
+	UninstallSchema:      {},
+	JournalListSchema:    {},
+	JournalActionSchema:  {},
+	CapabilityListSchema: {},
+	ReleaseCatalogSchema: {},
 }
 
 type Result struct {

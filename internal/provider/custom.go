@@ -9,9 +9,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/pelletier/go-toml/v2"
 
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/archive"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 )
@@ -74,6 +76,36 @@ func LoadCustomFile(path string) ([]Custom, error) {
 
 // SaveCustomFile writes providers.toml atomically.
 func SaveCustomFile(path string, entries []Custom) error {
+	unlock, err := acquireFileLock(path + ".lock")
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	return saveCustomFileNoLock(path, entries)
+}
+
+// AddAndSaveCustomFile locks the whole read-modify-write transaction.
+func AddAndSaveCustomFile(path string, entry Custom) ([]Custom, error) {
+	unlock, err := acquireFileLock(path + ".lock")
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
+	existing, err := LoadCustomFile(path)
+	if err != nil {
+		return nil, err
+	}
+	updated, err := AddCustom(existing, entry)
+	if err != nil {
+		return nil, err
+	}
+	if err := saveCustomFileNoLock(path, updated); err != nil {
+		return nil, err
+	}
+	return updated, nil
+}
+
+func saveCustomFileNoLock(path string, entries []Custom) error {
 	directory := filepath.Dir(path)
 	if err := os.MkdirAll(directory, 0o755); err != nil {
 		return apperrors.New(apperrors.E7007, "cannot create provider directory").WithCause(err.Error())
@@ -236,12 +268,29 @@ func assetNameFromURL(raw string) string {
 	return name
 }
 
-func hasArchiveExtension(name string) bool {
-	lower := strings.ToLower(name)
-	for _, extension := range []string{".zip", ".tar.xz", ".tar.gz", ".7z"} {
-		if strings.HasSuffix(lower, extension) {
-			return true
+// acquireFileLock serializes providers.toml writers across processes.
+func acquireFileLock(path string) (func(), error) {
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+		if err == nil {
+			_ = file.Close()
+			return func() { _ = os.Remove(path) }, nil
 		}
+		if !os.IsExist(err) {
+			return nil, apperrors.New(apperrors.E7007, "cannot create provider lock").WithCause(err.Error())
+		}
+		if info, statErr := os.Stat(path); statErr == nil && time.Since(info.ModTime()) > 30*time.Second {
+			_ = os.Remove(path)
+			continue
+		}
+		if time.Now().After(deadline) {
+			return nil, apperrors.New(apperrors.E7005, "providers file is locked by another process").WithDetails(map[string]any{"lock": path})
+		}
+		time.Sleep(50 * time.Millisecond)
 	}
-	return false
+}
+
+func hasArchiveExtension(name string) bool {
+	return archive.FormatFor(name) != ""
 }

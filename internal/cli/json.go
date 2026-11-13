@@ -46,6 +46,14 @@ func wantsJSON(args []string) bool {
 		"--license-hint":    true,
 		"--max-bytes":       true,
 		"--artifact":        true,
+		"--root":            true,
+		"--journal":         true,
+		"--only":            true,
+		"--version":         true,
+		"--snapshot":        true,
+		"--days":            true,
+		"--count":           true,
+		"--releases-url":    true,
 	}
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -108,6 +116,9 @@ func encodeJSON(w io.Writer, value any) error {
 }
 
 func writeResult(cmd *urfave.Command, command string, data any, human string) error {
+	if err := contracts.ValidateCommand(command); err != nil {
+		return err
+	}
 	if err := contracts.ValidateDataFields(data); err != nil {
 		return err
 	}

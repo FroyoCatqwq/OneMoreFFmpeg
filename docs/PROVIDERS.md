@@ -193,7 +193,8 @@ resolve --provider bnqdzj-nonfree --allow-nonfree -> 成功 + OMF-W1006
 one-more-ffmpeg provider add \
   --id my-ffmpeg \
   --url https://example.com/ffmpeg.zip \
-  --sha256 <64-hex>
+  --sha256 <64-hex> \
+  --apply
 ```
 
 `provider add` 只登记来源与身份（`id` / `url` / `sha256` / `status`）；`variant` / `linkage` / `target` 属于 `resolve` 的参数，不在 add 阶段固定，避免同一来源无法解析不同变体。
@@ -222,12 +223,14 @@ one-more-ffmpeg provider add \
 ```text
 provider add --id my-ffmpeg --url https://example.com/ffmpeg.zip \
              --sha256 <64-hex> [--checksums-url https://...] \
-             [--license-hint gpl|lgpl|nonfree|custom] [--dry-run]
+             [--license-hint gpl|lgpl|nonfree|custom] --apply
 ```
 
+- 默认 dry-run；`--apply` 才写入，`--dry-run` 可强制预览；
 - 写入 `<data-root>/providers.toml`（schema `onemoreffmpeg.providers/v1`），临时文件 + rename；保存前重新校验，拒绝重复/保留 id 与非法 URL；
+- 全链路 `Load → AddCustom → Save` 使用 `providers.toml.lock` 跨进程锁；
 - 重复 id 直接失败，不覆盖既有 pin；
-- URL 必须 https 且指向 `.zip` / `.tar.xz` / `.tar.gz` / `.7z`；不接受 userinfo、目录 URL 或带查询参数的文件名推导；
+- URL 必须 https 且指向解压器支持的 `.zip` / `.tar.xz` / `.tar.gz` / `.tgz` / `.tar.zst`；`.7z` 不受支持并在 add 阶段拒绝；不接受 userinfo、目录 URL 或带查询参数的文件名推导；
 - `resolve --provider my-ffmpeg` 输出 `repository=custom`、`release_tag=direct-<sha256[:12]>`、`published_at=pinned_at=解析时间`；
 - 自定义 provider 的 `redistributable` 固定 false，`license_hint` 取 `--license-hint`（默认 `custom`）；
 - 自定义 provider 在 `provider list` 中 `channels=["daily"]`；`resolve --channel stable` 返回 `OMF-E3004`；`--release-tag` / `--release-line` 返回 `OMF-E7001`；
