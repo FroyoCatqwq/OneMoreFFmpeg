@@ -2,7 +2,8 @@
 
 > 日期：2026-11-13
 > 范围：`install`（解压、版本化目录、install.json、current、journal）+ 只读 `env status` / `doctor`
-> 不在本轮：`env set/unset/rollback`、`uninstall`、Windows directory junction
+> 后续补充（同一 Phase 内完成）：`env set/unset/rollback`、`uninstall`、Windows directory junction。
+> 状态：**Phase 5 完成**，2026-11-14 在 Fedora 45 与 Windows Server 2025 两台 CI 机器上验证（§4）。
 
 ---
 
@@ -39,7 +40,8 @@ archive sha mismatch       E4002
 - apply 失败会删除临时目录、回滚已移动的目标目录与隔离目录，并写 failed journal；
 - 归档 SHA-256 在解压前重新计算，必须与 release pin 一致；
 - nonfree release 仍需 `--allow-nonfree`；
-- 不修改 PATH，不修改系统环境变量（Phase 6）。
+- `install` / `uninstall` 本身不改 PATH、不改 shell profile；只有 `env set|unset|rollback` 才会，
+  且它们默认 dry-run、需要 `--apply`，并且写入前记录 journal 以供回滚。
 
 ---
 
@@ -53,6 +55,24 @@ go build -tags deps ./... / windows / linux
 ```
 
 测试使用 `internal/testutil` 的真实 fake 可执行文件打包成 zip，安装后实际执行 `-version`。
+
+### 3.1 双机验证（2026-11-14，清理后重跑）
+
+先清掉两台机器上的全部 OneMoreFFmpeg 痕迹（data root、`ONE_MORE_FFMPEG_DIR` / `FFMPEG_DIR`、
+profile 追加行、`current`、journal、缓存），再用同一份源码部署重跑：
+
+| 机器 | 环境 | 结果 |
+|---|---|---|
+| Fedora Linux 45（2 vCPU） | go1.27.4（mise） | `go build` + `go vet` + `go test ./...` **22 包全绿**；pytest e2e **17 passed**；Robot **5 passed**；Bats **5 ok** |
+| Windows Server 2025（26100） | go1.27.4（用户级）/ uv 0.13.8 | `go build` + `go vet` + `go test ./...` **22 包全绿**；pytest e2e **17 passed**（`fake_trio` 现场用 go 编译）；产物 `version` / `doctor` / `provider list` / `env status --json` 契约正确 |
+
+清理后 Windows 上 `doctor --json` 返回 `data_root.ok=false`、`env status` 的三个变量全为 `null`，
+说明确实没有残留；Linux 的 `~/.profile` 已无 `FFMPEG` 行（原文件备份为 `~/.profile.bak-omf-clean`）。
+
+**`env set --apply` 的测试边界**：e2e 只覆盖 `--dry-run`。真实 apply 会写 `~/.profile`（Linux）与
+`HKCU\Environment`（Windows），无法用 `ONE_MORE_FFMPEG_HOME` 隔离，在无人值守 CI 上会污染机器；
+这条路径由 `internal/env` 的单元测试（含 journal 回滚）+ 人工验证覆盖。要让 CI 也能跑，需要先引入
+「可注入的 profile 路径」，属于 Phase 6 的契约工作。
 
 ---
 
