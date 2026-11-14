@@ -235,7 +235,7 @@ func validateCustom(entry Custom, existing []Custom) error {
 	if name := assetNameFromURL(entry.URL); name == "" {
 		return apperrors.New(apperrors.E3008, "custom provider url has no usable file name").WithDetails(map[string]any{"url": entry.URL})
 	} else if !hasArchiveExtension(name) {
-		return apperrors.New(apperrors.E3008, "custom provider url must point to a zip/tar.xz/tar.gz/7z archive").WithDetails(map[string]any{"url": entry.URL})
+		return apperrors.New(apperrors.E3008, "custom provider url must point to a zip/tar.xz/tar.gz/tar.zst archive").WithDetails(map[string]any{"url": entry.URL})
 	}
 	if entry.ChecksumsURL != "" && !isHTTPSURL(entry.ChecksumsURL) {
 		return apperrors.New(apperrors.E3008, "custom checksums url must be https").WithDetails(map[string]any{"url": entry.ChecksumsURL})

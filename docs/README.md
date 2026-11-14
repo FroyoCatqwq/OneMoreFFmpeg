@@ -2,8 +2,8 @@
 
 > 项目：OneMoreFFmpeg
 > 状态：Phase 1–5 已完成并通过全量审查与 Windows/Linux e2e
-> 日期：2026-11-13
-> 更新：全量审查、二次修复、e2e 与文档同步完成，见 `FULL_AUDIT_2026-11-13.md`
+> 日期：2026-11-14
+> 更新：用户视角 + 代码视角全量审查、缺陷修复、双机 e2e 与文档同步完成，见 `FULL_AUDIT_2026-11-14.md`
 
 ---
 
@@ -46,6 +46,7 @@
 | 33 | [`releases/release-v0.6.0.md`](releases/release-v0.6.0.md) | v0.6.0 release notes |
 | 34 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
 | 35 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
+| 36 | [`FULL_AUDIT_2026-11-14.md`](FULL_AUDIT_2026-11-14.md) | 2026-11-14 用户/代码双视角全量审查与修复 |
 
 冲突时：
 

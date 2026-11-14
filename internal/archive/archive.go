@@ -125,16 +125,30 @@ func extractTar(ctx context.Context, archivePath, destDir, format string) error 
 	defer file.Close()
 
 	var reader io.Reader = file
+	var closeReader func()
 	switch format {
 	case "tar.xz":
 		reader, err = xz.NewReader(file)
 	case "tar.gz":
-		reader, err = gzip.NewReader(file)
+		var gzipReader *gzip.Reader
+		gzipReader, err = gzip.NewReader(file)
+		if err == nil {
+			reader = gzipReader
+			closeReader = func() { _ = gzipReader.Close() }
+		}
 	case "tar.zst":
-		reader, err = zstd.NewReader(file)
+		var zstdReader *zstd.Decoder
+		zstdReader, err = zstd.NewReader(file)
+		if err == nil {
+			reader = zstdReader
+			closeReader = zstdReader.Close
+		}
 	}
 	if err != nil {
 		return apperrors.New(apperrors.E5001, "archive cannot be decompressed").WithCause(err.Error())
+	}
+	if closeReader != nil {
+		defer closeReader()
 	}
 
 	tarReader := tar.NewReader(reader)

@@ -7,6 +7,11 @@
     "healthy": true,
     "checks": [
       {
+        "name": "data_root",
+        "ok": true,
+        "detail": "D:/OneMoreFFmpeg"
+      },
+      {
         "name": "current_exists",
         "ok": true,
         "detail": "directory_junction"
@@ -19,7 +24,7 @@
       {
         "name": "path_contains_current",
         "ok": true,
-        "detail": "current/bin found in user PATH"
+        "detail": "current/bin found in PATH"
       },
       {
         "name": "no_pending_journal",

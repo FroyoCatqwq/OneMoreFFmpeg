@@ -100,3 +100,44 @@ func TestApplyFailureWritesFailedJournalAndUndoes(t *testing.T) {
 	require.Equal(t, journal.StatusFailed, records[0].Status)
 	require.NotEmpty(t, records[0].Details["path_previous"])
 }
+
+// When the very first action fails, nothing was applied, so undo must not
+// touch any tracked value (the old code restored every tracked value).
+func TestApplyFailureUndoesNothingWhenNoActionApplied(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("persistent env writes are Windows-only")
+	}
+	store := &fakeStore{
+		values: map[string]string{"FFMPEG_DIR": "keep"},
+		failOn: map[string]bool{"ONE_MORE_FFMPEG_DIR": true},
+	}
+	root := t.TempDir()
+
+	_, err := appenv.Apply(context.Background(), appenv.ApplyOptions{DataRoot: root, Store: store, Apply: true, NoPath: true})
+	require.Error(t, err)
+	require.Equal(t, 0, store.sets, "no action applied, so undo must not write")
+	require.Equal(t, "keep", store.values["FFMPEG_DIR"])
+	_, exists := store.values["ONE_MORE_FFMPEG_DIR"]
+	require.False(t, exists)
+}
+
+// A mid-transaction failure must undo only the actions that actually applied,
+// leaving later (unapplied) variables untouched.
+func TestApplyFailureUndoesOnlyAppliedActions(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("persistent env writes are Windows-only")
+	}
+	store := &fakeStore{
+		values: map[string]string{"FFMPEG_DIR": "keep"},
+		failOn: map[string]bool{"FFMPEG_DIR": true},
+	}
+	root := t.TempDir()
+
+	_, err := appenv.Apply(context.Background(), appenv.ApplyOptions{DataRoot: root, Store: store, Apply: true, NoPath: true})
+	require.Error(t, err)
+	// ONE_MORE_FFMPEG_DIR applied then was undone; FFMPEG_DIR never applied.
+	_, exists := store.values["ONE_MORE_FFMPEG_DIR"]
+	require.False(t, exists)
+	require.Equal(t, "keep", store.values["FFMPEG_DIR"])
+	require.Equal(t, 2, store.sets, "one apply + one undo, no extra writes")
+}

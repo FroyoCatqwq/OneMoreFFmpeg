@@ -279,8 +279,18 @@ func (d *Downloader) get(ctx context.Context, rawURL string) (*http.Response, er
 	client := d.options.HTTPClient
 	if client == nil {
 		maxRedirects := d.options.MaxRedirects
+		timeout := d.options.Timeout
 		client = &http.Client{
-			Timeout: d.options.Timeout,
+			// No overall Timeout: it would also cap the body read and abort a
+			// large asset on a slow link. Bound the connection phases instead;
+			// the request context still governs cancellation.
+			Transport: &http.Transport{
+				Proxy:                 http.ProxyFromEnvironment,
+				DialContext:           (&net.Dialer{Timeout: timeout, KeepAlive: 30 * time.Second}).DialContext,
+				TLSHandshakeTimeout:   timeout,
+				ResponseHeaderTimeout: timeout,
+				ExpectContinueTimeout: 1 * time.Second,
+			},
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				// Never downgrade to plain http, even if the original URL was
 				// https; loopback is the only exception (tests/mirrors).

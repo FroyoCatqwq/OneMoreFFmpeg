@@ -79,10 +79,6 @@ func journalRollbackCommand() *urfave.Command {
 			if id == "" {
 				return apperrors.New(apperrors.E7001, "--journal is required")
 			}
-			if !cmd.Bool("apply") {
-				preview := model.JournalActionData{Schema: model.JournalActionSchema, JournalID: id, Action: "rollback", Applied: false, Detail: "dry-run (use --apply to roll back)"}
-				return writeResult(cmd, "journal.rollback", preview, preview.Detail+"\n")
-			}
 			dataRoot, err := paths.DataRoot()
 			if err != nil {
 				return err
@@ -94,6 +90,15 @@ func journalRollbackCommand() *urfave.Command {
 			}
 			if record.Status == journal.StatusRolledBack {
 				return apperrors.New(apperrors.E7001, "journal was already rolled back")
+			}
+			switch record.Action {
+			case "env-set", "env-unset", "install", "uninstall":
+			default:
+				return apperrors.New(apperrors.E7001, "journal action cannot be rolled back").WithDetails(map[string]any{"action": record.Action})
+			}
+			if !cmd.Bool("apply") {
+				preview := model.JournalActionData{Schema: model.JournalActionSchema, JournalID: id, Action: record.Action, Applied: false, Detail: "dry-run (use --apply to roll back)"}
+				return writeResult(cmd, "journal.rollback", preview, preview.Detail+"\n")
 			}
 			detail := ""
 			switch record.Action {
@@ -112,8 +117,6 @@ func journalRollbackCommand() *urfave.Command {
 				if err := journal.Write(journalDir, record); err != nil {
 					return err
 				}
-			default:
-				return apperrors.New(apperrors.E7001, "journal action cannot be rolled back").WithDetails(map[string]any{"action": record.Action})
 			}
 			result := model.JournalActionData{Schema: model.JournalActionSchema, JournalID: id, Action: record.Action, Applied: true, Detail: detail}
 			return writeResult(cmd, "journal.rollback", result, detail+"\n")

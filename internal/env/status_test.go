@@ -3,6 +3,7 @@ package env_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -37,4 +38,23 @@ func TestStatusMissingCurrent(t *testing.T) {
 	require.Equal(t, model.CurrentMissing, status.CurrentType)
 	require.False(t, status.PathContainsCurrent)
 	require.Empty(t, status.Warnings)
+}
+
+// Windows environment variable names are case-insensitive; a lowercase
+// ffmpeg_dir in the process env must still be reported as FFMPEG_DIR.
+func TestStatusVariablesCaseInsensitiveOnWindows(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows environment names are case-insensitive")
+	}
+	root := t.TempDir()
+	status := appenv.Status(appenv.Options{
+		DataRoot: root,
+		Env: []string{
+			"PATH=/usr/bin",
+			"ffmpeg_dir=" + filepath.Join(root, "current"),
+			"One_More_Ffmpeg_Dir=" + filepath.Join(root, "current"),
+		},
+	})
+	require.NotNil(t, status.Variables["FFMPEG_DIR"])
+	require.NotNil(t, status.Variables["ONE_MORE_FFMPEG_DIR"])
 }

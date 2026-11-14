@@ -81,6 +81,7 @@ Check data root, current pointer, trio, PATH and pending journals. Always exits
 List transactions or roll back install, uninstall and env transactions.
 journal rollback is dry-run by default and needs
 .BR --apply .
+The journal id is validated even in dry-run: an unknown or malformed id exits 1 with OMF-E6005; an already rolled-back or non-applicable record exits 2 with OMF-E7001. env rollback only accepts env transactions.
 .SH SAFETY
 nonfree builds require
 .BR --allow-nonfree .

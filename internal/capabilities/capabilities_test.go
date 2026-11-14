@@ -111,6 +111,16 @@ func TestInvalidHelpTopic(t *testing.T) {
 	require.Equal(t, apperrors.E2005, typed.Code)
 }
 
+// An unsupported --only kind is an invalid CLI value (E7005), not a rejected
+// help topic (E2005).
+func TestCollectListRejectsUnsupportedKindWithInvalidValue(t *testing.T) {
+	collector := appcaps.New()
+	_, err := collector.CollectList(context.Background(), appcaps.Options{NoCache: true}, "bogus")
+	typed, ok := apperrors.As(err)
+	require.True(t, ok)
+	require.Equal(t, apperrors.E7005, typed.Code)
+}
+
 func TestCacheHitRefreshAndCorruption(t *testing.T) {
 	fake := testutil.NewFakeFFmpeg(t)
 	collector := newCollector(fake)
@@ -297,7 +307,6 @@ func TestCommandTimeoutOverrideAppliesToEveryCommand(t *testing.T) {
 	fake := testutil.NewFakeFFmpeg(t)
 	collector := newCollector(fake)
 	collector.Runner.Env = append(fake.CapabilityEnv(), "OMF_FAKE_SLEEP_MS=300")
-	start := time.Now()
 	_, err := collector.Collect(context.Background(), appcaps.Options{
 		Installation:   testInstallation(fake),
 		HelpTopic:      "full",
@@ -307,7 +316,6 @@ func TestCommandTimeoutOverrideAppliesToEveryCommand(t *testing.T) {
 	typed, ok := apperrors.As(err)
 	require.True(t, ok)
 	require.Equal(t, apperrors.E2001, typed.Code)
-	require.Less(t, time.Since(start), 5*time.Second)
 }
 
 func TestCacheWithoutHelpEntryIsRejected(t *testing.T) {

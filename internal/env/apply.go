@@ -35,6 +35,7 @@ const (
 type envAction struct {
 	description string
 	apply       func() error
+	undo        func() error
 }
 
 type envPlan struct {
@@ -145,6 +146,12 @@ func buildEnvPlan(opts ApplyOptions, add bool) (envPlan, error) {
 				plan.actions = append(plan.actions, envAction{
 					description: "write PATH",
 					apply:       func() error { return store.Set("PATH", updated) },
+					undo: func() error {
+						if !exists {
+							return store.Remove("PATH")
+						}
+						return store.Set("PATH", previous)
+					},
 				})
 			}
 		}
@@ -169,6 +176,12 @@ func buildEnvPlan(opts ApplyOptions, add bool) (envPlan, error) {
 							return store.Set(name, value)
 						}
 						return store.Remove(name)
+					},
+					undo: func() error {
+						if !exists {
+							return store.Remove(name)
+						}
+						return store.Set(name, previous)
 					},
 				})
 			}
@@ -200,12 +213,22 @@ func buildEnvPlan(opts ApplyOptions, add bool) (envPlan, error) {
 				plan.actions = append(plan.actions, envAction{
 					description: "write shim " + name,
 					apply:       func() error { return writeShim(shim, target) },
+					undo: func() error {
+						if exists {
+							return writeFileAtomic(shim, body, 0o755)
+						}
+						if err := os.Remove(shim); err != nil && !os.IsNotExist(err) {
+							return err
+						}
+						return nil
+					},
 				})
 			} else if exists {
 				plan.operations = append(plan.operations, "remove shim "+shim)
 				plan.actions = append(plan.actions, envAction{
 					description: "remove shim " + name,
 					apply:       func() error { return os.Remove(shim) },
+					undo:        func() error { return writeFileAtomic(shim, body, 0o755) },
 				})
 			}
 		}
@@ -227,12 +250,14 @@ func buildEnvPlan(opts ApplyOptions, add bool) (envPlan, error) {
 			plan.actions = append(plan.actions, envAction{
 				description: "write shell rc",
 				apply:       func() error { return updateShellRC(profile, body, desired, journalDirFor(opts), plan.details) },
+				undo:        func() error { return restoreShellRCBackup(plan.details) },
 			})
 		} else if !add && hasBlock {
 			plan.operations = append(plan.operations, "shell rc -= OneMoreFFmpeg block ("+profile+")")
 			plan.actions = append(plan.actions, envAction{
 				description: "remove shell rc block",
 				apply:       func() error { return updateShellRC(profile, body, "", journalDirFor(opts), plan.details) },
+				undo:        func() error { return restoreShellRCBackup(plan.details) },
 			})
 		} else if !opts.Apply {
 			plan.operations = append(plan.operations, "shell rc (dry-run): "+profile)
@@ -247,51 +272,27 @@ func undoEnvPlan(plan envPlan) error {
 
 func undoAppliedActions(plan envPlan, count int) error {
 	var first error
-	if runtime.GOOS == "windows" && plan.store != nil {
-		for _, name := range []string{"PATH", "ONE_MORE_FFMPEG_DIR", "FFMPEG_DIR", "LAE_FFMPEG_DIR"} {
-			key := strings.ToLower(name)
-			previous, tracked := plan.details[key+"_previous"]
-			if !tracked {
-				continue
-			}
-			var err error
-			if plan.details[key+"_existed"] == "0" {
-				err = plan.store.Remove(name)
-			} else {
-				err = plan.store.Set(name, previous)
-			}
-			if err != nil && first == nil {
-				first = err
-			}
-		}
-	} else {
-		for _, name := range []string{"ffmpeg", "ffprobe", "ffplay"} {
-			present, tracked := plan.details["shim_"+name+"_present"]
-			if !tracked || (present == "1" && plan.details["shim_"+name+"_managed"] == "0") {
-				continue
-			}
-			shim := filepath.Join(plan.details["shim_dir"], name)
-			var err error
-			if present == "1" {
-				err = writeFileAtomic(shim, []byte(plan.details["shim_"+name+"_body"]), 0o755)
-			} else {
-				err = os.Remove(shim)
-				if os.IsNotExist(err) {
-					err = nil
-				}
-			}
-			if err != nil && first == nil {
-				first = err
-			}
-		}
+	if count > len(plan.actions) {
+		count = len(plan.actions)
 	}
-	if backup := plan.details["shell_rc_backup"]; backup != "" {
-		if err := restoreShellRC(backup); err != nil && first == nil {
+	for index := count - 1; index >= 0; index-- {
+		undo := plan.actions[index].undo
+		if undo == nil {
+			continue
+		}
+		if err := undo(); err != nil && first == nil {
 			first = err
 		}
 	}
-	_ = count
 	return first
+}
+
+func restoreShellRCBackup(details map[string]string) error {
+	backup := details["shell_rc_backup"]
+	if backup == "" {
+		return nil
+	}
+	return restoreShellRC(backup)
 }
 
 // Rollback restores the values captured before an env-set/env-unset record.
@@ -309,6 +310,9 @@ func RollbackWithStore(ctx context.Context, dataRoot, journalID string, store pl
 	}
 	if record.Action != "env-set" && record.Action != "env-unset" {
 		return model.EnvSetData{}, apperrors.New(apperrors.E7001, "journal is not an env transaction").WithDetails(map[string]any{"action": record.Action})
+	}
+	if record.Status == journal.StatusRolledBack {
+		return model.EnvSetData{}, apperrors.New(apperrors.E7001, "journal was already rolled back")
 	}
 	operations := []string{}
 	if runtime.GOOS == "windows" {
@@ -438,7 +442,7 @@ func shellRCBlock(opts ApplyOptions) string {
 	return "\n" + strings.Join(lines, "\n") + "\n"
 }
 
-func shellQuote(value string) string { return `"` + strings.ReplaceAll(value, `"`, `\"`) + `"` }
+func shellQuote(value string) string { return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'" }
 
 func readShellRC(profile string) (bool, string, error) {
 	body, err := os.ReadFile(profile)
@@ -506,7 +510,7 @@ func restoreShellRC(backup string) error {
 }
 
 func writeShim(path, target string) error {
-	body := "#!/bin/sh\n" + shimMarker + "\nexec '" + target + "' \"$@\"\n"
+	body := "#!/bin/sh\n" + shimMarker + "\nexec " + shellQuote(target) + " \"$@\"\n"
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return apperrors.New(apperrors.E6002, "shim directory cannot be created").WithCause(err.Error())
 	}

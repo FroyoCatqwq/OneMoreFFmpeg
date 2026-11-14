@@ -20,6 +20,8 @@
 
 不覆盖用户已有变量，除非 CLI 明确 `--overwrite`。
 
+Windows 环境变量名不区分大小写：`env status` 按规范名（`FFMPEG_DIR` / `ONE_MORE_FFMPEG_DIR` / `LAE_FFMPEG_DIR`）报告，进程环境中诸如 `ffmpeg_dir` 的小写写法也会被识别并归一到规范名。
+
 ### 1.1 data root 解析
 
 所有下载、缓存、安装、journal 与默认配置都位于同一个 data root，解析顺序固定：

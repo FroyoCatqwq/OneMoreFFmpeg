@@ -10,6 +10,7 @@ import (
 	"time"
 
 	appenv "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/env"
+	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/ffexec"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/journal"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
@@ -39,7 +40,7 @@ func Run(ctx context.Context, opts Options) (model.DoctorData, error) {
 		Detail: status.CurrentType,
 	})
 
-	trioOK, trioDetail := checkTrio(ctx, opts, status)
+	trioOK, trioDetail, trioWarnings := checkTrio(ctx, opts, status)
 	checks = append(checks, model.Check{Name: "trio_valid", OK: trioOK, Detail: trioDetail})
 	checks = append(checks, model.Check{
 		Name:   "path_contains_current",
@@ -67,30 +68,31 @@ func Run(ctx context.Context, opts Options) (model.DoctorData, error) {
 			healthy = false
 		}
 	}
+	warnings := append([]model.Warning{}, status.Warnings...)
+	warnings = append(warnings, trioWarnings...)
 	return model.DoctorData{
 		Schema:         model.DoctorSchema,
 		Healthy:        healthy,
 		Checks:         checks,
-		Warnings:       status.Warnings,
+		Warnings:       warnings,
 		JournalPending: pendingIDs,
 	}, nil
 }
 
-func checkTrio(ctx context.Context, opts Options, status model.EnvStatusData) (bool, string) {
+func checkTrio(ctx context.Context, opts Options, status model.EnvStatusData) (bool, string, []model.Warning) {
 	if status.CurrentType == model.CurrentMissing {
-		return false, "current is missing"
+		return false, "current is missing", nil
 	}
 	if status.CurrentType == model.CurrentPointerFile {
-		return false, "current is a pointer file; run env set or use current_target/bin"
+		return false, "current is a pointer file; run env set or use current_target/bin", nil
 	}
 	binDir := filepath.Join(opts.DataRoot, "current", "bin")
 	runner := opts.Runner
 	if runner.Timeout <= 0 {
 		runner.Timeout = defaultProbeTimeout
 	}
-	names := []string{"ffmpeg", "ffprobe"}
 	missing := make([]string, 0)
-	for _, name := range names {
+	for _, name := range []string{"ffmpeg", "ffprobe"} {
 		path := findBinary(binDir, name)
 		if path == "" {
 			missing = append(missing, name)
@@ -102,9 +104,19 @@ func checkTrio(ctx context.Context, opts Options, status model.EnvStatusData) (b
 		}
 	}
 	if len(missing) > 0 {
-		return false, "unhealthy: " + strings.Join(missing, ", ")
+		return false, "unhealthy: " + strings.Join(missing, ", "), nil
 	}
-	return true, "ffmpeg, ffprobe healthy"
+	healthy := []string{"ffmpeg", "ffprobe"}
+	warnings := []model.Warning{}
+	ffplayPath := findBinary(binDir, "ffplay")
+	if ffplayPath == "" {
+		warnings = append(warnings, model.Warning{Code: string(apperrors.W1001), Message: "ffplay is missing"})
+	} else if result, err := runner.Run(ctx, ffplayPath, "-version"); err != nil || result.ExitCode != 0 {
+		warnings = append(warnings, model.Warning{Code: string(apperrors.W1001), Message: "ffplay is present but not runnable"})
+	} else {
+		healthy = append(healthy, "ffplay")
+	}
+	return true, strings.Join(healthy, ", ") + " healthy", warnings
 }
 
 func pathDetail(status model.EnvStatusData) string {

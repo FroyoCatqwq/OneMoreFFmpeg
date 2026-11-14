@@ -3,12 +3,14 @@ package cli
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	urfave "github.com/urfave/cli/v3"
 
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/doctor"
 	appenv "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/env"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/journal"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/paths"
 )
@@ -141,13 +143,23 @@ func envRollbackCommand() *urfave.Command {
 			if id == "" {
 				return apperrors.New(apperrors.E7001, "--journal is required")
 			}
-			if !cmd.Bool("apply") {
-				preview := model.EnvSetData{Schema: model.EnvSetSchema, DryRun: true, Applied: false, Operations: []string{}, JournalID: id, RollbackSupported: true}
-				return writeResult(cmd, "env.rollback", preview, "dry-run (use --apply to roll back)\n")
-			}
 			root, err := paths.DataRoot()
 			if err != nil {
 				return err
+			}
+			record, err := journal.Read(filepath.Join(root, "journal"), id)
+			if err != nil {
+				return err
+			}
+			if record.Action != "env-set" && record.Action != "env-unset" {
+				return apperrors.New(apperrors.E7001, "journal is not an env transaction").WithDetails(map[string]any{"action": record.Action})
+			}
+			if record.Status == journal.StatusRolledBack {
+				return apperrors.New(apperrors.E7001, "journal was already rolled back")
+			}
+			if !cmd.Bool("apply") {
+				preview := model.EnvSetData{Schema: model.EnvSetSchema, DryRun: true, Applied: false, Operations: []string{}, JournalID: id, RollbackSupported: true}
+				return writeResult(cmd, "env.rollback", preview, "dry-run (use --apply to roll back)\n")
 			}
 			result, err := appenv.Rollback(ctx, root, id)
 			if err != nil {

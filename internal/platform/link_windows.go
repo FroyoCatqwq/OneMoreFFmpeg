@@ -5,6 +5,7 @@ package platform
 import (
 	"encoding/binary"
 	"os"
+	"strings"
 
 	"golang.org/x/sys/windows"
 
@@ -42,7 +43,7 @@ func CreateLink(link, target string) error {
 	}
 	defer windows.CloseHandle(handle)
 
-	substitute := `\??\` + target
+	substitute := junctionSubstituteName(target)
 	printName := target
 	buffer := buildMountPointBuffer(substitute, printName)
 	var returned uint32
@@ -52,6 +53,15 @@ func CreateLink(link, target string) error {
 	}
 	cleanup = false
 	return nil
+}
+
+// junctionSubstituteName maps a target to the NT object-manager path stored in
+// the reparse buffer. UNC targets need the \??\UNC\ prefix instead of \??\.
+func junctionSubstituteName(target string) string {
+	if strings.HasPrefix(target, `\\`) {
+		return `\??\UNC\` + strings.TrimPrefix(target, `\\`)
+	}
+	return `\??\` + target
 }
 
 func buildMountPointBuffer(substitute, printName string) []byte {

@@ -554,7 +554,7 @@ provider 摘要：
 
 ### 4.14 `capabilities --only <kind>`（已实现）
 
-`data` 遵循 `onemoreffmpeg.capability-list/v1`：`kind` / `entries` / `command` / `installation_id` / `fingerprint` / `warnings`。只执行该类别所需的 FFmpeg 命令，不输出其他类别。`--cache-dir` / `--no-cache` / `--refresh` 同样生效：缓存文件为 `list-<kind>-<fingerprint>.json`，写入失败记录 `OMF-W1007`。
+`data` 遵循 `onemoreffmpeg.capability-list/v1`：`kind` / `entries` / `command` / `installation_id` / `fingerprint` / `warnings`。只执行该类别所需的 FFmpeg 命令，不输出其他类别。`--cache-dir` / `--no-cache` / `--refresh` 同样生效：缓存文件为 `list-<kind>-<fingerprint>.json`，写入失败记录 `OMF-W1007`。不支持的 `--only <kind>` 属于非法枚举值，返回 `OMF-E7005`（退出 2），而非 help topic 的 `OMF-E2005`。
 
 ### 4.15 `release list` / `release install`（已实现）
 
@@ -567,9 +567,10 @@ provider 摘要：
 ### 4.16 `journal list` / `journal rollback`（已实现）
 
 - `journal list`：`onemoreffmpeg.journal-list/v1`，输出全部 record 摘要与 pending ID；
-- `journal rollback --journal <id> --apply`：`onemoreffmpeg.journal-action/v1`，支持 `install` / `uninstall` / `env-set` / `env-unset`；默认 dry-run，只返回预览；
-- uninstall 先把安装目录移入 `<data-root>/quarantine/<journal-id>/`，回滚时恢复目录与 current；
-- journal id 强制执行白名单，拒绝 `..` 与路径分隔符。
+- `journal rollback --journal <id> --apply`：`onemoreffmpeg.journal-action/v1`，支持 `install` / `uninstall` / `env-set` / `env-unset`；默认 dry-run，只返回预览，预览的 `action` 取自记录本身；
+- 校验在 dry-run 与 `--apply` 下都先执行：journal id 强制白名单，拒绝 `..` 与路径分隔符；id 非法、记录不存在或读取失败返回 `OMF-E6005`（退出 1）；记录已回滚（`rolled-back`）或 action 不在支持列表返回 `OMF-E7001`（退出 2）；
+- `env rollback --journal <id>` 只接受 `env-set` / `env-unset` 记录；指向 install/uninstall 记录或已回滚记录返回 `OMF-E7001`，id 非法/缺失返回 `OMF-E6005`；
+- uninstall 先把安装目录移入 `<data-root>/quarantine/<journal-id>/`，回滚时恢复目录与 current。
 
 ---
 

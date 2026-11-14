@@ -34,7 +34,7 @@ func CapabilityKinds() []string {
 // CollectList runs only the FFmpeg command needed for one capability kind.
 func (c *Collector) CollectList(ctx context.Context, opts Options, kind string) (model.CapabilityListData, error) {
 	if !capabilityKinds[kind] {
-		return model.CapabilityListData{}, apperrors.New(apperrors.E2005, "unsupported capability kind").WithDetails(map[string]any{"kind": kind, "allowed": CapabilityKinds()})
+		return model.CapabilityListData{}, apperrors.New(apperrors.E7005, "unsupported capability kind").WithDetails(map[string]any{"kind": kind, "allowed": CapabilityKinds()})
 	}
 	if ctx == nil {
 		ctx = context.Background()

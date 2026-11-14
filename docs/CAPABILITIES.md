@@ -228,6 +228,7 @@ ffmpeg -hide_banner -buildconf
 | ffmpeg 无执行权限 | `OMF-E1005`，整体失败 |
 | `--dir` / `--installation-id` 缺失或同时给出 | `OMF-E7001` |
 | help topic 非法 | `OMF-E2005` |
+| `--only <kind>` 不在支持列表 | `OMF-E7005`（非法枚举值，退出 2） |
 | help topic 未命中 | 该命令 `ok=false`，`found=false`，记录 `OMF-W1002`，整体仍成功 |
 | 单个命令超时 | 该命令 `ok=false`，其他继续，记录 `OMF-W1002` |
 | 单个命令非零退出 | 该命令 `ok=false`，继续，记录 `OMF-W1002` |

@@ -45,27 +45,37 @@ func Status(opts Options) model.EnvStatusData {
 }
 
 func variables(environment []string) map[string]*string {
+	names := []string{"ONE_MORE_FFMPEG_DIR", "FFMPEG_DIR", "LAE_FFMPEG_DIR"}
 	values := map[string]*string{}
-	for _, name := range []string{"ONE_MORE_FFMPEG_DIR", "FFMPEG_DIR", "LAE_FFMPEG_DIR"} {
+	canonical := map[string]string{}
+	for _, name := range names {
 		values[name] = nil
+		canonical[envNameKey(name)] = name
 	}
 	for _, pair := range environment {
 		key, value, ok := strings.Cut(pair, "=")
 		if !ok {
 			continue
 		}
-		if _, tracked := values[key]; tracked {
+		if name, tracked := canonical[envNameKey(key)]; tracked {
 			copied := value
-			values[key] = &copied
+			values[name] = &copied
 		}
 	}
-	for _, name := range []string{"ONE_MORE_FFMPEG_DIR", "FFMPEG_DIR", "LAE_FFMPEG_DIR"} {
+	for _, name := range names {
 		// Keep null for unset variables; detect empty as unset.
 		if pointer := values[name]; pointer != nil && *pointer == "" {
 			values[name] = nil
 		}
 	}
 	return values
+}
+
+func envNameKey(name string) string {
+	if runtime.GOOS == "windows" {
+		return strings.ToUpper(name)
+	}
+	return name
 }
 
 func pathContains(environment []string, dir string) bool {

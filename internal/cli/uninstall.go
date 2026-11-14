@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	urfave "github.com/urfave/cli/v3"
@@ -100,9 +101,9 @@ func uninstallCommand() *urfave.Command {
 				return err
 			}
 			record.Details["quarantine"] = quarantine
-			if currentTarget != "" && filepath.Clean(currentTarget) == root {
+			if currentTarget != "" && samePath(currentTarget, root) {
 				if err := platform.RemoveLink(filepath.Join(dataRoot, "current")); err != nil {
-					_ = os.Rename(quarantine, root)
+					_ = platform.RenamePath(quarantine, root)
 					record.Status = journal.StatusFailed
 					record.Details["error"] = err.Error()
 					_ = journal.Write(filepath.Join(dataRoot, "journal"), record)
@@ -118,4 +119,13 @@ func uninstallCommand() *urfave.Command {
 			return writeResult(cmd, "uninstall", data, fmt.Sprintf("quarantined %s (rollback: journal rollback --journal %s)\n", root, journalID))
 		},
 	}
+}
+
+func samePath(left, right string) bool {
+	left = filepath.Clean(left)
+	right = filepath.Clean(right)
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(left, right)
+	}
+	return left == right
 }

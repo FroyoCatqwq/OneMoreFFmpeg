@@ -14,6 +14,7 @@ import (
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/ffexec"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/journal"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
 )
 
 type Options struct {
@@ -91,7 +92,9 @@ func Run(ctx context.Context, opts Options) (model.InstallData, error) {
 					}
 					data.CurrentPointer = pointer
 				}
-				_ = writeRecord(targetDir, record{Schema: "onemoreffmpeg.install-record/v1", InstalledAt: now().UTC().Format(time.RFC3339), AssetName: opts.Release.AssetName, Installation: data})
+				if err := writeRecord(targetDir, record{Schema: "onemoreffmpeg.install-record/v1", InstalledAt: now().UTC().Format(time.RFC3339), AssetName: opts.Release.AssetName, Installation: data}); err != nil {
+					return model.InstallData{}, err
+				}
 			}
 			return data, nil
 		}
@@ -173,7 +176,7 @@ func Run(ctx context.Context, opts Options) (model.InstallData, error) {
 			if _, err := os.Stat(restoreTarget); os.IsNotExist(err) {
 				if _, qErr := os.Stat(quarantine); qErr == nil {
 					_ = os.MkdirAll(filepath.Dir(restoreTarget), 0o755)
-					_ = os.Rename(quarantine, restoreTarget)
+					_ = platform.RenamePath(quarantine, restoreTarget)
 				}
 			}
 		}
@@ -266,10 +269,10 @@ func Run(ctx context.Context, opts Options) (model.InstallData, error) {
 	if err := os.MkdirAll(filepath.Dir(targetDir), 0o755); err != nil {
 		return fail(apperrors.New(apperrors.E5005, "install parent directory cannot be created").WithCause(err.Error()))
 	}
-	if err := os.Rename(stage, targetDir); err != nil {
+	if err := platform.RenamePath(stage, targetDir); err != nil {
 		if quarantine != "" {
 			_ = os.MkdirAll(filepath.Dir(restoreTarget), 0o755)
-			_ = os.Rename(quarantine, restoreTarget)
+			_ = platform.RenamePath(quarantine, restoreTarget)
 		}
 		return fail(apperrors.New(apperrors.E5005, "install directory cannot be committed").WithCause(err.Error()))
 	}
@@ -282,7 +285,7 @@ func Run(ctx context.Context, opts Options) (model.InstallData, error) {
 			_ = os.RemoveAll(targetDir)
 			if quarantine != "" {
 				_ = os.MkdirAll(filepath.Dir(restoreTarget), 0o755)
-				_ = os.Rename(quarantine, restoreTarget)
+				_ = platform.RenamePath(quarantine, restoreTarget)
 			}
 			_ = restoreCurrentState(opts.DataRoot, previousTarget, previousKind)
 			return fail(switchErr)

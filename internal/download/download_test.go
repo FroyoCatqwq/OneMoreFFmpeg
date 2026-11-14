@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -328,4 +329,43 @@ func TestNewRequiresAbsoluteDir(t *testing.T) {
 	typed, ok := apperrors.As(err)
 	require.True(t, ok)
 	require.Equal(t, apperrors.E4005, typed.Code)
+}
+
+// A large asset on a slow link trickles its body over longer than the phase
+// timeout. The timeout must bound connection phases, not the whole body read,
+// so a steady download still completes.
+func TestFetchSlowBodyCompletesDespiteShortTimeout(t *testing.T) {
+	payload := []byte(strings.Repeat("x", 4096))
+	sha := shaOf(payload)
+	checksums := sha + "  " + assetName + "\n"
+	mux := http.NewServeMux()
+	mux.HandleFunc("/asset", func(writer http.ResponseWriter, _ *http.Request) {
+		flusher := writer.(http.Flusher)
+		chunk := len(payload) / 8
+		for start := 0; start < len(payload); start += chunk {
+			end := start + chunk
+			if end > len(payload) {
+				end = len(payload)
+			}
+			_, _ = writer.Write(payload[start:end])
+			flusher.Flush()
+			time.Sleep(60 * time.Millisecond)
+		}
+	})
+	mux.HandleFunc("/checksums", func(writer http.ResponseWriter, _ *http.Request) {
+		_, _ = writer.Write([]byte(checksums))
+	})
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	instance, err := download.New(download.Options{Dir: t.TempDir(), MaxBytes: 1 << 20, Timeout: 250 * time.Millisecond})
+	require.NoError(t, err)
+	release := model.Release{
+		Schema: model.ReleaseSchema, Provider: "btbn", ReleaseTag: "latest",
+		AssetName: assetName, AssetURL: server.URL + "/asset", AssetSHA256: sha,
+		ChecksumsURL: server.URL + "/checksums", ChecksumsSHA256: shaOf([]byte(checksums)),
+	}
+	artifact, err := instance.Fetch(context.Background(), release)
+	require.NoError(t, err, "a slow but steady body must not be aborted by the phase timeout")
+	require.True(t, artifact.Verified)
 }

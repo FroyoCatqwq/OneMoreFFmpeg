@@ -33,9 +33,9 @@ v1 支持三种实现：
 |---|---|---|---|
 | `directory_junction` | 优先 | 不常用 | Windows 目录 junction，普通用户通常可创建 |
 | `symlink` | 可选，可能需提权/开发者模式 | 默认 | 目录 symlink |
-| `pointer_file` | 回退 | 回退 | 写 `current.txt` 指向版本化目录 |
+| `pointer_file` | 回退 | 回退 | 写 `current.pointer` 指向版本化目录 |
 
-junction 限制：目标必须是本机磁盘路径、目标必须已存在、不支持跨卷/UNC；不满足时回退 `pointer_file`。
+junction 限制：目标必须已存在；本机路径写入 `\??\<path>` 替换名，UNC 网络路径（`\\server\share`）写入 `\??\UNC\server\share`，因此支持本机跨卷与 UNC 目标；创建失败时回退 `pointer_file`。
 
 目录布局：
 
@@ -43,7 +43,7 @@ junction 限制：目标必须是本机磁盘路径、目标必须已存在、�
 <data-root>/
 ├─ apps/<provider>/<release-tag>/<sha256-16hex>/
 ├─ current                  # junction/symlink，或不存在
-├─ current.txt              # pointer_file 模式
+├─ current.pointer          # pointer_file 模式
 └─ journal/
 ```
 
@@ -138,7 +138,8 @@ Windows 不能可靠覆盖正在运行的 exe。
 - 若占用，返回 `OMF-E5006`；
 - 不强制 kill 用户进程；
 - 可把旧目录移动到 quarantine，记录 `OMF-E5007` 风险；
-- quarantine 目录必须由 journal 管理，不能自动无限期删除。
+- quarantine 目录必须由 journal 管理，不能自动无限期删除；
+- 目录 rename（install 提交、quarantine 恢复、current 切换）可能被 Defender/索引器等短暂占用而返回 `ACCESS_DENIED` / `SHARING_VIOLATION`；`platform.RenamePath` 对这两类错误做有限次退避重试，非占用类错误立即失败。
 
 ---
 
@@ -176,14 +177,15 @@ LAE_FFMPEG_DIR
 
 规则：
 
-- 优先 symlink 到 `<data-root>/current/bin/*`；
+- 写入带托管标记（`# OneMoreFFmpeg managed shim`）的 `#!/bin/sh` 脚本，`exec` 到 `<data-root>/current/bin/*`；目标路径用单引号包裹并转义其中的单引号，含空格/特殊字符的路径也安全；
 - 若 `~/.local/bin` 不存在，可创建；
 - 若 `~/.local/bin` 不在 PATH，只 warning，不改 shell rc；
 - 不写 `/etc/profile`；
 - 不写 `/etc/environment`；
 - 不调用 root；
 - 卸载时按 journal 删除本项目创建的 shim；
-- 不删除同名但非本项目创建的文件，返回 `OMF-E6007`。
+- 不删除同名但非本项目创建的文件，返回 `OMF-E6007`；
+- 写入失败时按相反顺序撤销已应用动作：原本存在的 shim 恢复原内容，新建的 shim 删除。
 
 ---
 

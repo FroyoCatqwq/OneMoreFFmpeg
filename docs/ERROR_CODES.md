@@ -115,6 +115,7 @@ OMF-Wxxxx  警告码（不导致命令失败）
 - 只有所有能力命令都失败或缓存/输出不可用时才返回整体错误；
 - 当前实现：单个命令失败 → `OMF-W1002`；13 个命令全部失败 → `OMF-E2001` 且不写缓存；`-h <topic>` 未命中 → 该命令 `ok=false` + `OMF-W1002`，整体仍成功；
 - `OMF-E2002` / `OMF-E2003` / `OMF-E2004` / `OMF-E2006` 为保留码：当前解析器对未知行降级为 `OMF-W1002`，缓存读取失败降级为 `OMF-W1003`，缓存写入失败降级为 `OMF-W1007`，不单独使用这些码。
+- `OMF-E2005` 仅用于 `-h <topic>` 的 help topic 校验；`capabilities --only <kind>` 的 kind 不在支持列表属于非法枚举值，使用 `OMF-E7005`（退出 2），不复用 `E2005`。
 
 ---
 
@@ -184,6 +185,11 @@ OMF-Wxxxx  警告码（不导致命令失败）
 | `OMF-E6007` | `NON_MANAGED_FILE` | 试图删除/覆盖非本项目管理的文件 | 1 |
 | `OMF-E6008` | `WM_SETTINGCHANGE_FAILED` | Windows 环境变更广播失败 | 1 |
 
+说明：
+
+- `journal rollback` / `env rollback` 的 journal id 强制白名单（拒绝 `..` 与路径分隔符）；id 非法、记录不存在或读取/解析失败统一 `OMF-E6005`（退出 1），dry-run 预览同样先校验；
+- 记录已回滚（`rolled-back`）、action 不在支持列表，或 `env rollback` 指向非 env 记录，属于用法错误 `OMF-E7001`（退出 2），不复用 `E6005`。
+
 ---
 
 ## 10. E7xxx：CLI / Config / JSON
@@ -215,7 +221,7 @@ OMF-Wxxxx  警告码（不导致命令失败）
 
 | 编号 | 名称 | 说明 |
 |---|---|---|
-| `OMF-W1001` | `FFPLAY_MISSING` | ffplay 缺失，但不影响 ffmpeg/ffprobe |
+| `OMF-W1001` | `FFPLAY_MISSING` | ffplay 缺失或不可运行，但不影响 ffmpeg/ffprobe |
 | `OMF-W1002` | `CAPABILITY_PARSE_WARNING` | 部分输出行无法解析 |
 | `OMF-W1003` | `CACHE_STALE` | 缓存过期、损坏或不可读，已重新探测 |
 | `OMF-W1004` | `NETWORK_DRIVE_SKIPPED` | 网络盘/可移动盘默认跳过 |

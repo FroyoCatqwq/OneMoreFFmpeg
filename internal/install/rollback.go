@@ -21,7 +21,7 @@ func Quarantine(dataRoot, root, journalID string) (string, error) {
 	if err := os.MkdirAll(filepath.Dir(quarantine), 0o755); err != nil {
 		return "", apperrors.New(apperrors.E5007, "quarantine directory cannot be created").WithCause(err.Error())
 	}
-	if err := os.Rename(root, quarantine); err != nil {
+	if err := platform.RenamePath(root, quarantine); err != nil {
 		return "", apperrors.New(apperrors.E5007, "installation cannot be quarantined").WithCause(err.Error())
 	}
 	return quarantine, nil
@@ -54,7 +54,7 @@ func Rollback(dataRoot string, record journal.Record) (string, error) {
 		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 			return "", apperrors.New(apperrors.E5005, "install parent cannot be restored").WithCause(err.Error())
 		}
-		if err := os.Rename(quarantine, target); err != nil {
+		if err := platform.RenamePath(quarantine, target); err != nil {
 			return "", apperrors.New(apperrors.E5005, "installation cannot be restored").WithCause(err.Error())
 		}
 		if currentTarget != "" {
@@ -78,7 +78,7 @@ func Rollback(dataRoot string, record journal.Record) (string, error) {
 				if err := os.MkdirAll(filepath.Dir(restorePath), 0o755); err != nil {
 					return "", apperrors.New(apperrors.E5005, "previous install parent cannot be restored").WithCause(err.Error())
 				}
-				if err := os.Rename(quarantine, restorePath); err != nil {
+				if err := platform.RenamePath(quarantine, restorePath); err != nil {
 					return "", apperrors.New(apperrors.E5005, "previous installation cannot be restored").WithCause(err.Error())
 				}
 			}
@@ -144,7 +144,7 @@ func quarantineExistingInstalls(dataRoot, targetDir, journalID string, force boo
 	if err := os.MkdirAll(filepath.Dir(quarantine), 0o755); err != nil {
 		return "", "", apperrors.New(apperrors.E5007, "quarantine directory cannot be created").WithCause(err.Error())
 	}
-	if err := os.Rename(original, quarantine); err != nil {
+	if err := platform.RenamePath(original, quarantine); err != nil {
 		return "", "", apperrors.New(apperrors.E5007, "existing install cannot be quarantined").WithCause(err.Error())
 	}
 	return quarantine, original, nil

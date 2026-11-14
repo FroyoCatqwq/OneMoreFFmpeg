@@ -124,6 +124,7 @@ Phase 1 建议采用：
 - 禁止 `file://`；
 - 限制重定向次数；
 - 限制下载大小；
+- 超时只约束连接阶段（dial / TLS 握手 / 响应头），不设整体 `http.Client.Timeout`，避免大资产在慢链路上被 body 读取超时中断；代理取自环境变量（`ProxyFromEnvironment`）；
 - 使用 checksums.sha256；
 - direct URL 必须显式提供 SHA-256；
 - 先下载到临时文件，再原子移动；

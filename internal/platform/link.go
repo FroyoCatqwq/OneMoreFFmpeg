@@ -41,14 +41,14 @@ func ReplaceLink(link, target string) (string, error) {
 	}
 	existed := false
 	if _, err := os.Lstat(link); err == nil {
-		if err := os.Rename(link, backup); err != nil {
+		if err := RenamePath(link, backup); err != nil {
 			return "", apperrors.New(apperrors.E5004, "current pointer cannot be moved aside").WithCause(err.Error())
 		}
 		existed = true
 	}
-	if err := os.Rename(temp, link); err != nil {
+	if err := RenamePath(temp, link); err != nil {
 		if existed {
-			_ = os.Rename(backup, link)
+			_ = RenamePath(backup, link)
 		}
 		return "", apperrors.New(apperrors.E5004, "current pointer cannot be committed").WithCause(err.Error())
 	}
