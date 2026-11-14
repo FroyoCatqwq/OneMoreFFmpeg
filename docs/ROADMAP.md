@@ -20,7 +20,7 @@
 - 新增 provider resolver 细则；
 - 新增许可证决策记录；
 - 新增文档审查报告；
-- `go.mod` 锁定 Go 1.27.3；
+- `go.mod` 声明 `go 1.27`（允许 1.27.x 补丁）；
 - 不写 Go 业务代码。
 
 ### 贯穿 Phase 1–7 的契约引用
@@ -217,7 +217,7 @@ snap / flatpak 专门适配
 
 - GitHub Actions；
 - Windows + Linux；
-- Go 1.27.3；
+- Go 1.27.4；
 - `gofmt` / `go vet` / `go test`；
 - `govulncheck`；
 - fuzz URL / parser；

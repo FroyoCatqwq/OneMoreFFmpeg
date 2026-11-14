@@ -64,7 +64,7 @@ https://proxy.golang.org/github.com/!burnt!sushi/toml/@latest
 | 其他项目如何调用 | **只调用本项目产物可执行文件，即 CLI** |
 | CLI 对外输出 | JSON / 文件 / 退出码 |
 | 配置文件 | TOML 1.1 |
-| 语言 | Go 1.27.3 |
+| 语言 | Go 1.27.4 |
 
 因此当前依赖目标是：
 

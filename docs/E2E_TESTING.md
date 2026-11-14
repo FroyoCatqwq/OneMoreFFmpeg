@@ -35,7 +35,7 @@ uv run --python 3.14 --with-requirements tests/e2e/requirements.txt `
   python tests/e2e/remote_linux.py all
 ```
 
-远程流程：SFTP 部署源码与 Linux 二进制到 `/tmp/omf-e2e` → `mise trust` → `go test ./...` → pytest e2e → Robot → Bats。远程使用 mise 提供的 Python 3.15、uv、Go 1.27。
+远程流程：SFTP 部署源码与 Linux 二进制到 `/tmp/omf-e2e` → `mise trust` → `go test ./...` → pytest e2e → Robot → Bats。远程使用 mise 提供的 Python 3.14、uv、Go 1.27（工具链实际为 go1.27.4）。
 
 ## 3. CI
 

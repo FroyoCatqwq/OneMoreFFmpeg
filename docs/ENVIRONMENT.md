@@ -18,7 +18,7 @@
 | `HTTPS_PROXY` / `HTTP_PROXY` | 网络代理 | 只读，不持久化 |
 | `ONE_MORE_FFMPEG_HOME` | data root 覆盖 | 只读，本项目不写 |
 
-不覆盖用户已有变量，除非 CLI 明确 `--overwrite`。
+不覆盖用户已有变量。
 
 Windows 环境变量名不区分大小写：`env status` 按规范名（`FFMPEG_DIR` / `ONE_MORE_FFMPEG_DIR` / `LAE_FFMPEG_DIR`）报告，进程环境中诸如 `ffmpeg_dir` 的小写写法也会被识别并归一到规范名。
 
@@ -99,9 +99,9 @@ ONE_MORE_FFMPEG_DIR=<data-root>/current
 ### 3.1 默认行为
 
 - 只修改当前用户 PATH；
-- 不修改 machine PATH，除非 `--system` + 提权 + 明确 `--yes`；
+- 不修改 machine PATH，除非 `--system --apply` 且已提权；
 - 不删除 PATH 中已有项；
-- 不改变顺序，除非 `--prepend`；
+- 不改变 PATH 顺序，固定追加 `current/bin`；
 - 写入前保存旧值到 journal；
 - 写入后广播 `WM_SETTINGCHANGE`；
 - 新进程才生效，当前进程不假装已生效。
@@ -122,7 +122,7 @@ Chocolatey
 - 不调用 `scoop update` / `scoop install`；
 - 不改包管理器内部目录；
 - `env status` 报告实际解析来源；
-- 是否 `--prepend` 必须由用户显式指定。
+- PATH 顺序固定，CLI 不提供调整参数。
 
 ### 3.3 风险
 
@@ -180,24 +180,27 @@ snap / flatpak
 
 ```text
 one-more-ffmpeg env status --json
-one-more-ffmpeg env set --installation <id> --dry-run
-one-more-ffmpeg env set --installation <id> --yes
-one-more-ffmpeg env unset --yes
-one-more-ffmpeg env rollback --journal <id>
+one-more-ffmpeg env set --json                    # 预览（默认 dry-run）
+one-more-ffmpeg env set --apply --json            # 实际写入
+one-more-ffmpeg env unset --apply --json
+one-more-ffmpeg env rollback --journal <id> --apply --json
 one-more-ffmpeg doctor --json
 ```
 
-`env set` 默认 dry-run；没有 `--yes` 不写。
+所有写操作**默认 dry-run**，只有 `--apply` 才落盘。`--apply` + `--system` 必须真正提权；
+`--authorize-system` 只记录系统级同意，不能替代提权（见 `SYSTEM_REQUIREMENTS.md`）。
 
 | 参数 | 作用 |
 |---|---|
-| `--dry-run` | 只打印将执行的变更 |
-| `--yes` | 实际写入 |
-| `--overwrite` | 允许覆盖已有变量 |
-| `--prepend` | 将 `current/bin` 放到 PATH 前面 |
-| `--system` | Windows machine scope；需要提权与 `--yes` |
-| `--shell-rc <PATH>` | Linux 下显式指定要修改的 shell rc |
+| `--apply` | 实际写入；不带则只预览 |
+| `--no-path` | 不改 PATH |
+| `--no-variables` | 不改环境变量 |
+| `--no-shell-rc` | 不改 Linux shell profile |
+| `--system` | 系统级作用域；`--apply` 时需要提权 |
+| `--authorize-system` | 记录系统级同意（dry-run 预览可只用这个） |
 | `--lae-compat` | 额外写入 `LAE_FFMPEG_DIR` |
+
+完整参数与 JSON 字段以 [`CLI_SCHEMA.md`](CLI_SCHEMA.md) §4.11 为准。
 
 Windows 注册表、UAC、`REG_EXPAND_SZ`、`WM_SETTINGCHANGE`、junction / pointer_file、Linux shim / shell rc 与 journal 细则见 [`PLATFORM_ENVIRONMENT.md`](PLATFORM_ENVIRONMENT.md)。错误码见 [`ERROR_CODES.md`](ERROR_CODES.md)，`env status` / `doctor` 输出形状见 [`CLI_SCHEMA.md`](CLI_SCHEMA.md)。
 

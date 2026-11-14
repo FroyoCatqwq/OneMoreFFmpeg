@@ -73,7 +73,7 @@ OMF-Wxxxx  警告码（不导致命令失败）
 
 | 编号 | 名称 | 说明 | 退出 |
 |---|---|---|---:|
-| `OMF-E1001` | `DIR_MISSING` | 显式目录不存在 | 1 |
+| `OMF-E1001` | `DIR_MISSING` | 显式目录不存在；也用于 `--in-detail-usage` 与 `--json` 互斥（stdout 只留 JSON） | 1 |
 | `OMF-E1002` | `BINARY_MISSING` | ffmpeg/ffprobe/ffplay 缺失 | 1 |
 | `OMF-E1003` | `VERSION_MISMATCH` | 三件套版本核心不一致 | 1 |
 | `OMF-E1004` | `INSTALLATION_UNUSABLE` | 安装不可用（缺二进制或校验失败） | 1 |
@@ -167,10 +167,9 @@ OMF-Wxxxx  警告码（不导致命令失败）
 | `OMF-E5004` | `CURRENT_SWITCH_FAILED` | current 指针切换失败 | 1 |
 | `OMF-E5005` | `ROLLBACK_FAILED` | 回滚失败 | 1 |
 | `OMF-E5006` | `EXECUTABLE_BUSY` | Windows 正在运行的 exe 无法替换（**保留编号，当前无使用点**：`RenamePath` 改为退避重试） | 1 |
-| `OMF-E5009` | `IO_FAILED` | 文件/目录读写或创建失败（解压、复制、写 install.json、建目录、备份 shell rc） | 1 |
 | `OMF-E5007` | `QUARANTINE_FAILED` | 旧版本隔离/清理失败 | 1 |
 | `OMF-E5008` | `INSTALL_VALIDATION_FAILED` | 安装后三件套校验失败 | 1 |
-| `OMF-E5009` | `IO_FAILED` | 文件/目录读写或创建失败（解压、复制、写 install.json、建目录） | 1 |
+| `OMF-E5009` | `IO_FAILED` | 文件/目录读写或创建失败（解压、复制、写 install.json、建目录、备份 shell rc） | 1 |
 
 ---
 

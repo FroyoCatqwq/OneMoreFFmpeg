@@ -443,7 +443,7 @@ provider 摘要：
 | `license_hint` | string | gpl / lgpl / nonfree / custom |
 | `redistributable` | boolean | nonfree 必须为 false |
 | `lock_path` | string | 由 `--emit-trio-lock` 触发时的可选输出 |
-| `journal_id` | string | 安装事务 ID |
+| `journal_id` | string | 安装事务 ID；**dry-run 时省略**，非 dry-run 必填（v0.9.0 起） |
 | `dry_run` | boolean | 是否只预览 |
 
 参数：
@@ -540,7 +540,8 @@ provider 摘要：
 | `warnings` | array | `OMF-W*` |
 | `journal_pending` | array | 未提交/未回滚 journal |
 
-检查项：`data_root`、`current_exists`、`trio_valid`、`path_contains_current`、`no_pending_journal`。默认报告整体仍退出 0，脚本必须读取 `healthy`；`journal_pending` 为未完成 journal 的 ID 列表。`--strict` 在 `healthy=false` 时改为返回 `OMF-E6006`（退出 1），完整报告置于错误对象 `details.report`；健康时仍输出正常结果并退出 0。
+检查项：`data_root`、`current_exists`、`trio_valid`、`path_contains_current`、`no_pending_journal`；
+当 journal 目录中有损坏/不可读记录时额外出现 `journals_readable`（v0.9.0 起，值为 false）。默认报告整体仍退出 0，脚本必须读取 `healthy`；`journal_pending` 为未完成 journal 的 ID 列表。`--strict` 在 `healthy=false` 时改为返回 `OMF-E6006`（退出 1），完整报告置于错误对象 `details.report`；健康时仍输出正常结果并退出 0。
 
 示例：[`schemas/examples/doctor.example.json`](schemas/examples/doctor.example.json)
 
@@ -571,7 +572,7 @@ provider 摘要：
 
 ### 4.16 `journal list` / `journal rollback`（已实现）
 
-- `journal list`：`onemoreffmpeg.journal-list/v1`，输出全部 record 摘要与 pending ID；
+- `journal list`：`onemoreffmpeg.journal-list/v1`，输出全部 record 摘要与 pending ID；遇到损坏/不可读记录不再静默跳过，返回 `OMF-E6005`（带 `file` 详情，退出 1）；
 - `journal rollback --journal <id> --apply`：`onemoreffmpeg.journal-action/v1`，支持 `install` / `uninstall` / `env-set` / `env-unset`；默认 dry-run，只返回预览，预览的 `action` 取自记录本身；
 - 校验在 dry-run 与 `--apply` 下都先执行：journal id 强制白名单，拒绝 `..` 与路径分隔符；id 非法、记录不存在或读取失败返回 `OMF-E6005`（退出 1）；记录已回滚（`rolled-back`）或 action 不在支持列表返回 `OMF-E7001`（退出 2）；
 - `env rollback --journal <id>` 只接受 `env-set` / `env-unset` 记录；指向 install/uninstall 记录或已回滚记录返回 `OMF-E7001`，id 非法/缺失返回 `OMF-E6005`；

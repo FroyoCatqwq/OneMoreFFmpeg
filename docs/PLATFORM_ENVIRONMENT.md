@@ -68,15 +68,15 @@ junction 限制：目标必须已存在；本机路径写入 `\??\<path>` 替换
 | 用户 PATH | `HKCU\Environment` | 是 |
 | 系统 PATH | `HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment` | 否 |
 
-`--system` 必须同时满足：
+`--system` 与 `--apply` 同用时必须**真正提权**；`--authorize-system` 只记录用户同意，
+在 dry-run 预览里可单独使用，但不能替代提权。
 
 ```text
---yes
-已提权
-用户显式确认
+--apply + --system   -> 需要已提权
+--authorize-system   -> 仅记录同意（dry-run 预览可用）
 ```
 
-否则返回 `OMF-E6003`，不静默调用 UAC。
+未提权时返回 `OMF-E6003`（退出 2），不静默调用 UAC。
 
 ### 3.2 注册表类型
 
@@ -99,7 +99,7 @@ PATH 项处理：
 - Windows 路径大小写不敏感；
 - 比较前规范化结尾反斜杠；
 - 使用 `filepath.Clean` 等价规范化；
-- `--prepend` 只在显式要求时改变顺序；
+- PATH 顺序固定，CLI 不提供 `--prepend` 之类的调整参数；
 - 默认 append。
 
 ### 3.3 写入流程
@@ -135,7 +135,7 @@ Windows 不能可靠覆盖正在运行的 exe。
 规则：
 
 - 切换 current 前检测目标三件套是否被占用；
-- 若占用，返回 `OMF-E5006`；
+- 若占用，`platform.RenamePath` 做有限次退避重试；`OMF-E5006` 为**保留编号，当前无使用点**；
 - 不强制 kill 用户进程；
 - 可把旧目录移动到 quarantine，记录 `OMF-E5007` 风险；
 - quarantine 目录必须由 journal 管理，不能自动无限期删除；
@@ -157,7 +157,7 @@ LAE_FFMPEG_DIR
 
 - 默认写用户作用域；
 - `--system` 规则同 PATH；
-- 不覆盖已有值，除非 `--overwrite`；
+- 不覆盖已有值；
 - 旧值写入 journal；
 - 变量值指向 `<data-root>/current` 或 `<data-root>/current/bin`；
 - 不写 token / 密码；
@@ -191,13 +191,9 @@ LAE_FFMPEG_DIR
 
 ## 6. Linux shell rc
 
-只有显式参数：
-
-```text
---shell-rc <PATH>
-```
-
-才允许修改 shell rc。
+`--no-shell-rc`（bool）可跳过修改 shell rc。**没有**「指定任意 rc 路径」的参数：
+写哪一份 profile 由平台规则与 `internal/env/rollback_guard.go` 的白名单决定
+（`~/.profile` / `/etc/profile.d/onemoreffmpeg.sh`），这是防止 journal 被改写到任意路径的安全边界。
 
 限制：
 
@@ -213,7 +209,7 @@ export PATH="..."
 ```
 
 - 已存在旧块则替换旧块，不追加第二份；
-- 写入失败或备份失败返回 `OMF-E6004`；
+- 写入或备份这类 IO 失败返回 `OMF-E5009`（退出 1）；`OMF-E6004` 只表示「策略拒绝修改 shell rc」（退出 2，保留编号）；
 - 回滚时恢复原文件；
 - 当前进程不会自动获得新 PATH，记录 `OMF-W1005`。
 

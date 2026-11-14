@@ -17,8 +17,8 @@
 - 这些是示例，不是完整 JSON Schema Draft 文件；
 - 字段名和类型以 `CLI_SCHEMA.md` 为准；
 - 错误码以 `ERROR_CODES.md` 为准；
-- **全部 18 个命令均已实现**（含 `env.*` / `doctor` / `uninstall` / `release` / `journal` / `capability list`），
-  17 个 `data.schema` 全为 `/v1`；命令集与 schema 集已冻结，清单见 `../PHASE6_STATUS.md`。
+- **全部 18 个命令均已实现**（含 `env.*` / `doctor` / `uninstall` / `release.list` / `journal.list|rollback` / `capabilities --only`），
+  17 个 `data.schema` 全为 `/v1`；命令集与 schema 集已冻结，清单见 `../archive/PHASE6_STATUS.md`。
 - `provider-resolve.example.json` 已按 D1 使用真实可达组合：`release_tag=latest` + `release_id` + `published_at` + `asset_sha256`；示例中的 SHA-256 仍是占位值，真实解析必须来自 checksums 或上游 API。
 - release / artifact / provider-list / provider-add 示例已由 `internal/contracts` 做字段级校验（HTTPS、SHA-256、RFC 3339、枚举、nonfree 不可再分发）。
 

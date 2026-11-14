@@ -24,6 +24,8 @@ one-more-ffmpeg <command> --json
 
 可运行的最小集成示例（Python / PowerShell，仅标准库，不 import Go / 不链接 Go runtime）见
 [`../examples/external-caller/`](../examples/external-caller/README.md)。CLI 契约已于 Phase 6 冻结，见 [`PHASE6_STATUS.md`](archive/PHASE6_STATUS.md)。
+完整的 18 个 `result.command` 与 17 个 `/v1` data schema 冻结清单见
+[`CLI_SCHEMA.md`](CLI_SCHEMA.md) 与 `internal/contracts/freeze_test.go`；下方 §3 只是常用子集。
 
 当前明确不提供：
 

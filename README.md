@@ -4,7 +4,9 @@
 
 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg>
 
-状态：**Phase 1–6 已完成；已通过全量审查、二次修复与 Windows/Linux e2e；CLI 外部契约已冻结。**
+状态：**v0.9.0**（2026-11-14）：Phase 1–6 已完成，CLI 外部契约已冻结；Phase 1–6 收口轮修完
+全部登记缺陷；本地 Windows + Fedora 45 + Windows Server 2025 三机 `go test` / e2e 全绿。
+当前产物见 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/tag/v0.9.0)。
 
 > 已实现：`version` / `detect` / `validate` / `capabilities [--only]` / `provider list|add` / `resolve` / `download` / `install` / `uninstall` / `release list|install` / `journal list|rollback` / `env status|set|unset|rollback` / `doctor`。
 > install/uninstall/rollback/provider add 默认 dry-run；download 与能力缓存会立即写文件。
@@ -127,7 +129,7 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 
 | 文档 | 内容 |
 |---|---|
-| [`docs/archive/README.md`](docs/README.md) | 文档索引与权威顺序 |
+| [`docs/README.md`](docs/README.md) | 文档索引与权威顺序 |
 | [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md) | 项目计划、阶段、步骤、DoD、技术点 |
 | [`docs/GO_LIBRARY_EVALUATION.md`](docs/GO_LIBRARY_EVALUATION.md) | Go 依赖库评估与采用/候选/拒绝清单 |
 | [`docs/CLI_SCHEMA.md`](docs/CLI_SCHEMA.md) | 当前唯一外部契约：CLI JSON v1 |
@@ -157,11 +159,13 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 | [`docs/archive/PHASE4_CODE_REVIEW.md`](docs/archive/PHASE4_CODE_REVIEW.md) | Phase 4 代码审查、缺陷修复与残留限制 |
 | [`docs/archive/PHASE5_STATUS.md`](docs/archive/PHASE5_STATUS.md) | Phase 5 安装、current 与 journal 实施状态 |
 | [`docs/E2E_TESTING.md`](docs/E2E_TESTING.md) | Windows/Linux e2e、远程服务器与 CI 说明 |
+| [`docs/HOWTO.md`](docs/HOWTO.md) | 新手上手指南（第一次用先读这个） |
 | [`docs/USAGE.md`](docs/USAGE.md) | 首次使用详细教程 |
 | [`docs/man/one-more-ffmpeg.1`](docs/man/one-more-ffmpeg.1) | Linux man 页（`man ./docs/man/one-more-ffmpeg.1`） |
 | [`docs/archive/FULL_AUDIT_2026-11-13.md`](docs/archive/FULL_AUDIT_2026-11-13.md) | 2026-11-13 全量审查与二次修复记录 |
 | [`docs/VERSIONING.md`](docs/VERSIONING.md) | SemVer 版本与发布规范 |
-| [`docs/releases/release-v0.6.0.md`](docs/releases/release-v0.6.0.md) | v0.6.0 release notes |
+| [`docs/releases/release-v0.9.0.md`](docs/releases/release-v0.9.0.md) | **v0.9.0（当前版本）** release notes |
+| [`docs/releases/release-v0.6.0.md`](docs/releases/release-v0.6.0.md) | v0.6.0 release notes（历史） |
 | [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) | 第三方依赖许可证清单初稿 |
 
 ---
