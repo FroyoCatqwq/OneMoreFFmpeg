@@ -76,7 +76,9 @@ func switchCurrent(dataRoot, target string) (string, error) {
 		return "", apperrors.New(apperrors.E5004, "broken current pointer cannot be removed").WithCause(removeErr.Error())
 	}
 	if writeErr := os.WriteFile(filepath.Join(dataRoot, "current.pointer"), []byte(target+"\n"), 0o644); writeErr != nil {
-		return "", apperrors.New(apperrors.E5004, "current pointer cannot be written").WithCause(err.Error())
+		// v0.6.x: this used to report err (the ReplaceLink failure) instead of
+		// the write failure, so the diagnostic pointed at the wrong operation.
+		return "", apperrors.New(apperrors.E5004, "current pointer cannot be written").WithCause(writeErr.Error())
 	}
 	return model.CurrentPointerFile, nil
 }

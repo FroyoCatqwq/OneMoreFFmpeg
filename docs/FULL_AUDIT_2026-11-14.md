@@ -109,7 +109,9 @@ win2025server: go build/vet/test + pytest e2e + Robot Framework
 
 1. 本地 Windows 沙箱创建 junction 受限（开发者模式下 symlink 可用）：doctor 测试用 `ensureCurrentLink` 兜底重建链接，主机两者都不支持时跳过；属环境限制，非代码缺陷。
 2. GitHub releases 只取前 100 条；`--days` 很大时仍可能受第一页限制，未实现 Link 头分页。
-3. install / env / uninstall 没有全局 data-root 事务锁；并发写遵循「后写覆盖」，临时文件与 current 备份已随机化。
+3. ~~install / env / uninstall 没有全局 data-root 事务锁~~ —— 该条已被后续提交的 `internal/lock` 推翻；
+   该锁本身的语义缺陷（30 s 被判定过期、释放时删除他人锁）见
+   [`FULL_AUDIT_2026-11-14b.md`](FULL_AUDIT_2026-11-14b.md) §1.1。
 4. Linux 只维护 `~/.profile`，不处理 fish/zsh 专属 rc；不改系统级环境、不提权。
 5. `doctor` 默认退出 0，即使 `healthy=false`；脚本必须读取 `data.healthy`。
 6. `download` 与 capabilities 缓存会立即写文件，不属于默认 dry-run 命令。

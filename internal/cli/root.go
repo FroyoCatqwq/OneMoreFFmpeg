@@ -71,17 +71,33 @@ func Run(ctx context.Context, opts RunOptions) (code int) {
 	return 0
 }
 
-func showFirstUseNotice(stderr io.Writer) {
+func showFirstUseNotice(stderr io.Writer, persist bool) {
 	root, err := paths.DataRoot()
 	if err == nil {
 		marker := filepath.Join(root, ".first-use")
 		if _, statErr := os.Stat(marker); statErr == nil {
 			return
 		}
-		_ = os.MkdirAll(root, 0o755)
-		_ = os.WriteFile(marker, []byte("seen\n"), 0o644)
+		// Only a command that is allowed to write drops the marker. A read-only
+		// command (version / detect / doctor) or a --dry-run used to create the
+		// data root and a marker file, which contradicted "dry-run writes
+		// nothing".
+		if persist {
+			_ = os.MkdirAll(root, 0o755)
+			_ = os.WriteFile(marker, []byte("seen\n"), 0o644)
+		}
 	}
 	_, _ = fmt.Fprint(stderr, firstUseNotice)
+}
+
+// writesSomething reports whether the invocation is allowed to create files.
+func writesSomething(args []string) bool {
+	for _, arg := range args {
+		if arg == "--apply" {
+			return true
+		}
+	}
+	return false
 }
 
 func New(opts RunOptions) (*urfave.Command, error) {
@@ -140,7 +156,7 @@ func New(opts RunOptions) (*urfave.Command, error) {
 				"log_json", cfg.Log.JSON,
 			)
 			if configPath == "" {
-				showFirstUseNotice(opts.Stderr)
+				showFirstUseNotice(opts.Stderr, writesSomething(cmd.Args().Slice()))
 			}
 			ctx = withConfig(ctx, cfg)
 			return logging.WithLogger(ctx, logger), nil

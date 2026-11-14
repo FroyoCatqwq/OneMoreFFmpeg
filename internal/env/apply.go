@@ -300,6 +300,11 @@ func restoreShellRCBackup(details map[string]string) error {
 		return nil
 	}
 	profile := details["shell_rc_path"]
+	if profile != "" && !safeShellProfile(profile) {
+		return apperrors.New(apperrors.E7001,
+			"journal shell profile is not a known profile path").
+			WithDetails(map[string]any{"shell_rc_path": profile})
+	}
 	if profile == "" {
 		var err error
 		profile, err = shellProfile(false)
@@ -365,7 +370,13 @@ func RollbackWithStore(ctx context.Context, dataRoot, journalID string, store pl
 			if !tracked || (present == "1" && record.Details["shim_"+name+"_managed"] == "0") {
 				continue
 			}
-			shim := filepath.Join(record.Details["shim_dir"], name)
+			shimDir := record.Details["shim_dir"]
+			if !safeRollbackPath(shimDir, dataRoot) {
+				return model.EnvSetData{}, apperrors.New(apperrors.E7001,
+					"journal shim directory is outside the data root").
+					WithDetails(map[string]any{"shim_dir": shimDir})
+			}
+			shim := filepath.Join(shimDir, name)
 			if present == "1" {
 				if err := writeFileAtomic(shim, []byte(record.Details["shim_"+name+"_body"]), 0o755); err != nil {
 					return model.EnvSetData{}, err
@@ -381,6 +392,11 @@ func RollbackWithStore(ctx context.Context, dataRoot, journalID string, store pl
 	}
 	if backup := record.Details["shell_rc_backup"]; backup != "" {
 		profile := record.Details["shell_rc_path"]
+		if profile != "" && !safeRollbackPath(profile, dataRoot) {
+			return model.EnvSetData{}, apperrors.New(apperrors.E7001,
+				"journal shell profile is not a known profile path").
+				WithDetails(map[string]any{"shell_rc_path": profile})
+		}
 		if profile == "" {
 			profile, err = shellProfile(false)
 			if err != nil {

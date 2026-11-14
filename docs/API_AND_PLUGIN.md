@@ -100,13 +100,13 @@ omf
 ```text
 one-more-ffmpeg version
 one-more-ffmpeg detect [--dir] [--scan] [--json]
-one-more-ffmpeg validate --installation <id> [--json]
-one-more-ffmpeg capabilities --installation <id> [--refresh] [--json]
+one-more-ffmpeg validate --installation-id <ID> [--json]
+one-more-ffmpeg capabilities --installation-id <ID> [--refresh] [--json]
 one-more-ffmpeg provider list
 one-more-ffmpeg provider add --id --url --sha256
 one-more-ffmpeg resolve --provider btbn|bnqdzj-nonfree|custom --channel stable|daily --json
 one-more-ffmpeg download --release <id> --json
-one-more-ffmpeg install --artifact <id> [--emit-trio-lock] --dry-run|--yes
+one-more-ffmpeg install --artifact <path> [--apply]   # 默认 dry-run，--apply 才落盘
 one-more-ffmpeg env status|set|unset|rollback --json
 one-more-ffmpeg doctor --json
 ```

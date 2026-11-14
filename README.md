@@ -37,14 +37,14 @@
 
 | 能力 | 状态 |
 |---|---|
-| 管理 FFmpeg 路径 | 已实现发现与校验；安装/切换仍计划中 |
-| 下载/安装/部署 FFmpeg | 计划中 |
-| 配置环境变量 / PATH | 计划中 |
-| 检查支持的能力列表 | 已实现 |
-| Windows + Linux | 已完成本地构建/测试/交叉编译 |
-| 自定义 FFmpeg URL | 计划中 |
-| 内置 BtbN 与 BnqDzj 来源 | 文档契约已就绪，实现计划中 |
-| 每日构建版 / 稳定版 | 计划中 |
+| 管理 FFmpeg 路径 | 已实现：发现、校验、安装、切换（`current`） |
+| 下载/安装/部署 FFmpeg | 已实现（`download` / `install`，默认 dry-run） |
+| 配置环境变量 / PATH | 已实现（`env set\|unset\|status\|rollback`，默认 dry-run） |
+| 检查支持的能力列表 | 已实现（13 项，带缓存） |
+| Windows + Linux | 已完成本地构建/测试/交叉编译与双平台 e2e |
+| 自定义 FFmpeg URL | 已实现（`--url` + `provider add`） |
+| 内置 BtbN 与 BnqDzj 来源 | 已实现（`provider list` / `resolve`） |
+| 每日构建版 / 稳定版 | 已实现（channel + release pin） |
 | 识别系统已有 FFmpeg | 已实现 |
 | 全盘扫描 | 已实现，必须显式 `--scan` |
 | 其他项目调用本项目产物可执行文件 | 当前唯一外部集成方式 |
@@ -193,11 +193,10 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 - CLI：`version` / `detect` / `validate` / `capabilities` 已实现；
 - 本地单测 / `go vet` / Windows+Linux 交叉编译：通过；
 - 第三方许可证清单 / `THIRD_PARTY_NOTICES`：初稿完成，许可证文本已复制；
-- 下载/安装/环境变量修改：未实现；
-- provider resolve / download：未实现；
-- 包管理器识别：未实现，未来考虑；
-- Go API / 插件接口：未实现，未来考虑；
-- GitHub Actions / 发布 CI：未建立。
+- 下载/安装/环境变量修改：已实现（Phase 4/5，写入路径默认 dry-run）；
+- provider resolve / download：已实现；
+- 包管理器识别（Scoop / winget / apt …）：未实现，明确推迟；
+- Go API / 插件接口：未实现，明确推迟。
 
 ## 6. 开发命令
 
