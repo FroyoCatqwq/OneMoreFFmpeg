@@ -57,7 +57,11 @@ func Unset(ctx context.Context, opts ApplyOptions) (model.EnvSetData, error) {
 }
 
 func runEnvTransaction(ctx context.Context, opts ApplyOptions, action string, add bool) (model.EnvSetData, error) {
-	_ = ctx
+	// v0.6.x: the transaction writes files and shells out; a cancelled context
+	// must stop it before the first mutation instead of being ignored.
+	if err := ctx.Err(); err != nil {
+		return model.EnvSetData{}, err
+	}
 	if !filepath.IsAbs(opts.DataRoot) {
 		return model.EnvSetData{}, apperrors.New(apperrors.E7001, "data root must be absolute")
 	}
@@ -322,7 +326,11 @@ func Rollback(ctx context.Context, dataRoot, journalID string) (model.EnvSetData
 
 // RollbackWithStore restores an env transaction using an injectable backend.
 func RollbackWithStore(ctx context.Context, dataRoot, journalID string, store platform.EnvStore) (model.EnvSetData, error) {
-	_ = ctx
+	// v0.6.x: the transaction writes files and shells out; a cancelled context
+	// must stop it before the first mutation instead of being ignored.
+	if err := ctx.Err(); err != nil {
+		return model.EnvSetData{}, err
+	}
 	journalDir := filepath.Join(dataRoot, "journal")
 	record, err := journal.Read(journalDir, journalID)
 	if err != nil {
@@ -587,7 +595,10 @@ func writeFileAtomic(path string, payload []byte, mode os.FileMode) error {
 		_ = os.Remove(tmpPath)
 		return err
 	}
-	if err := os.Rename(tmpPath, path); err != nil {
+	// platform.RenamePath retries the Windows sharing violation a shell or
+	// antivirus can cause while the target is open; a bare os.Rename would turn
+	// that into a lost shim.
+	if err := platform.RenamePath(tmpPath, path); err != nil {
 		_ = os.Remove(tmpPath)
 		return err
 	}

@@ -121,7 +121,8 @@ func envWriteCommand(name, usage string) *urfave.Command {
 			}
 			system := cmd.Bool("system")
 			if system {
-				if err := platform.AuthorizeSystemScope(cmd.Bool("authorize-system")); err != nil {
+				if err := platform.AuthorizeSystemScope(
+					cmd.Bool("authorize-system"), cmd.Bool("apply")); err != nil {
 					return err
 				}
 			}

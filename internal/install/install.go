@@ -163,6 +163,18 @@ func Run(ctx context.Context, opts Options) (model.InstallData, error) {
 		}
 	}
 	if err := journal.Write(journalDir, recordEntry); err != nil {
+		// v0.6.x: the quarantine has already moved the previous install away,
+		// but the closure that puts it back is only assigned below. Without this
+		// the old version sat in quarantine/ forever and `current` kept pointing
+		// at a directory that no longer exists.
+		if quarantine != "" && quarantineOriginal != "" {
+			if _, statErr := os.Stat(quarantineOriginal); os.IsNotExist(statErr) {
+				if _, qErr := os.Stat(quarantine); qErr == nil {
+					_ = os.MkdirAll(filepath.Dir(quarantineOriginal), 0o755)
+					_ = platform.RenamePath(quarantine, quarantineOriginal)
+				}
+			}
+		}
 		return fail(err)
 	}
 	restoreOnFailure = func() {

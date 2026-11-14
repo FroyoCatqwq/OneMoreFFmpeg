@@ -45,6 +45,11 @@ type Options struct {
 	Timeout      time.Duration
 	HTTPClient   *http.Client
 	Now          func() time.Time
+
+	// Warn receives non-fatal degradations. A release that ships no checksums
+	// file still verifies against the pinned sha256, but the second, independent
+	// source is missing -- the run must say so instead of silently downgrading.
+	Warn func(string)
 }
 
 // Downloader is safe for reuse; each Fetch is independent.
@@ -99,6 +104,13 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 	// makes checksums failures cheap, keeps reuse honest, and avoids deleting a
 	// fully verified 500 MiB asset after the fact.
 	if err := d.verifyChecksumsFile(ctx, release); err != nil {
+		// Only the file this call wrote may be removed: targetDir is keyed by
+		// sha[:16], so a concurrent run downloading the same asset shares it and
+		// deleting the directory would pull the file out from under it.
+		_ = os.Remove(finalPath)
+		// Removing a non-empty directory fails harmlessly, so this only tidies
+		// up the case where this call created the directory and nothing else is
+		// in it -- a concurrent run keeps its files.
 		_ = os.Remove(targetDir)
 		return model.Artifact{}, err
 	}
@@ -108,7 +120,14 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 		return model.Artifact{}, err
 	} else if !matches {
 		if err := d.download(ctx, release.AssetURL, finalPath, sha); err != nil {
-			_ = os.Remove(targetDir)
+			// Only the file this call wrote may be removed: targetDir is keyed by
+		// sha[:16], so a concurrent run downloading the same asset shares it and
+		// deleting the directory would pull the file out from under it.
+		_ = os.Remove(finalPath)
+		// Removing a non-empty directory fails harmlessly, so this only tidies
+		// up the case where this call created the directory and nothing else is
+		// in it -- a concurrent run keeps its files.
+		_ = os.Remove(targetDir)
 			return model.Artifact{}, err
 		}
 		downloaded = true
@@ -118,7 +137,18 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 	if err != nil {
 		if downloaded {
 			_ = os.Remove(finalPath)
-			_ = os.Remove(targetDir)
+		// Removing a non-empty directory fails harmlessly, so this only tidies
+		// up the case where this call created the directory and nothing else is
+		// in it -- a concurrent run keeps its files.
+		_ = os.Remove(targetDir)
+			// Only the file this call wrote may be removed: targetDir is keyed by
+		// sha[:16], so a concurrent run downloading the same asset shares it and
+		// deleting the directory would pull the file out from under it.
+		_ = os.Remove(finalPath)
+		// Removing a non-empty directory fails harmlessly, so this only tidies
+		// up the case where this call created the directory and nothing else is
+		// in it -- a concurrent run keeps its files.
+		_ = os.Remove(targetDir)
 		}
 		return model.Artifact{}, err
 	}
@@ -229,6 +259,10 @@ func (d *Downloader) download(ctx context.Context, rawURL, finalPath, expected s
 // digest.
 func (d *Downloader) verifyChecksumsFile(ctx context.Context, release model.Release) error {
 	if strings.TrimSpace(release.ChecksumsURL) == "" {
+		if d.options.Warn != nil {
+			d.options.Warn("no independent checksums file for this release; " +
+				"only the pinned sha256 was verified")
+		}
 		return nil
 	}
 	if !isAllowedURL(release.ChecksumsURL) {

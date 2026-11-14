@@ -53,6 +53,42 @@
 现在只有带 `--apply` 的调用才落标记（`writesSomething`），提示本身照常打印。
 回归测试：`internal/cli/firstuse_test.go`。
 
+### 1.5 journal 写失败会把旧安装留在 quarantine（P1）
+
+`internal/install/install.go`：`quarantineExistingInstalls` 先把旧版本移进 `quarantine/`，随后写 journal；
+写失败时 `restoreOnFailure` 这个闭包**还没赋值**（它在下一段才构建），于是旧版本永久滞留在 quarantine，
+`current` 指向一个已经不存在的目录。
+
+现在这条失败路径先把隔离目录搬回 `quarantine_original`，再返回错误。
+
+### 1.6 下载失败会删掉并发进程的共享目录（P1）
+
+`internal/download/download.go`：下载目录按 `sha[:16]` 命名，**两个进程下载同一资产会共享它**；
+原清理逻辑 `os.Remove(targetDir)` 会把对方正在写的文件一起删掉。
+
+现在只删本次写出的文件，再对目录做一次 `os.Remove` —— 非空时安全失败，空目录才顺带清掉。
+
+### 1.7 `--authorize-system` 不能替代提权（P2）
+
+`internal/platform/authz.go` 原来是 `elevated || consented` 就放行，于是「未提权 + `--authorize-system`
++ `--apply`」会走进写入流程，写 HKLM / `/usr/local/bin` 失败后以退出码 1 + failed journal 收场，
+而不是参数错误 E6003。
+
+现在按是否落盘区分：**dry-run** 允许 consent 预览（`TestEnvSystemDryRunWithConsent` 保持通过），
+**`--apply`** 必须真正提权，否则 E6003 退出 2。`authz_test.go` 覆盖四种组合。
+
+### 1.8 第二校验源缺失时不再静默降级（P2）
+
+`internal/download` 的 `Options` 新增 `Warn` 回调：release 没有 checksums 文件时发一条警告
+（`warning: no independent checksums file ... only the pinned sha256 was verified`），
+`download` 与 `install` 两条命令都接上（stderr，不影响 JSON 与退出码）。
+
+### 1.9 两处顺手修掉的小洞（P2-6 的一部分）
+
+* `env.writeFileAtomic` 的最终替换改用 `platform.RenamePath`（Windows 上带共享冲突重试），
+  不再用裸 `os.Rename`。
+* `env` 的 apply / rollback 事务开头检查 `ctx.Err()`，取消不再被 `_ = ctx` 吞掉。
+
 ## 2. 文档修正
 
 * `README.md` §2「当前范围」仍写着安装/下载/环境变量「计划中」、§5 又写「Phase 5 已完成」、
@@ -67,11 +103,14 @@
 
 | 编号 | 问题 | 位置 |
 |---|---|---|
-| P1-3 | `quarantine` 之后、回滚闭包赋值之前若 journal 写失败，旧安装目录永久滞留在 quarantine | `internal/install` |
-| P1-4 | `install --apply` 在锁外下载；下载失败清理会操作共享目录（可能与并发进程互踩） | `internal/cli/install.go` |
-| P2-1 | `--authorize-system` 使 E6003「未提权」门失效，失败落到退出码 1 且遗留 failed journal | `internal/cli/install.go`、`internal/platform` |
-| P2-4 | 下载的「第二 independent 校验源」缺失时静默降级，不产生任何警告 | `internal/download` |
-| P2-5 | 解压边界：ADS 流、磁盘空间预检、压缩比上限、TOCTOU | `internal/archive` |
-| P2-6 | 「原子写」的 `.bak` 回退不是原子替换；三处 `os.Rename` 缺 Windows 共享冲突重试；env 事务不响应 `context` | `internal/env`、`internal/platform` |
+| P2-5 | 解压边界：NTFS 备用数据流（ADS）、磁盘空间预检、压缩比上限、解压期 TOCTOU | `internal/archive` |
+| P1-4a | `install --apply` 仍在**锁外**下载（下载耗时长，持锁会阻塞其它进程，这是有意的取舍；但失败清理已改为只动本次文件，见 §1.6） | `internal/cli/install.go` |
 
-这些都不影响默认 dry-run 路径；P1-3/P1-4 需要并发测试矩阵才敢动。
+> P2-6a 核实后不成立：`restoreShellRC` 本来就走 `writeFileAtomic`，而它现在用
+> `platform.RenamePath`（带 Windows 共享冲突重试），所以 `.bak` 恢复也是原子的。
+
+其余已修：P1-3（§1.5）、P1-4 的共享目录清理（§1.6）、P2-1（§1.7）、P2-4（§1.8）、
+P2-6 的 `RenamePath` 与 `context`（§1.9）。
+
+P2-5 需要针对 zip/tar 的恶意样本（ADS 名、超大解压比、符号链接、`..`）建一组负向测试，
+以及一次真实磁盘空间不足的模拟，建议单开一轮。

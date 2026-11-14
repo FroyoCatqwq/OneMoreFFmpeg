@@ -21,6 +21,12 @@ import (
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/provider"
 )
 
+// warnToStderr surfaces a non-fatal degradation (a release with no independent
+// checksums file, say) without changing the exit code or the JSON payload.
+func warnToStderr(msg string) {
+	fmt.Fprintf(os.Stderr, "warning: %s\n", msg)
+}
+
 func downloadCommand() *urfave.Command {
 	flags := providerFlags()
 	flags = append(flags,
@@ -90,6 +96,7 @@ func downloadCommand() *urfave.Command {
 				MaxBytes:     maxBytes,
 				MaxRedirects: cfg.Download.MaxRedirects,
 				Timeout:      timeout,
+				Warn:         warnToStderr,
 			})
 			if err != nil {
 				return err

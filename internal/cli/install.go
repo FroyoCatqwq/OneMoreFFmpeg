@@ -130,6 +130,7 @@ func installArchivePath(ctx context.Context, cmd *urfave.Command, cfg config.Con
 		MaxBytes:     maxBytes,
 		MaxRedirects: cfg.Download.MaxRedirects,
 		Timeout:      timeout,
+		Warn:         warnToStderr,
 	})
 	if err != nil {
 		return "", err
