@@ -12,13 +12,13 @@ one-more-ffmpeg \- discover, download, install and inspect FFmpeg builds
 .SH DESCRIPTION
 OneMoreFFmpeg is a CLI-first FFmpeg manager. stdout contains JSON when
 .B --json
-is used; diagnostics and first-use notes go to stderr. Write commands are
+is used; diagnostics go to stderr. Write commands are
 dry-run by default and require
 .B --apply
 to change files; download and capability cache writes are immediate.
-.SH FIRST USE
-No configuration file means built-in defaults. On first use a short note is
-printed to stderr once and marked with <data-root>/.first-use. The data root
+.SH CONFIGURATION
+No configuration file means built-in defaults. The program prints nothing on
+start-up and writes no marker files. The data root
 is controlled by
 .B ONE_MORE_FFMPEG_HOME
 and defaults to ~/.local/share/onemoreffmpeg on Linux. --in-detail-usage prints

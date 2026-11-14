@@ -35,7 +35,7 @@
 
 ## Phase 1：仓库骨架（已完成）
 
-> 实施与验证结果见 [`PHASE1_STATUS.md`](PHASE1_STATUS.md)。
+> 实施与验证结果见 [`PHASE1_STATUS.md`](archive/PHASE1_STATUS.md)。
 
 内容：
 
@@ -70,7 +70,7 @@
 
 ## Phase 2：发现与校验（已完成）
 
-> 实施与验证结果见 [`PHASE2_STATUS.md`](PHASE2_STATUS.md)。
+> 实施与验证结果见 [`PHASE2_STATUS.md`](archive/PHASE2_STATUS.md)。
 
 内容：
 
@@ -100,8 +100,8 @@ snap / flatpak 专门适配
 
 ## Phase 3：能力检查（已完成）
 
-> 实施与验证结果见 [`PHASE3_STATUS.md`](PHASE3_STATUS.md)。
-> 代码审查与真实输出修复见 [`PHASE3_CODE_REVIEW.md`](PHASE3_CODE_REVIEW.md)。
+> 实施与验证结果见 [`PHASE3_STATUS.md`](archive/PHASE3_STATUS.md)。
+> 代码审查与真实输出修复见 [`PHASE3_CODE_REVIEW.md`](archive/PHASE3_CODE_REVIEW.md)。
 
 内容：
 
@@ -139,7 +139,7 @@ snap / flatpak 专门适配
 
 ## Phase 4：Provider / Resolve / Download（已完成）
 
-> 状态：`provider list|add` / `resolve` / `download` 已实现并通过真实 GitHub 与真实下载验证，见 [`PHASE4_STATUS.md`](PHASE4_STATUS.md)。
+> 状态：`provider list|add` / `resolve` / `download` 已实现并通过真实 GitHub 与真实下载验证，见 [`PHASE4_STATUS.md`](archive/PHASE4_STATUS.md)。
 
 内容：
 
@@ -163,7 +163,7 @@ snap / flatpak 专门适配
 
 ## Phase 5：Install / Env / Rollback
 
-> 状态：Phase 5 全部核心（install / env / journal / uninstall / release catalog / 单类能力探测 / doctor）已完成并通过全量审查与 e2e。见 [`PHASE5_STATUS.md`](PHASE5_STATUS.md) 与 [`FULL_AUDIT_2026-11-13.md`](FULL_AUDIT_2026-11-13.md)。
+> 状态：Phase 5 全部核心（install / env / journal / uninstall / release catalog / 单类能力探测 / doctor）已完成并通过全量审查与 e2e。见 [`PHASE5_STATUS.md`](archive/PHASE5_STATUS.md) 与 [`FULL_AUDIT_2026-11-13.md`](archive/FULL_AUDIT_2026-11-13.md)。
 
 内容：
 
@@ -188,7 +188,7 @@ snap / flatpak 专门适配
 ## Phase 6：CLI 外部调用契约
 
 > 状态：**已完成**（2026-11-14）。命令集 / JSON v1 schema / 退出码冻结，`internal/contracts/freeze_test.go` 守护；
-> 外部调用示例见 `examples/external-caller/`；实施与验证见 [`PHASE6_STATUS.md`](PHASE6_STATUS.md)。
+> 外部调用示例见 `examples/external-caller/`；实施与验证见 [`PHASE6_STATUS.md`](archive/PHASE6_STATUS.md)。
 
 内容：
 

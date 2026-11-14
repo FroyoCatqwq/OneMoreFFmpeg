@@ -138,7 +138,7 @@ DoD：
 - 依赖库版本新鲜度已核对；
 - CLI JSON 契约、错误码、平台环境细节、provider resolver 细节已补齐；
 - 许可证已确定为 GPL-3.0-only；
-- Phase 0 结束时代码尚未开始；Phase 1 骨架已完成，见 [`PHASE1_STATUS.md`](PHASE1_STATUS.md)。
+- Phase 0 结束时代码尚未开始；Phase 1 骨架已完成，见 [`PHASE1_STATUS.md`](archive/PHASE1_STATUS.md)。
 
 ### Phase 0 契约引用
 
@@ -181,7 +181,7 @@ DoD：
 
 ### Phase 2：发现与可用性校验（已完成）
 
-> 实施与验证结果见 [`PHASE2_STATUS.md`](PHASE2_STATUS.md)。
+> 实施与验证结果见 [`PHASE2_STATUS.md`](archive/PHASE2_STATUS.md)。
 
 目标：找到系统已有 FFmpeg，并判断能不能用。
 
@@ -218,8 +218,8 @@ DoD：
 
 ### Phase 3：能力检查（已完成）
 
-> 实施与验证结果见 [`PHASE3_STATUS.md`](PHASE3_STATUS.md)。
-> 代码审查与 P1 修复见 [`PHASE3_CODE_REVIEW.md`](PHASE3_CODE_REVIEW.md)。
+> 实施与验证结果见 [`PHASE3_STATUS.md`](archive/PHASE3_STATUS.md)。
+> 代码审查与 P1 修复见 [`PHASE3_CODE_REVIEW.md`](archive/PHASE3_CODE_REVIEW.md)。
 
 目标：结构化输出用户列出的 13 项能力。
 
@@ -248,7 +248,7 @@ DoD：
 
 ### Phase 4：Provider / Resolve / Download（已完成）
 
-> 实施状态见 [`PHASE4_STATUS.md`](PHASE4_STATUS.md)；准入与决策见 [`PHASE4_READINESS.md`](PHASE4_READINESS.md)。
+> 实施状态见 [`PHASE4_STATUS.md`](archive/PHASE4_STATUS.md)；准入与决策见 [`PHASE4_READINESS.md`](archive/PHASE4_READINESS.md)。
 > 状态：`provider list` / `provider add` / `resolve` / `download` 全部实现并通过真实 GitHub 解析与真实小文件下载验证。
 
 目标：解析 BtbN、BnqDzj、自定义 URL，并安全下载。
@@ -281,7 +281,7 @@ DoD：
 ### Phase 5：安装、环境变量、切换、回滚
 
 > 状态：install / 安全解压 / current / journal / env / doctor / uninstall / release catalog / 单类能力探测 已完成并通过全量审查与 e2e；见 `FULL_AUDIT_2026-11-13.md`。
-> 实施状态见 [`PHASE5_STATUS.md`](PHASE5_STATUS.md)。
+> 实施状态见 [`PHASE5_STATUS.md`](archive/PHASE5_STATUS.md)。
 
 目标：完成部署闭环。
 
@@ -314,7 +314,7 @@ DoD：
 
 > 状态：**已完成**（2026-11-14）。命令集（18 个）、`data.schema` 集（17 个，全 `/v1`）与退出码映射
 > 由 `internal/contracts/freeze_test.go` 守护；外部调用示例在 `examples/external-caller/`；
-> 实施与验证见 [`PHASE6_STATUS.md`](PHASE6_STATUS.md)。
+> 实施与验证见 [`PHASE6_STATUS.md`](archive/PHASE6_STATUS.md)。
 
 目标：让 LAE / VideoDamage / 脚本通过调用可执行文件稳定集成。
 
@@ -444,15 +444,15 @@ M0 不通过，不进入下载/安装/环境变量写入实现。
 - 平台环境变量细则完成；
 - Provider resolver 细则完成；
 - 许可证已确定为 GPL-3.0-only，根目录 `LICENSE` 已添加；
-- Phase 1 Go 骨架完成，详见 [`PHASE1_STATUS.md`](PHASE1_STATUS.md)；
-- Phase 1 代码审查与 P0/P1 修复完成，详见 [`PHASE1_CODE_REVIEW.md`](PHASE1_CODE_REVIEW.md)；
-- Phase 2 真实发现与校验完成，详见 [`PHASE2_STATUS.md`](PHASE2_STATUS.md)；
-- Phase 3 13 项能力检查、解析、缓存与 `capabilities` CLI 完成，详见 [`PHASE3_STATUS.md`](PHASE3_STATUS.md)；
-- Phase 3 代码审查完成，修复真实 `-pix_fmts` / `-layouts` 解析、`-h` 未命中、全失败语义与缓存污染，详见 [`PHASE3_CODE_REVIEW.md`](PHASE3_CODE_REVIEW.md)；
-- Phase 4 契约与真实 GitHub 资产事实已核对，准入清单见 [`PHASE4_READINESS.md`](PHASE4_READINESS.md)；
+- Phase 1 Go 骨架完成，详见 [`PHASE1_STATUS.md`](archive/PHASE1_STATUS.md)；
+- Phase 1 代码审查与 P0/P1 修复完成，详见 [`PHASE1_CODE_REVIEW.md`](archive/PHASE1_CODE_REVIEW.md)；
+- Phase 2 真实发现与校验完成，详见 [`PHASE2_STATUS.md`](archive/PHASE2_STATUS.md)；
+- Phase 3 13 项能力检查、解析、缓存与 `capabilities` CLI 完成，详见 [`PHASE3_STATUS.md`](archive/PHASE3_STATUS.md)；
+- Phase 3 代码审查完成，修复真实 `-pix_fmts` / `-layouts` 解析、`-h` 未命中、全失败语义与缓存污染，详见 [`PHASE3_CODE_REVIEW.md`](archive/PHASE3_CODE_REVIEW.md)；
+- Phase 4 契约与真实 GitHub 资产事实已核对，准入清单见 [`PHASE4_READINESS.md`](archive/PHASE4_READINESS.md)；
 - Phase 4 基础设施（paths / checksum / model / config / contracts / provider 注册表 / GitHub client / `provider list`）已完成；
-- Phase 4 `provider add` / `resolve` / `download` 已完成，见 [`PHASE4_STATUS.md`](PHASE4_STATUS.md)；
-- 全量审查与缺陷修复见 [`FULL_AUDIT_2026-11-11.md`](FULL_AUDIT_2026-11-11.md)；
+- Phase 4 `provider add` / `resolve` / `download` 已完成，见 [`PHASE4_STATUS.md`](archive/PHASE4_STATUS.md)；
+- 全量审查与缺陷修复见 [`FULL_AUDIT_2026-11-11.md`](archive/FULL_AUDIT_2026-11-11.md)；
 - `go.sum` 已生成；
 - `version --json` / `detect --json` / `validate --json` / `capabilities --json` / `--help` 已验证；
 - 本地单测、`go vet`、Windows/Linux 交叉编译通过；

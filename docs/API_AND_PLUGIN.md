@@ -23,7 +23,7 @@ one-more-ffmpeg <command> --json
 ```
 
 可运行的最小集成示例（Python / PowerShell，仅标准库，不 import Go / 不链接 Go runtime）见
-[`../examples/external-caller/`](../examples/external-caller/README.md)。CLI 契约已于 Phase 6 冻结，见 [`PHASE6_STATUS.md`](PHASE6_STATUS.md)。
+[`../examples/external-caller/`](../examples/external-caller/README.md)。CLI 契约已于 Phase 6 冻结，见 [`PHASE6_STATUS.md`](archive/PHASE6_STATUS.md)。
 
 当前明确不提供：
 

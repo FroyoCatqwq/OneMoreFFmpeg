@@ -13,11 +13,11 @@
 
 | 审计项 | 第二轮状态 |
 |---|---|
-| P1-8 错误码注册表 | **已补**：新增 [`ERROR_CODES.md`](ERROR_CODES.md) |
-| P1-9 LICENSE | **已解决**：用户选择 GPL-3.0-only；根目录 `LICENSE` 已添加，[`LICENSE_DECISION.md`](LICENSE_DECISION.md) 已更新 |
-| P1-10 CLI JSON schema | **已补**：新增 [`CLI_SCHEMA.md`](CLI_SCHEMA.md) 与 [`schemas/`](schemas/) 示例 |
-| P1-11 Windows PATH / 环境变量细节 | **已补**：新增 [`PLATFORM_ENVIRONMENT.md`](PLATFORM_ENVIRONMENT.md) |
-| P1-12 provider resolver 细节 | **已补**：新增 [`PROVIDER_RESOLVER.md`](PROVIDER_RESOLVER.md) |
+| P1-8 错误码注册表 | **已补**：新增 [`ERROR_CODES.md`](../ERROR_CODES.md) |
+| P1-9 LICENSE | **已解决**：用户选择 GPL-3.0-only；根目录 `LICENSE` 已添加，[`LICENSE_DECISION.md`](../LICENSE_DECISION.md) 已更新 |
+| P1-10 CLI JSON schema | **已补**：新增 [`CLI_SCHEMA.md`](../CLI_SCHEMA.md) 与 [`schemas/`](schemas/) 示例 |
+| P1-11 Windows PATH / 环境变量细节 | **已补**：新增 [`PLATFORM_ENVIRONMENT.md`](../PLATFORM_ENVIRONMENT.md) |
+| P1-12 provider resolver 细节 | **已补**：新增 [`PROVIDER_RESOLVER.md`](../PROVIDER_RESOLVER.md) |
 | P2-4 未来 API 文档误读 | **已缓解**：`API_AND_PLUGIN.md` 明确未来内容不进入 Phase 1 |
 | P2-5 channel 支持矩阵 | **已补**：`PROVIDERS.md` 与 `PROVIDER_RESOLVER.md` |
 | P2-6 Phase 0 历史动作 | **已改**：路线图改为“仓库已建立” |
@@ -344,7 +344,7 @@ current（symlink / Windows junction / directory pointer） -> apps/<...>
 
 已修正：
 
-- 新增 [`ERROR_CODES.md`](ERROR_CODES.md)；
+- 新增 [`ERROR_CODES.md`](../ERROR_CODES.md)；
 - 定义 E1xxx–E9xxx 与 W1xxx；
 - 定义退出码 0/1/2/130；
 - 定义错误对象 `onemoreffmpeg.error/v1`；
@@ -358,7 +358,7 @@ current（symlink / Windows junction / directory pointer） -> apps/<...>
 
 ### P1-9：没有 LICENSE（已解决）
 
-已选择 **GPL-3.0-only**，根目录 `LICENSE` 已添加，`README.md` 与 [`LICENSE_DECISION.md`](LICENSE_DECISION.md) 已更新。
+已选择 **GPL-3.0-only**，根目录 `LICENSE` 已添加，`README.md` 与 [`LICENSE_DECISION.md`](../LICENSE_DECISION.md) 已更新。
 
 ### P1-10：CLI JSON schema 未冻结
 

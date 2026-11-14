@@ -2,7 +2,8 @@
 
 > 状态：**Phase 6 契约冻结基准**（2026-11-14）。命令集、`data.schema` 集与退出码映射由
 > `internal/contracts/freeze_test.go` 守护。
-> 配套：[`../CLI_SCHEMA.md`](../CLI_SCHEMA.md)、[`../ERROR_CODES.md`](../ERROR_CODES.md)、[`../PHASE6_STATUS.md`](../PHASE6_STATUS.md)
+> 配套：[`../CLI_SCHEMA.md`](../CLI_SCHEMA.md)、[`../ERROR_CODES.md`](../ERROR_CODES.md)、
+> [`../archive/PHASE6_STATUS.md`](../archive/PHASE6_STATUS.md)
 
 本目录存放 CLI JSON 的 **v1 示例**，用于：
 
