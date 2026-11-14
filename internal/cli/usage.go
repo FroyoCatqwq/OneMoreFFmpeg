@@ -6,6 +6,7 @@ const firstUseNotice = `OneMoreFFmpeg first-use notes:
 - download and capabilities cache may write files immediately; use --no-cache to disable capability cache writes.
 - stdout is reserved for JSON; diagnostics go to stderr. Use --json for scripts.
 - nonfree builds require --allow-nonfree and are for local use only.
+- New here? Read docs/HOWTO.md. Quick start: install --apply, then env set --apply, then open a NEW terminal.
 - Run --in-detail-usage for the complete guide, or read docs/USAGE.md.
 `
 
@@ -75,6 +76,7 @@ SAFETY
     or ~/.local/share/onemoreffmpeg (Linux).
 
 FULL DOCUMENTATION
+  docs/HOWTO.md                           beginner guide (start here)
   docs/USAGE.md                           tutorial
   docs/man/one-more-ffmpeg.1              man page: man ./docs/man/one-more-ffmpeg.1
   docs/E2E_TESTING.md                     Windows/Linux e2e and CI

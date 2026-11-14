@@ -9,6 +9,10 @@
 > 已实现：`version` / `detect` / `validate` / `capabilities [--only]` / `provider list|add` / `resolve` / `download` / `install` / `uninstall` / `release list|install` / `journal list|rollback` / `env status|set|unset|rollback` / `doctor`。
 > install/uninstall/rollback/provider add 默认 dry-run；download 与能力缓存会立即写文件。
 
+> 🟢 **第一次用？先看 [`docs/HOWTO.md`](docs/HOWTO.md) 新手上手指南。**
+> 黄金顺序：`install --apply` → `env set --apply` → **开新终端** → `ffmpeg` 可用。
+> 「装完了却 `ffmpeg: command not found`」的解决办法也在里面。
+
 ---
 
 ## 1. 项目定位
