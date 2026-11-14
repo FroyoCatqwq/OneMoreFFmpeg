@@ -18,3 +18,4 @@ Thumbs.db
 __pycache__/
 .pytest_cache/
 tests/e2e/results/
+publish/
