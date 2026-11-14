@@ -58,3 +58,24 @@ func safeShellProfile(path string) bool {
 	return false
 }
 
+// safeShimDir accepts exactly the directories shimDirectory() can produce:
+// ~/.local/bin (user scope) and /usr/local/bin (system scope). Both live OUTSIDE
+// the data root, so the data-root containment check in safeRollbackPath must not
+// be used for shim directories — doing so rejected every legitimate Linux shim
+// rollback.
+func safeShimDir(path string) bool {
+	clean := filepath.Clean(path)
+	if clean == "" || !filepath.IsAbs(clean) {
+		return false
+	}
+	if samePath(clean, "/usr/local/bin") {
+		return true
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		if samePath(clean, filepath.Join(home, ".local", "bin")) {
+			return true
+		}
+	}
+	return false
+}
+

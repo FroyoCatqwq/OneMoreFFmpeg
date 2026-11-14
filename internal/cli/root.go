@@ -91,11 +91,27 @@ func showFirstUseNotice(stderr io.Writer, persist bool) {
 }
 
 // writesSomething reports whether the invocation is allowed to create files.
+// Besides --apply commands, download always writes and capabilities writes its
+// cache unless --no-cache is given; read-only commands and dry-runs write nothing.
 func writesSomething(args []string) bool {
 	for _, arg := range args {
 		if arg == "--apply" {
 			return true
 		}
+	}
+	if len(args) == 0 {
+		return false
+	}
+	switch args[0] {
+	case "download":
+		return true
+	case "capabilities":
+		for _, arg := range args {
+			if arg == "--no-cache" {
+				return false
+			}
+		}
+		return true
 	}
 	return false
 }

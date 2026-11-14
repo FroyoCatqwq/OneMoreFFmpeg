@@ -379,9 +379,9 @@ func RollbackWithStore(ctx context.Context, dataRoot, journalID string, store pl
 				continue
 			}
 			shimDir := record.Details["shim_dir"]
-			if !safeRollbackPath(shimDir, dataRoot) {
+			if !safeShimDir(shimDir) {
 				return model.EnvSetData{}, apperrors.New(apperrors.E7001,
-					"journal shim directory is outside the data root").
+					"journal shim directory is not a managed shim location").
 					WithDetails(map[string]any{"shim_dir": shimDir})
 			}
 			shim := filepath.Join(shimDir, name)

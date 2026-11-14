@@ -18,4 +18,9 @@ func TestOnlyApplyCommandsMayPersistTheFirstUseMarker(t *testing.T) {
 	require.False(t, writesSomething([]string{"install"}))
 	require.False(t, writesSomething([]string{"doctor", "--strict"}))
 	require.False(t, writesSomething(nil))
+
+	// download always writes; capabilities writes its cache unless --no-cache.
+	require.True(t, writesSomething([]string{"download", "--release", "r.json"}))
+	require.True(t, writesSomething([]string{"capabilities", "--dir", "x"}))
+	require.False(t, writesSomething([]string{"capabilities", "--dir", "x", "--no-cache"}))
 }

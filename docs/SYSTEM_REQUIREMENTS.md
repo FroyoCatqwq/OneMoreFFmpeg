@@ -57,5 +57,5 @@ OneMoreFFmpeg **绝不自动提权**（不会静默调用 `sudo` / `runas`）。
 
 ## 4. 回滚路径白名单与只读不写盘
 
-- `env rollback` 从 journal 读取 shim 目录与 shell profile 路径时会做白名单校验（`internal/env/rollback_guard.go`）：shim 目录必须落在 data root 内；shell profile 仅接受 `~/.profile` 与 `/etc/profile.d/onemoreffmpeg.sh`（后者仅 Linux）；越界/相对/空白一律 `OMF-E7001`，dry-run 与 `--apply` 共用同一判断。这防止有人篡改 journal 文件后让回滚往任意目录写文件。
-- 只读命令（`version` / `detect` / `doctor` 等）与所有 dry-run **不创建 data root、不落 `.first-use` 标记**；首次使用提示照常打印到 stderr，但标记仅在带 `--apply` 的调用时写入。
+- `env rollback` 从 journal 读取 shim 目录与 shell profile 路径时会做白名单校验（`internal/env/rollback_guard.go`）：shim 目录仅接受 `~/.local/bin`（用户级）与 `/usr/local/bin`（系统级）——两者都在 data root **之外**，故不能用 data-root 包含判断；shell profile 仅接受 `~/.profile` 与 `/etc/profile.d/onemoreffmpeg.sh`（后者仅 Linux）；其余/相对/空白一律 `OMF-E7001`。这防止有人篡改 journal 文件后让回滚往任意目录写文件。
+- 只读命令（`version` / `detect` / `doctor` 等）与 install/env/uninstall 的 dry-run **不创建 data root、不落 `.first-use` 标记**；首次使用提示照常打印到 stderr。标记在会写盘的调用时写入：带 `--apply` 的命令、`download`（立即下载）、以及 `capabilities`（写缓存，`--no-cache` 除外）。

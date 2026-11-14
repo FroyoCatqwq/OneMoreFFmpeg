@@ -41,3 +41,20 @@ func TestOnlyTheKnownShellProfilesAreAccepted(t *testing.T) {
 	root := t.TempDir()
 	require.True(t, safeRollbackPath(filepath.Join(home, ".profile"), root))
 }
+
+func TestOnlyTheKnownShimDirsAreAccepted(t *testing.T) {
+	home, err := os.UserHomeDir()
+	require.NoError(t, err)
+
+	require.True(t, safeShimDir(filepath.Join(home, ".local", "bin")))
+	if runtime.GOOS != "windows" {
+		require.True(t, safeShimDir("/usr/local/bin"))
+	}
+	// Shim dirs live outside the data root; arbitrary directories must still be
+	// rejected so a crafted journal cannot redirect a rollback.
+	require.False(t, safeShimDir(filepath.Join(home, ".local", "bin", "evil")))
+	require.False(t, safeShimDir("/etc"))
+	require.False(t, safeShimDir("/usr/local/bin/evil"))
+	require.False(t, safeShimDir("relative/bin"))
+	require.False(t, safeShimDir(""))
+}

@@ -187,6 +187,29 @@ func TestFetchRejectsChecksumsFileHashMismatch(t *testing.T) {
 	require.Equal(t, apperrors.E4002, typed.Code)
 }
 
+// A checksums-source failure happens before this call downloads anything, so it
+// must not delete finalPath: a concurrent run of the same asset may already have
+// a verified file there.
+func TestFetchChecksumsFailureKeepsExistingAsset(t *testing.T) {
+	fixture := newFixture(t, []byte("payload-bytes"))
+	fixture.checksums = strings.Repeat("a", 64) + "  " + assetName + "\n"
+	release := fixture.release()
+	release.ChecksumsSHA256 = "" // only the parsed line can disagree
+	dir := t.TempDir()
+
+	target := filepath.Join(dir, fixture.sha[:16], assetName)
+	require.NoError(t, os.MkdirAll(filepath.Dir(target), 0o755))
+	require.NoError(t, os.WriteFile(target, fixture.payload, 0o644))
+
+	_, err := downloader(t, dir).Fetch(context.Background(), release)
+	typed, ok := apperrors.As(err)
+	require.True(t, ok)
+	require.Equal(t, apperrors.E4002, typed.Code)
+	content, readErr := os.ReadFile(target)
+	require.NoError(t, readErr, "a concurrent run's verified asset must survive")
+	require.Equal(t, fixture.payload, content)
+}
+
 func TestFetchEnforcesSizeLimit(t *testing.T) {
 	fixture := newFixture(t, []byte(strings.Repeat("x", 2048)))
 	instance, err := download.New(download.Options{Dir: t.TempDir(), MaxBytes: 1024})

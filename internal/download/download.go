@@ -104,13 +104,9 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 	// makes checksums failures cheap, keeps reuse honest, and avoids deleting a
 	// fully verified 500 MiB asset after the fact.
 	if err := d.verifyChecksumsFile(ctx, release); err != nil {
-		// Only the file this call wrote may be removed: targetDir is keyed by
-		// sha[:16], so a concurrent run downloading the same asset shares it and
-		// deleting the directory would pull the file out from under it.
-		_ = os.Remove(finalPath)
-		// Removing a non-empty directory fails harmlessly, so this only tidies
-		// up the case where this call created the directory and nothing else is
-		// in it -- a concurrent run keeps its files.
+		// This call has not written anything yet. targetDir is keyed by sha[:16]
+		// and shared by concurrent runs of the same asset, so leave finalPath
+		// alone (it may be another run's verified file); only tidy an empty dir.
 		_ = os.Remove(targetDir)
 		return model.Artifact{}, err
 	}
@@ -120,14 +116,10 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 		return model.Artifact{}, err
 	} else if !matches {
 		if err := d.download(ctx, release.AssetURL, finalPath, sha); err != nil {
-			// Only the file this call wrote may be removed: targetDir is keyed by
-		// sha[:16], so a concurrent run downloading the same asset shares it and
-		// deleting the directory would pull the file out from under it.
-		_ = os.Remove(finalPath)
-		// Removing a non-empty directory fails harmlessly, so this only tidies
-		// up the case where this call created the directory and nothing else is
-		// in it -- a concurrent run keeps its files.
-		_ = os.Remove(targetDir)
+			// download writes a .part temp and only commits finalPath on success,
+			// so a failure leaves no file of ours at finalPath. Do not delete a
+			// concurrent run's file; only tidy an empty shared directory.
+			_ = os.Remove(targetDir)
 			return model.Artifact{}, err
 		}
 		downloaded = true
@@ -136,19 +128,10 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 	artifact, err := d.record(targetDir, release, finalPath, sha)
 	if err != nil {
 		if downloaded {
+			// Only the file this call downloaded may be removed; a non-empty
+			// shared targetDir fails to remove harmlessly, keeping others' files.
 			_ = os.Remove(finalPath)
-		// Removing a non-empty directory fails harmlessly, so this only tidies
-		// up the case where this call created the directory and nothing else is
-		// in it -- a concurrent run keeps its files.
-		_ = os.Remove(targetDir)
-			// Only the file this call wrote may be removed: targetDir is keyed by
-		// sha[:16], so a concurrent run downloading the same asset shares it and
-		// deleting the directory would pull the file out from under it.
-		_ = os.Remove(finalPath)
-		// Removing a non-empty directory fails harmlessly, so this only tidies
-		// up the case where this call created the directory and nothing else is
-		// in it -- a concurrent run keeps its files.
-		_ = os.Remove(targetDir)
+			_ = os.Remove(targetDir)
 		}
 		return model.Artifact{}, err
 	}

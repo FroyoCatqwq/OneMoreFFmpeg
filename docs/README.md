@@ -53,6 +53,8 @@
 | 39 | [`HOWTO.md`](HOWTO.md) | 新手上手指南（第一次使用必读） |
 | 40 | [`PHASE6_STATUS.md`](PHASE6_STATUS.md) | Phase 6 CLI 外部契约稳定化与冻结 |
 | 41 | [`../examples/external-caller/README.md`](../examples/external-caller/README.md) | 外部调用示例（不依赖 Go） |
+| 42 | [`FULL_AUDIT_2026-11-14c.md`](FULL_AUDIT_2026-11-14c.md) | 2026-11-14 第三轮审查：shim 回滚/下载清理修复 |
+| 43 | [`releases/release-v0.8.0.md`](releases/release-v0.8.0.md) | v0.8.0 release notes |
 
 冲突时：
 
