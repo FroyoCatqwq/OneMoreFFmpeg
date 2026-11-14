@@ -39,6 +39,7 @@ func ReplaceLink(link, target string) (string, error) {
 	if err := CreateLink(temp, target); err != nil {
 		return "", err
 	}
+	kind := createdKind(temp)
 	existed := false
 	if _, err := os.Lstat(link); err == nil {
 		if err := RenamePath(link, backup); err != nil {
@@ -52,7 +53,15 @@ func ReplaceLink(link, target string) (string, error) {
 		}
 		return "", apperrors.New(apperrors.E5004, "current pointer cannot be committed").WithCause(err.Error())
 	}
-	return LinkKind(), nil
+	return kind, nil
+}
+
+// createdKind reports the pointer kind actually produced for a link path.
+func createdKind(path string) string {
+	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		return model.CurrentSymlink
+	}
+	return model.CurrentJunction
 }
 
 func reservePath(directory, pattern string) (string, error) {

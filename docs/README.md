@@ -47,6 +47,8 @@
 | 34 | [`schemas/README.md`](schemas/README.md) | CLI JSON 示例索引 |
 | 35 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
 | 36 | [`FULL_AUDIT_2026-11-14.md`](FULL_AUDIT_2026-11-14.md) | 2026-11-14 用户/代码双视角全量审查与修复 |
+| 37 | [`SYSTEM_REQUIREMENTS.md`](SYSTEM_REQUIREMENTS.md) | 最低/推荐系统要求、权限授权模型与事务锁 |
+| 38 | [`releases/release-v0.7.0.md`](releases/release-v0.7.0.md) | v0.7.0 release notes |
 
 冲突时：
 

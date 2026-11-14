@@ -22,3 +22,15 @@ setup() {
   [ "$status" -eq 0 ]
   [[ "$output" == *'"onemoreffmpeg.doctor/v1"'* ]]
 }
+
+@test "doctor --strict exits nonzero when unhealthy" {
+  run "$OMF_BINARY" doctor --strict --json
+  [ "$status" -eq 1 ]
+  [[ "$output" == *'OMF-E6006'* ]]
+}
+
+@test "env system scope with consent is a dry-run by default" {
+  run "$OMF_BINARY" env set --system --authorize-system --json
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"dry_run":true'* ]]
+}

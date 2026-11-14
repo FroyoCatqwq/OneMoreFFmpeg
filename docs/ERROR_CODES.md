@@ -178,17 +178,21 @@ OMF-Wxxxx  警告码（不导致命令失败）
 |---|---|---|---:|
 | `OMF-E6001` | `ENV_READ_FAILED` | 读取环境变量/注册表失败 | 1 |
 | `OMF-E6002` | `ENV_WRITE_FAILED` | 写入环境变量/注册表失败 | 1 |
-| `OMF-E6003` | `SYSTEM_SCOPE_DENIED` | `--system` 被拒绝或未提权 | 2 |
+| `OMF-E6003` | `SYSTEM_SCOPE_DENIED` | 系统级作用域未授权：未提权且未传 `--authorize-system` | 2 |
 | `OMF-E6004` | `SHELL_RC_DENIED` | shell rc 不在允许范围或备份失败 | 2 |
 | `OMF-E6005` | `JOURNAL_FAILED` | journal 写入/读取/提交失败 | 1 |
-| `OMF-E6006` | `DOCTOR_UNHEALTHY` | doctor 检测到不可恢复状态 | 1 |
+| `OMF-E6006` | `DOCTOR_UNHEALTHY` | `doctor --strict` 检测到不健康状态 | 1 |
 | `OMF-E6007` | `NON_MANAGED_FILE` | 试图删除/覆盖非本项目管理的文件 | 1 |
 | `OMF-E6008` | `WM_SETTINGCHANGE_FAILED` | Windows 环境变更广播失败 | 1 |
+| `OMF-E6009` | `TRANSACTION_LOCKED` | data root 被另一事务锁定（install/env/uninstall 并发） | 1 |
 
 说明：
 
 - `journal rollback` / `env rollback` 的 journal id 强制白名单（拒绝 `..` 与路径分隔符）；id 非法、记录不存在或读取/解析失败统一 `OMF-E6005`（退出 1），dry-run 预览同样先校验；
 - 记录已回滚（`rolled-back`）、action 不在支持列表，或 `env rollback` 指向非 env 记录，属于用法错误 `OMF-E7001`（退出 2），不复用 `E6005`。
+- 系统级授权模型：进程已提权（Linux root / Windows Administrator）直接放行；否则需用户显式 `--authorize-system`，未授权返回 `OMF-E6003`。工具绝不自动 `sudo`/提权；非管理员被拒绝并告知用 sudo/管理员运行。
+- `doctor` 默认退出 0；`--strict` 在 `healthy=false` 时返回 `OMF-E6006`（退出 1），报告置于 `details.report`。
+- `OMF-E6009` 为 data root 事务锁竞争（install/env/uninstall/rollback 的 `--apply`）；锁超过 30 秒视为陈旧自动回收，活跃锁等待超过 5 秒返回该码。
 
 ---
 

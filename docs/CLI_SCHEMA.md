@@ -518,7 +518,11 @@ provider 摘要：
 | `journal_id` | string | 事务 ID |
 | `rollback_supported` | boolean | 是否可回滚 |
 
-参数：`--apply`（默认 dry-run）、`--no-path`、`--no-variables`、`--lae-compat`、`--no-shell-rc`；`env rollback --journal <id> --apply` 恢复备份，默认 dry-run。Windows 写入后广播 `WM_SETTINGCHANGE`；Linux 维护 `~/.profile` 托管块与 `~/.local/bin` shim，并支持 `--no-path` / `--no-variables` / `--lae-compat` 控制托管块内容。
+参数：`--apply`（默认 dry-run）、`--no-path`、`--no-variables`、`--lae-compat`、`--no-shell-rc`、`--system`、`--authorize-system`；`env rollback --journal <id> --apply` 恢复备份，默认 dry-run。Windows 写入后广播 `WM_SETTINGCHANGE`；Linux 维护 `~/.profile` 托管块与 `~/.local/bin` shim，并支持 `--no-path` / `--no-variables` / `--lae-compat` 控制托管块内容。
+
+`--system` 切换到系统级作用域（Windows `HKLM` 系统环境；Linux `/usr/local/bin` shim + `/etc/profile.d/onemoreffmpeg.sh`）。系统级操作需要授权：进程已提权（root / Administrator）直接放行；否则必须显式传 `--authorize-system` 表示用户同意，未授权返回 `OMF-E6003`（退出 2）。工具绝不自动提权。详见 [`SYSTEM_REQUIREMENTS.md`](SYSTEM_REQUIREMENTS.md)。
+
+`env set|unset|rollback` 的 `--apply` 路径持有全局 data root 事务锁 `<data-root>/.transaction.lock`；被其他事务占用且等待超时返回 `OMF-E6009`（退出 1）。
 
 示例：[`schemas/examples/env-set.example.json`](schemas/examples/env-set.example.json)
 
@@ -535,7 +539,7 @@ provider 摘要：
 | `warnings` | array | `OMF-W*` |
 | `journal_pending` | array | 未提交/未回滚 journal |
 
-检查项：`data_root`、`current_exists`、`trio_valid`、`path_contains_current`、`no_pending_journal`。报告整体仍退出 0，脚本必须读取 `healthy`；`journal_pending` 为未完成 journal 的 ID 列表。
+检查项：`data_root`、`current_exists`、`trio_valid`、`path_contains_current`、`no_pending_journal`。默认报告整体仍退出 0，脚本必须读取 `healthy`；`journal_pending` 为未完成 journal 的 ID 列表。`--strict` 在 `healthy=false` 时改为返回 `OMF-E6006`（退出 1），完整报告置于错误对象 `details.report`；健康时仍输出正常结果并退出 0。
 
 示例：[`schemas/examples/doctor.example.json`](schemas/examples/doctor.example.json)
 

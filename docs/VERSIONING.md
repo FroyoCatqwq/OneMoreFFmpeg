@@ -42,3 +42,4 @@ SHA256SUMS.txt
 | 版本 | 日期 | 说明 |
 |---|---|---|
 | v0.6.0 | 2026-11-13 | 首个公开 release：Phase 1–5、审查修复、e2e |
+| v0.7.0 | 2026-11-14 | 全局事务锁、系统级作用域与显式提权授权、doctor --strict、Windows symlink 回退 |

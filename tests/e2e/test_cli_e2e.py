@@ -259,3 +259,50 @@ async def test_parallel_read_only_commands(cli):
     )
     assert all(result.returncode == 0 for result in results)
     assert all(result.json()["ok"] for result in results)
+
+
+def test_doctor_default_unhealthy_exits_zero(cli):
+    result = cli.run("doctor", "--json")
+    assert result.returncode == 0
+    assert result.data()["healthy"] is False
+
+
+def test_doctor_strict_unhealthy_exits_nonzero(cli):
+    result = cli.run("doctor", "--strict", "--json")
+    assert result.returncode == 1
+    body = result.json()
+    assert body["code"] == "OMF-E6006"
+    assert body["details"]["report"]["healthy"] is False
+
+
+def test_env_system_consent_dry_run(cli):
+    result = cli.run("env", "set", "--system", "--authorize-system", "--json")
+    assert result.returncode == 0, result.stdout
+    assert result.data()["dry_run"] is True
+    assert result.data()["applied"] is False
+
+
+def test_env_system_requires_authorization(cli):
+    result = cli.run("env", "set", "--system", "--json")
+    if result.returncode != 0:
+        # Non-elevated processes must be refused with guidance.
+        assert result.returncode == 2
+        assert result.json()["code"] == "OMF-E6003"
+    else:
+        # Elevated (root/Administrator) processes are pre-authorized.
+        assert result.data()["dry_run"] is True
+
+
+def test_install_releases_transaction_lock(cli, fake_trio: Path, tmp_path: Path):
+    archive = tmp_path / "ffmpeg-lock.zip"
+    with zipfile.ZipFile(archive, "w") as writer:
+        for executable in sorted(fake_trio.iterdir()):
+            if executable.is_file() and not executable.name.endswith(".go"):
+                writer.write(executable, "ffmpeg-build/bin/" + executable.name)
+        writer.writestr("LICENSE.txt", "GPL-3.0-only\n")
+    release_path = write_release(tmp_path, release_for(archive))
+
+    applied = cli.run("install", "--release", str(release_path),
+                      "--artifact", str(archive), "--apply", "--json")
+    assert applied.returncode == 0, applied.stdout
+    assert not (cli.data_root / ".transaction.lock").exists(), "lock must be released after install"

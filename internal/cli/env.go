@@ -11,8 +11,10 @@ import (
 	appenv "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/env"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/journal"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/lock"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/paths"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
 )
 
 func envCommand() *urfave.Command {
@@ -59,6 +61,9 @@ func doctorCommand() *urfave.Command {
 	return &urfave.Command{
 		Name:  "doctor",
 		Usage: "check current pointer, trio, PATH and journals (read-only)",
+		Flags: []urfave.Flag{
+			&urfave.BoolFlag{Name: "strict", Usage: "exit non-zero (OMF-E6006) when the report is unhealthy"},
+		},
 		Action: func(ctx context.Context, cmd *urfave.Command) error {
 			if err := rejectExtraArgs(cmd); err != nil {
 				return err
@@ -70,6 +75,9 @@ func doctorCommand() *urfave.Command {
 			report, err := doctor.Run(ctx, doctor.Options{DataRoot: dataRoot, Runner: newInstallRunner()})
 			if err != nil {
 				return err
+			}
+			if cmd.Bool("strict") && !report.Healthy {
+				return apperrors.New(apperrors.E6006, "doctor detected an unhealthy state").WithDetails(map[string]any{"report": report})
 			}
 			human := fmt.Sprintf("healthy: %v\n", report.Healthy)
 			for _, check := range report.Checks {
@@ -100,6 +108,8 @@ func envWriteCommand(name, usage string) *urfave.Command {
 			&urfave.BoolFlag{Name: "no-variables", Usage: "do not touch FFmpeg variables"},
 			&urfave.BoolFlag{Name: "lae-compat", Usage: "also set LAE_FFMPEG_DIR"},
 			&urfave.BoolFlag{Name: "no-shell-rc", Usage: "do not touch ~/.profile (Linux)"},
+			&urfave.BoolFlag{Name: "system", Usage: "write system scope (HKLM / /usr/local/bin + /etc/profile.d); requires elevation"},
+			&urfave.BoolFlag{Name: "authorize-system", Usage: "explicit user consent for system scope when not already elevated"},
 		},
 		Action: func(ctx context.Context, cmd *urfave.Command) error {
 			if err := rejectExtraArgs(cmd); err != nil {
@@ -109,7 +119,20 @@ func envWriteCommand(name, usage string) *urfave.Command {
 			if err != nil {
 				return err
 			}
-			options := appenv.ApplyOptions{DataRoot: root, Apply: cmd.Bool("apply"), NoPath: cmd.Bool("no-path"), NoVariables: cmd.Bool("no-variables"), NoShellRC: cmd.Bool("no-shell-rc"), LAECompat: cmd.Bool("lae-compat")}
+			system := cmd.Bool("system")
+			if system {
+				if err := platform.AuthorizeSystemScope(cmd.Bool("authorize-system")); err != nil {
+					return err
+				}
+			}
+			options := appenv.ApplyOptions{DataRoot: root, Apply: cmd.Bool("apply"), NoPath: cmd.Bool("no-path"), NoVariables: cmd.Bool("no-variables"), NoShellRC: cmd.Bool("no-shell-rc"), LAECompat: cmd.Bool("lae-compat"), System: system}
+			if options.Apply {
+				unlock, err := lock.DataRoot(root)
+				if err != nil {
+					return err
+				}
+				defer unlock()
+			}
 			var result model.EnvSetData
 			if name == "set" {
 				result, err = appenv.Apply(ctx, options)
@@ -161,6 +184,11 @@ func envRollbackCommand() *urfave.Command {
 				preview := model.EnvSetData{Schema: model.EnvSetSchema, DryRun: true, Applied: false, Operations: []string{}, JournalID: id, RollbackSupported: true}
 				return writeResult(cmd, "env.rollback", preview, "dry-run (use --apply to roll back)\n")
 			}
+			unlock, err := lock.DataRoot(root)
+			if err != nil {
+				return err
+			}
+			defer unlock()
 			result, err := appenv.Rollback(ctx, root, id)
 			if err != nil {
 				return err

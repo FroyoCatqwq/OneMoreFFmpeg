@@ -16,6 +16,7 @@ import (
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/ffexec"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/install"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/lock"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/paths"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/provider"
@@ -71,6 +72,13 @@ func installRelease(ctx context.Context, cmd *urfave.Command, release model.Rele
 	archivePath, err := installArchivePath(ctx, cmd, configFrom(ctx), release, apply)
 	if err != nil {
 		return err
+	}
+	if apply {
+		unlock, err := lock.DataRoot(dataRoot)
+		if err != nil {
+			return err
+		}
+		defer unlock()
 	}
 	result, err := install.Run(ctx, install.Options{
 		DataRoot:    dataRoot,

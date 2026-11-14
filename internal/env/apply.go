@@ -22,6 +22,7 @@ type ApplyOptions struct {
 	NoVariables bool
 	NoShellRC   bool
 	LAECompat   bool
+	System      bool
 	Store       platform.EnvStore
 	Now         func() time.Time
 }
@@ -122,10 +123,15 @@ func runEnvTransaction(ctx context.Context, opts ApplyOptions, action string, ad
 
 func buildEnvPlan(opts ApplyOptions, add bool) (envPlan, error) {
 	plan := envPlan{details: map[string]string{}, operations: []string{}}
+	plan.details["scope"] = map[bool]string{true: "system", false: "user"}[opts.System]
 	if runtime.GOOS == "windows" {
 		store := opts.Store
 		if store == nil {
-			store = platform.NewEnvStore()
+			if opts.System {
+				store = platform.NewSystemEnvStore()
+			} else {
+				store = platform.NewEnvStore()
+			}
 		}
 		plan.store = store
 		if !opts.NoPath {
@@ -189,7 +195,7 @@ func buildEnvPlan(opts ApplyOptions, add bool) (envPlan, error) {
 		return plan, nil
 	}
 
-	shimDir, err := shimDirectory()
+	shimDir, err := shimDirectory(opts.System)
 	if err != nil {
 		return plan, err
 	}
@@ -234,10 +240,11 @@ func buildEnvPlan(opts ApplyOptions, add bool) (envPlan, error) {
 		}
 	}
 	if !opts.NoShellRC && (!opts.NoPath || !opts.NoVariables) {
-		profile, err := shellProfile()
+		profile, err := shellProfile(opts.System)
 		if err != nil {
 			return plan, err
 		}
+		plan.details["shell_rc_path"] = profile
 		desired := shellRCBlock(opts)
 		hasBlock, body, err := readShellRC(profile)
 		if err != nil {
@@ -292,12 +299,20 @@ func restoreShellRCBackup(details map[string]string) error {
 	if backup == "" {
 		return nil
 	}
-	return restoreShellRC(backup)
+	profile := details["shell_rc_path"]
+	if profile == "" {
+		var err error
+		profile, err = shellProfile(false)
+		if err != nil {
+			return err
+		}
+	}
+	return restoreShellRC(backup, profile)
 }
 
 // Rollback restores the values captured before an env-set/env-unset record.
 func Rollback(ctx context.Context, dataRoot, journalID string) (model.EnvSetData, error) {
-	return RollbackWithStore(ctx, dataRoot, journalID, platform.NewEnvStore())
+	return RollbackWithStore(ctx, dataRoot, journalID, nil)
 }
 
 // RollbackWithStore restores an env transaction using an injectable backend.
@@ -313,6 +328,13 @@ func RollbackWithStore(ctx context.Context, dataRoot, journalID string, store pl
 	}
 	if record.Status == journal.StatusRolledBack {
 		return model.EnvSetData{}, apperrors.New(apperrors.E7001, "journal was already rolled back")
+	}
+	if store == nil {
+		if record.Details["scope"] == "system" {
+			store = platform.NewSystemEnvStore()
+		} else {
+			store = platform.NewEnvStore()
+		}
 	}
 	operations := []string{}
 	if runtime.GOOS == "windows" {
@@ -358,7 +380,14 @@ func RollbackWithStore(ctx context.Context, dataRoot, journalID string, store pl
 		}
 	}
 	if backup := record.Details["shell_rc_backup"]; backup != "" {
-		if err := restoreShellRC(backup); err != nil {
+		profile := record.Details["shell_rc_path"]
+		if profile == "" {
+			profile, err = shellProfile(false)
+			if err != nil {
+				return model.EnvSetData{}, err
+			}
+		}
+		if err := restoreShellRC(backup, profile); err != nil {
 			return model.EnvSetData{}, err
 		}
 		operations = append(operations, "restore shell rc")
@@ -404,7 +433,10 @@ func removePath(previous, entry string) (string, bool) {
 	return strings.Join(kept, string(os.PathListSeparator)), removed
 }
 
-func shimDirectory() (string, error) {
+func shimDirectory(system bool) (string, error) {
+	if system {
+		return "/usr/local/bin", nil
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", apperrors.New(apperrors.E9003, "home directory cannot be determined").WithCause(err.Error())
@@ -412,7 +444,10 @@ func shimDirectory() (string, error) {
 	return filepath.Join(home, ".local", "bin"), nil
 }
 
-func shellProfile() (string, error) {
+func shellProfile(system bool) (string, error) {
+	if system {
+		return "/etc/profile.d/onemoreffmpeg.sh", nil
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", apperrors.New(apperrors.E9003, "home directory cannot be determined").WithCause(err.Error())
@@ -425,7 +460,11 @@ func journalDirFor(opts ApplyOptions) string { return filepath.Join(opts.DataRoo
 func shellRCBlock(opts ApplyOptions) string {
 	lines := []string{shellRCMarkerStart}
 	if !opts.NoPath {
-		lines = append(lines, `export PATH="$HOME/.local/bin:$PATH"`)
+		if opts.System {
+			lines = append(lines, `export PATH="/usr/local/bin:$PATH"`)
+		} else {
+			lines = append(lines, `export PATH="$HOME/.local/bin:$PATH"`)
+		}
 	}
 	if !opts.NoVariables {
 		current := shellQuote(filepath.Join(opts.DataRoot, "current"))
@@ -497,14 +536,10 @@ func updateShellRC(profile, body, desired, journalDir string, details map[string
 	return nil
 }
 
-func restoreShellRC(backup string) error {
+func restoreShellRC(backup, profile string) error {
 	content, err := os.ReadFile(backup)
 	if err != nil {
 		return apperrors.New(apperrors.E6004, "shell rc backup cannot be read").WithCause(err.Error())
-	}
-	profile, err := shellProfile()
-	if err != nil {
-		return err
 	}
 	return writeFileAtomic(profile, content, 0o644)
 }

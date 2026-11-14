@@ -21,3 +21,13 @@ Doctor Returns Report
     ${result}=    Run Process    ${CLI}    doctor    --json
     Should Be Equal As Integers    ${result.rc}    0
     Should Contain    ${result.stdout}    "onemoreffmpeg.doctor/v1"
+
+Doctor Strict Unhealthy Exits Nonzero
+    ${result}=    Run Process    ${CLI}    doctor    --strict    --json
+    Should Be Equal As Integers    ${result.rc}    1
+    Should Contain    ${result.stdout}    OMF-E6006
+
+Env System Consent Dry Run
+    ${result}=    Run Process    ${CLI}    env    set    --system    --authorize-system    --json
+    Should Be Equal As Integers    ${result.rc}    0
+    Should Contain    ${result.stdout}    "dry_run":true

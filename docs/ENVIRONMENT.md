@@ -22,6 +22,8 @@
 
 Windows 环境变量名不区分大小写：`env status` 按规范名（`FFMPEG_DIR` / `ONE_MORE_FFMPEG_DIR` / `LAE_FFMPEG_DIR`）报告，进程环境中诸如 `ffmpeg_dir` 的小写写法也会被识别并归一到规范名。
 
+默认作用域为用户级。`env set/unset --system` 切换到系统级（Windows HKLM 系统环境；Linux `/usr/local/bin` + `/etc/profile.d/onemoreffmpeg.sh`），需要授权：已提权（root/Administrator）直接放行，否则须显式 `--authorize-system`，未授权返回 `OMF-E6003`。工具绝不自动提权。权限模型与系统要求见 [`SYSTEM_REQUIREMENTS.md`](SYSTEM_REQUIREMENTS.md)。
+
 ### 1.1 data root 解析
 
 所有下载、缓存、安装、journal 与默认配置都位于同一个 data root，解析顺序固定：

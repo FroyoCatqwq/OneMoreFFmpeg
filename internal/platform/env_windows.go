@@ -8,15 +8,24 @@ import (
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 )
 
-type userEnvStore struct{}
+const systemEnvKey = `SYSTEM\CurrentControlSet\Control\Session Manager\Environment`
 
-// NewEnvStore returns the HKCU\Environment store.
-func NewEnvStore() EnvStore { return userEnvStore{} }
+type registryEnvStore struct {
+	root registry.Key
+	key  string
+}
 
-func (userEnvStore) Get(name string) (string, bool, error) {
-	key, err := registry.OpenKey(registry.CURRENT_USER, `Environment`, registry.QUERY_VALUE)
+// NewEnvStore returns the HKCU\Environment (user) store.
+func NewEnvStore() EnvStore { return registryEnvStore{registry.CURRENT_USER, `Environment`} }
+
+// NewSystemEnvStore returns the HKLM system environment store; writing it
+// requires an elevated (Administrator) process.
+func NewSystemEnvStore() EnvStore { return registryEnvStore{registry.LOCAL_MACHINE, systemEnvKey} }
+
+func (s registryEnvStore) Get(name string) (string, bool, error) {
+	key, err := registry.OpenKey(s.root, s.key, registry.QUERY_VALUE)
 	if err != nil {
-		return "", false, apperrors.New(apperrors.E6001, "user environment cannot be opened").WithCause(err.Error())
+		return "", false, apperrors.New(apperrors.E6001, "environment cannot be opened").WithCause(err.Error())
 	}
 	defer key.Close()
 	value, _, err := key.GetStringValue(name)
@@ -24,15 +33,15 @@ func (userEnvStore) Get(name string) (string, bool, error) {
 		return "", false, nil
 	}
 	if err != nil {
-		return "", false, apperrors.New(apperrors.E6001, "user environment value cannot be read").WithCause(err.Error())
+		return "", false, apperrors.New(apperrors.E6001, "environment value cannot be read").WithCause(err.Error())
 	}
 	return value, true, nil
 }
 
-func (userEnvStore) Set(name, value string) error {
-	key, _, err := registry.CreateKey(registry.CURRENT_USER, `Environment`, registry.SET_VALUE)
+func (s registryEnvStore) Set(name, value string) error {
+	key, _, err := registry.CreateKey(s.root, s.key, registry.SET_VALUE)
 	if err != nil {
-		return apperrors.New(apperrors.E6002, "user environment cannot be opened for writing").WithCause(err.Error())
+		return apperrors.New(apperrors.E6002, "environment cannot be opened for writing").WithCause(err.Error())
 	}
 	defer key.Close()
 	_, valueType, err := key.GetValue(name, nil)
@@ -45,19 +54,19 @@ func (userEnvStore) Set(name, value string) error {
 		err = key.SetStringValue(name, value)
 	}
 	if err != nil {
-		return apperrors.New(apperrors.E6002, "user environment value cannot be written").WithCause(err.Error())
+		return apperrors.New(apperrors.E6002, "environment value cannot be written").WithCause(err.Error())
 	}
 	return nil
 }
 
-func (userEnvStore) Remove(name string) error {
-	key, err := registry.OpenKey(registry.CURRENT_USER, `Environment`, registry.SET_VALUE)
+func (s registryEnvStore) Remove(name string) error {
+	key, err := registry.OpenKey(s.root, s.key, registry.SET_VALUE)
 	if err != nil {
-		return apperrors.New(apperrors.E6002, "user environment cannot be opened for writing").WithCause(err.Error())
+		return apperrors.New(apperrors.E6002, "environment cannot be opened for writing").WithCause(err.Error())
 	}
 	defer key.Close()
 	if err := key.DeleteValue(name); err != nil && err != registry.ErrNotExist {
-		return apperrors.New(apperrors.E6002, "user environment value cannot be removed").WithCause(err.Error())
+		return apperrors.New(apperrors.E6002, "environment value cannot be removed").WithCause(err.Error())
 	}
 	return nil
 }

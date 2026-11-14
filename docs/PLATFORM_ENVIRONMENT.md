@@ -32,10 +32,10 @@ v1 支持三种实现：
 | 类型 | Windows | Linux | 说明 |
 |---|---|---|---|
 | `directory_junction` | 优先 | 不常用 | Windows 目录 junction，普通用户通常可创建 |
-| `symlink` | 可选，可能需提权/开发者模式 | 默认 | 目录 symlink |
+| `symlink` | junction 失败时回退（开发者模式 / sudo / gsudo） | 默认 | 目录 symlink |
 | `pointer_file` | 回退 | 回退 | 写 `current.pointer` 指向版本化目录 |
 
-junction 限制：目标必须已存在；本机路径写入 `\??\<path>` 替换名，UNC 网络路径（`\\server\share`）写入 `\??\UNC\server\share`，因此支持本机跨卷与 UNC 目标；创建失败时回退 `pointer_file`。
+junction 限制：目标必须已存在；本机路径写入 `\??\<path>` 替换名，UNC 网络路径（`\\server\share`）写入 `\??\UNC\server\share`，因此支持本机跨卷与 UNC 目标。Windows 回退链为 junction → 目录 symlink → `pointer_file`；symlink 需要开发者模式（Win10 1809+）、Win11 24H2 `sudo` 或 `gsudo`（见 `scripts/elevate.ps1`、`scripts/enable-developer-mode.ps1`）。`ReplaceLink` 返回实际创建的 kind。
 
 目录布局：
 

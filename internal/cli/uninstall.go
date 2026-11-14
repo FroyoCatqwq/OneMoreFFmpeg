@@ -13,6 +13,7 @@ import (
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/install"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/journal"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/lock"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/paths"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
@@ -80,6 +81,11 @@ func uninstallCommand() *urfave.Command {
 			if !cmd.Bool("apply") {
 				return writeResult(cmd, "uninstall", data, "dry-run (use --apply to delete)\nroot: "+root+"\n")
 			}
+			unlock, err := lock.DataRoot(dataRoot)
+			if err != nil {
+				return err
+			}
+			defer unlock()
 			if _, err := os.Stat(root); err != nil {
 				return apperrors.New(apperrors.E7007, "installation root does not exist").WithDetails(map[string]any{"root": root})
 			}

@@ -17,12 +17,23 @@ const (
 	reparseTagMountPoint = 0xA0000003
 )
 
-// CreateLink creates a directory junction. Junctions do not require the
-// developer-mode symlink privilege.
+// CreateLink creates a directory link. It prefers a junction (no privilege
+// needed) and falls back to a directory symlink, which developer mode, sudo
+// (Win11 24H2+) or gsudo permits.
 func CreateLink(link, target string) error {
 	if _, err := os.Stat(target); err != nil {
-		return apperrors.New(apperrors.E5004, "junction target does not exist").WithCause(err.Error())
+		return apperrors.New(apperrors.E5004, "link target does not exist").WithCause(err.Error())
 	}
+	if junctionErr := createJunction(link, target); junctionErr == nil {
+		return nil
+	}
+	if err := os.Symlink(target, link); err != nil {
+		return apperrors.New(apperrors.E5004, "link cannot be created").WithCause(err.Error())
+	}
+	return nil
+}
+
+func createJunction(link, target string) error {
 	pointer, err := windows.UTF16PtrFromString(link)
 	if err != nil {
 		return apperrors.New(apperrors.E5004, "junction path is invalid").WithCause(err.Error())

@@ -13,6 +13,10 @@ type processEnvStore struct{}
 // NewEnvStore is read-only on non-Windows; Linux persists via shims instead.
 func NewEnvStore() EnvStore { return processEnvStore{} }
 
+// NewSystemEnvStore is read-only on non-Windows; Linux system scope persists
+// via /usr/local/bin shims and /etc/profile.d instead.
+func NewSystemEnvStore() EnvStore { return processEnvStore{} }
+
 func (processEnvStore) Get(name string) (string, bool, error) {
 	value, ok := os.LookupEnv(name)
 	return value, ok, nil

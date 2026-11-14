@@ -65,6 +65,7 @@ const (
 	E6006 Code = "OMF-E6006"
 	E6007 Code = "OMF-E6007"
 	E6008 Code = "OMF-E6008"
+	E6009 Code = "OMF-E6009"
 
 	E7001 Code = "OMF-E7001"
 	E7002 Code = "OMF-E7002"
@@ -154,6 +155,7 @@ var codeInfo = map[Code]struct {
 	E6006: {"DOCTOR_UNHEALTHY", "doctor detected unrecoverable state"},
 	E6007: {"NON_MANAGED_FILE", "file is not managed by OneMoreFFmpeg"},
 	E6008: {"WM_SETTINGCHANGE_FAILED", "WM_SETTINGCHANGE broadcast failed"},
+	E6009: {"TRANSACTION_LOCKED", "data root is locked by another transaction"},
 
 	E7001: {"CLI_USAGE", "invalid command usage"},
 	E7002: {"TOML_PARSE_FAILED", "TOML 1.1 syntax error"},

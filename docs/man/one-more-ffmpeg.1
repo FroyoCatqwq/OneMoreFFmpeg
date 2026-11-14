@@ -72,10 +72,17 @@ Move a managed installation into quarantine; reversible via journal rollback.
 Inspect or update PATH/variables/shims. All modifying env subcommands are
 dry-run by default and need
 .BR --apply .
+.B --system
+writes system scope (HKLM on Windows, /usr/local/bin + /etc/profile.d on Linux)
+and requires elevation: root/Administrator proceeds directly, otherwise pass
+.B --authorize-system
+to consent (OMF-E6003 if neither). The tool never elevates itself.
 .TP
-.B doctor --json
-Check data root, current pointer, trio, PATH and pending journals. Always exits
-0 with a report; scripts must read healthy.
+.B doctor --json [--strict]
+Check data root, current pointer, trio, PATH and pending journals. By default
+exits 0 with a report; scripts must read healthy.
+.B --strict
+exits 1 with OMF-E6006 (report in details.report) when unhealthy.
 .TP
 .B journal list|rollback
 List transactions or roll back install, uninstall and env transactions.
@@ -86,11 +93,14 @@ The journal id is validated even in dry-run: an unknown or malformed id exits 1 
 nonfree builds require
 .BR --allow-nonfree .
 uninstall never removes unmanaged directories and quarantines managed ones.
-Windows uses a directory junction for current; Linux uses a symlink; a
-pointer file is the fallback. env writes are journaled with pending state and
-can be rolled back. env set writes HKCU environment on Windows and shims plus
-~/.profile on Linux; new terminals are required to see the new PATH.
-provider add uses a cross-process lock around read-modify-write.
+Windows uses a directory junction for current, falling back to a directory
+symlink (developer mode / sudo / gsudo) then a pointer file; Linux uses a
+symlink. env writes are journaled with pending state and can be rolled back.
+env set writes HKCU environment on Windows and shims plus ~/.profile on Linux;
+new terminals are required to see the new PATH.
+provider add uses a cross-process lock around read-modify-write. install,
+uninstall and env writes hold a global data-root transaction lock
+(.transaction.lock); a busy lock exits 1 with OMF-E6009.
 .SH FILES
 .TP
 .I ONE_MORE_FFMPEG_HOME/config.toml
