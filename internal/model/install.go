@@ -21,7 +21,7 @@ type InstallData struct {
 	LicenseHint     string          `json:"license_hint"`
 	Redistributable bool            `json:"redistributable"`
 	LockPath        string          `json:"lock_path,omitempty"`
-	JournalID       string          `json:"journal_id"`
+	JournalID       string          `json:"journal_id,omitempty"`
 	DryRun          bool            `json:"dry_run"`
 }
 

@@ -55,10 +55,21 @@ func Extract(ctx context.Context, archivePath, destDir string) error {
 	if err := ensureEmptyDir(destDir); err != nil {
 		return err
 	}
-	compressed := int64(0)
-	if info, err := os.Stat(archivePath); err == nil {
-		compressed = info.Size()
+	// Fail closed. The old code left compressed=0 on a stat error, which made
+	// ratioExceeded() permanently false and silently disabled the zip/tar bomb
+	// ceiling for that archive. The readers below open the same path anyway, so
+	// refusing here does not add a new failure mode.
+	info, statErr := os.Stat(archivePath)
+	if statErr != nil {
+		return apperrors.New(apperrors.E5009, "archive cannot be inspected").
+			WithCause(statErr.Error())
 	}
+	compressed := info.Size()
+	// The bomb ceiling (compressed * maxRatio) is an upper bound on ALLOWED
+	// expansion, NOT a prediction of disk usage: sizing a pre-flight budget
+	// from it would demand gigabytes for an ordinary few-MB archive. zip uses
+	// its central directory for an exact pre-check (extractZip); tar checks
+	// each entry before writing it (extractTar).
 	switch format {
 	case "zip":
 		return extractZip(ctx, archivePath, destDir, compressed)
@@ -222,6 +233,12 @@ func extractTar(ctx context.Context, archivePath, destDir, format string, compre
 		case tar.TypeReg:
 			if header.Size > maxFileSize || total+header.Size > maxTotal {
 				return apperrors.New(apperrors.E5002, "archive exceeds extraction size limit").WithDetails(map[string]any{"entry": header.Name})
+			}
+			// tar cannot pre-sum a non-rewindable stream, so check the declared
+			// size of each entry right before writing it. Best-effort: if the
+			// platform cannot report free space, extraction still proceeds.
+			if err := checkDiskSpace(destDir, header.Size); err != nil {
+				return err
 			}
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return apperrors.New(apperrors.E5009, "archive directory cannot be created").WithCause(err.Error())

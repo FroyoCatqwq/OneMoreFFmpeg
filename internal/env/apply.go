@@ -2,6 +2,7 @@ package env
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -88,36 +89,48 @@ func runEnvTransaction(ctx context.Context, opts ApplyOptions, action string, ad
 	if err := journal.Write(journalDir, record); err != nil {
 		return result, err
 	}
-	fail := func(cause error) (model.EnvSetData, error) {
+	// A rollback failure used to be dropped entirely: the CLI reported the
+	// original error and the user never learned that PATH / shims / .profile
+	// were left half-changed. Keep the original error FIRST (so Code, exit code
+	// and Details do not move), but surface the undo failure in the journal,
+	// in Cause and in the error chain.
+	fail := func(cause, undoErr error) (model.EnvSetData, error) {
 		record.Status = journal.StatusFailed
 		record.Details = copyDetails(plan.details)
 		record.Details["error"] = cause.Error()
-		_ = journal.Write(journalDir, record)
-		return result, cause
+		if undoErr != nil {
+			record.Details["undo_error"] = undoErr.Error()
+		}
+		if writeErr := journal.Write(journalDir, record); writeErr != nil {
+			undoErr = errors.Join(undoErr, writeErr)
+		}
+		if undoErr == nil {
+			return result, cause
+		}
+		if typed, ok := apperrors.As(cause); ok {
+			typed.Cause = strings.TrimSpace(typed.Cause + "; rollback failed: " + undoErr.Error())
+		}
+		return result, errors.Join(cause, undoErr)
 	}
 
 	for index, step := range plan.actions {
 		if err := step.apply(); err != nil {
-			_ = undoAppliedActions(plan, index)
-			return fail(err)
+			return fail(err, undoAppliedActions(plan, index))
 		}
 		record.Details = copyDetails(plan.details)
 		if err := journal.Write(journalDir, record); err != nil {
-			_ = undoAppliedActions(plan, index+1)
-			return fail(err)
+			return fail(err, undoAppliedActions(plan, index+1))
 		}
 	}
 	if runtime.GOOS == "windows" {
 		if err := platform.NotifyEnvChange(); err != nil {
-			_ = undoEnvPlan(plan)
-			return fail(err)
+			return fail(err, undoEnvPlan(plan))
 		}
 	}
 	record.Status = journal.StatusCommitted
 	record.Details = copyDetails(plan.details)
 	if err := journal.Write(journalDir, record); err != nil {
-		_ = undoEnvPlan(plan)
-		return fail(err)
+		return fail(err, undoEnvPlan(plan))
 	}
 	result.Applied = true
 	result.JournalID = id
@@ -282,7 +295,9 @@ func undoEnvPlan(plan envPlan) error {
 }
 
 func undoAppliedActions(plan envPlan, count int) error {
-	var first error
+	// Keep undoing after a failure and report ALL of them: dropping every error
+	// after the first hid a partially restored PATH/shim/profile state.
+	var all error
 	if count > len(plan.actions) {
 		count = len(plan.actions)
 	}
@@ -291,11 +306,11 @@ func undoAppliedActions(plan envPlan, count int) error {
 		if undo == nil {
 			continue
 		}
-		if err := undo(); err != nil && first == nil {
-			first = err
+		if err := undo(); err != nil {
+			all = errors.Join(all, err)
 		}
 	}
-	return first
+	return all
 }
 
 func restoreShellRCBackup(details map[string]string) error {

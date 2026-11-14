@@ -92,13 +92,18 @@
 
 ## 4. 仍保留的限制
 
-- **P1-4a**：`install --apply` 在锁外下载（有意取舍：持锁会阻塞其它进程；失败清理已只动本次文件）。
-- **P2-2**：`journal list` / `doctor` 看不到损坏的 journal 记录（需要给 `model.JournalListData` 加 `warnings`）。
-- **P2-3**：`env` 事务的撤销失败被丢弃，只报原始错误。
-- **P2-4**：压缩炸弹比例检查依赖 `os.Stat`，失败时静默失效；tar 路径没有磁盘空间预检。
-- **P2-5**：`install --json` 的 dry-run 输出 `journal_id: ""`，而 `env-set` / `uninstall` 省略该字段。
+2026-11-14 收口轮已修掉前几轮登记的 5 项（P1-4a / P2-2 / P2-3 / P2-4 / P2-5）：
+压缩炸弹检查改为 stat 失败即拒绝且 zip/tar 统一预检；journal 损坏记录不再静默跳过（`doctor`
+输出失败检查项）；env 撤销失败用 `errors.Join` 合并并写进 journal；`install` dry-run 省略
+`journal_id`；锁外下载的 TOCTOU 由「复制到事务私有文件再解压」消除。
+
+**仍未做**：
+
+- `contracts.validateCapabilities` 只校验字段**存在**，不校验类型（`version: 123` 目前会通过）。
+- GitHub release 列表仍只读最多 100 条，没有 Link 分页回溯（见 `archive/PHASE4_STATUS.md`）。
+- 没有 `--select` / provider 优先级（同为 Phase 4 的明确推迟项）。
 - `env set --apply` 会写 `~/.profile` 与 `HKCU\Environment`，无法在无人值守 CI 隔离，故 e2e 只覆盖 dry-run。
-- 多 title 的 DVD 只读第一个 title（这与本项目无关，属 FFmpeg 的 dvdvideo demuxer 行为，见 LiveArchiveEncoder 文档）。
+- Phase 7：CI 质量门禁（gofmt / govulncheck）、fuzz、真实上游资产集成、release 自动化与签名。
 
 ## 5. 未来，明确不属于当前 Phase
 

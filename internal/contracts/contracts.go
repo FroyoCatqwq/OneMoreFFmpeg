@@ -400,8 +400,19 @@ func validateInstall(raw []byte) error {
 	if !sha256Pattern.MatchString(data.AssetSHA256) {
 		return apperrors.New(apperrors.E7003, "install asset_sha256 must be lowercase hex")
 	}
-	dryRun, _ := rawField(raw, "dry_run")
-	isDryRun, _ := dryRun.(bool)
+	dryRun, found := rawField(raw, "dry_run")
+	if !found {
+		return apperrors.New(apperrors.E7003, "install dry_run is required")
+	}
+	isDryRun, isBool := dryRun.(bool)
+	if !isBool {
+		return apperrors.New(apperrors.E7003, "install dry_run must be a boolean")
+	}
+	// An applied install MUST name its transaction: a caller needs the id to
+	// roll it back. A dry-run creates no journal, so the field is omitted.
+	if !isDryRun && data.JournalID == "" {
+		return apperrors.New(apperrors.E7003, "install journal_id is required when applied")
+	}
 	if !isDryRun {
 		if !sha256Pattern.MatchString(data.Binaries.FFmpegSHA256) || !sha256Pattern.MatchString(data.Binaries.FFprobeSHA256) {
 			return apperrors.New(apperrors.E7003, "install binary hashes must be lowercase hex")

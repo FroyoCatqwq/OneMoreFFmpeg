@@ -48,9 +48,13 @@ func Run(ctx context.Context, opts Options) (model.DoctorData, error) {
 		Detail: pathDetail(status),
 	})
 
-	pending, err := journal.Pending(filepath.Join(opts.DataRoot, "journal"))
-	if err != nil {
-		return model.DoctorData{}, err
+	pending, journalErr := journal.Pending(filepath.Join(opts.DataRoot, "journal"))
+	if journalErr != nil {
+		// A corrupt journal must not make doctor itself fail: --json has to stay
+		// parseable, so surface the damage as a failed health check instead.
+		checks = append(checks, model.Check{
+			Name: "journals_readable", OK: false, Detail: journalErr.Error(),
+		})
 	}
 	pendingIDs := make([]string, 0, len(pending))
 	for _, record := range pending {
@@ -58,7 +62,7 @@ func Run(ctx context.Context, opts Options) (model.DoctorData, error) {
 	}
 	checks = append(checks, model.Check{
 		Name:   "no_pending_journal",
-		OK:     len(pending) == 0,
+		OK:     journalErr == nil && len(pending) == 0,
 		Detail: fmt.Sprintf("%d pending journals", len(pending)),
 	})
 

@@ -44,3 +44,4 @@ SHA256SUMS.txt
 | v0.6.0 | 2026-11-13 | 首个公开 release：Phase 1–5、审查修复、e2e |
 | v0.7.0 | 2026-11-14 | 全局事务锁、系统级作用域与显式提权授权、doctor --strict、Windows symlink 回退 |
 | v0.8.0 | 2026-11-14 | Phase 6 契约冻结 + 外部调用示例、P2-5 解压加固、shim 回滚/下载清理修复 |
+| v0.9.0 | 2026-11-14 | Phase 1–6 收口：修完 P1-4a / P2-2 / P2-3 / P2-4 / P2-5，详见 [`releases/release-v0.9.0.md`](releases/release-v0.9.0.md) |

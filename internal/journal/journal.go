@@ -126,11 +126,13 @@ func List(dir string) ([]Record, error) {
 		}
 		payload, err := os.ReadFile(filepath.Join(dir, entry.Name()))
 		if err != nil {
-			continue
+			return nil, apperrors.New(apperrors.E6005, "journal record cannot be read").
+				WithDetails(map[string]any{"file": entry.Name()}).WithCause(err.Error())
 		}
 		var record Record
 		if err := json.Unmarshal(payload, &record); err != nil {
-			continue
+			return nil, apperrors.New(apperrors.E6005, "journal record is corrupt").
+				WithDetails(map[string]any{"file": entry.Name()}).WithCause(err.Error())
 		}
 		records = append(records, record)
 	}

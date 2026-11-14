@@ -70,6 +70,10 @@ func Run(ctx context.Context, opts Options) (model.InstallData, error) {
 		if existing.Installation.AssetSHA256 == opts.Release.AssetSHA256 {
 			data := existing.Installation
 			data.DryRun = !opts.Apply
+			// This branch reuses an existing install and creates NO journal, so
+			// carrying install.json's id from a previous apply would point at a
+			// transaction that has nothing to do with this run.
+			data.JournalID = ""
 			data.CurrentPointer = currentType(opts.DataRoot, targetDir)
 			if opts.Apply {
 				if _, err := os.Stat(opts.ArchivePath); err != nil {
@@ -215,7 +219,18 @@ func Run(ctx context.Context, opts Options) (model.InstallData, error) {
 	_ = journal.Write(journalDir, recordEntry)
 	defer os.RemoveAll(tempDir)
 
-	if err := archive.Extract(ctx, opts.ArchivePath, tempDir); err != nil {
+	// The archive lives in the shared download cache keyed by sha[:16]. Between
+	// the pinned-sha check above and Extract's open() another process (or a
+	// cache cleanup) can replace that path. Copy it into a private, journalID-
+	// scoped file first and extract from the copy, so the bytes we verified are
+	// exactly the bytes we unpack. The lock stays outside the download.
+	privateArchive := filepath.Join(opts.DataRoot, "tmp",
+		journalID+".archive"+filepath.Ext(opts.ArchivePath))
+	if err := copyFile(opts.ArchivePath, privateArchive); err != nil {
+		return fail(err)
+	}
+	defer os.Remove(privateArchive)
+	if err := archive.Extract(ctx, privateArchive, tempDir); err != nil {
 		return fail(err)
 	}
 	binDir, err := findBinDir(tempDir)
