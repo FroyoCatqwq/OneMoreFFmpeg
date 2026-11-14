@@ -166,9 +166,11 @@ OMF-Wxxxx  警告码（不导致命令失败）
 | `OMF-E5003` | `INSTALL_DIR_CONFLICT` | 目标安装目录冲突 | 1 |
 | `OMF-E5004` | `CURRENT_SWITCH_FAILED` | current 指针切换失败 | 1 |
 | `OMF-E5005` | `ROLLBACK_FAILED` | 回滚失败 | 1 |
-| `OMF-E5006` | `EXECUTABLE_BUSY` | Windows 正在运行的 exe 无法替换 | 1 |
+| `OMF-E5006` | `EXECUTABLE_BUSY` | Windows 正在运行的 exe 无法替换（**保留编号，当前无使用点**：`RenamePath` 改为退避重试） | 1 |
+| `OMF-E5009` | `IO_FAILED` | 文件/目录读写或创建失败（解压、复制、写 install.json、建目录、备份 shell rc） | 1 |
 | `OMF-E5007` | `QUARANTINE_FAILED` | 旧版本隔离/清理失败 | 1 |
 | `OMF-E5008` | `INSTALL_VALIDATION_FAILED` | 安装后三件套校验失败 | 1 |
+| `OMF-E5009` | `IO_FAILED` | 文件/目录读写或创建失败（解压、复制、写 install.json、建目录） | 1 |
 
 ---
 
@@ -179,7 +181,7 @@ OMF-Wxxxx  警告码（不导致命令失败）
 | `OMF-E6001` | `ENV_READ_FAILED` | 读取环境变量/注册表失败 | 1 |
 | `OMF-E6002` | `ENV_WRITE_FAILED` | 写入环境变量/注册表失败 | 1 |
 | `OMF-E6003` | `SYSTEM_SCOPE_DENIED` | 系统级作用域未授权：未提权且未传 `--authorize-system` | 2 |
-| `OMF-E6004` | `SHELL_RC_DENIED` | shell rc 不在允许范围或备份失败 | 2 |
+| `OMF-E6004` | `SHELL_RC_DENIED` | shell rc 不在允许范围（**保留编号**：备份/读写这类 IO 失败改用 `E5009`） | 2 |
 | `OMF-E6005` | `JOURNAL_FAILED` | journal 写入/读取/提交失败 | 1 |
 | `OMF-E6006` | `DOCTOR_UNHEALTHY` | `doctor --strict` 检测到不健康状态 | 1 |
 | `OMF-E6007` | `NON_MANAGED_FILE` | 试图删除/覆盖非本项目管理的文件 | 1 |

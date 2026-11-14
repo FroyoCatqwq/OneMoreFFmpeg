@@ -94,7 +94,19 @@ func keepFresh(path, nonce string, stop <-chan struct{}) {
 				return
 			}
 			now := time.Now()
-			_ = os.Chtimes(path, now, now)
+			if err := os.Chtimes(path, now, now); err != nil {
+				// v0.6.x: ignoring this silently broke the mutex 30 s later -- the
+				// mtime stops moving, another process reclaims the lock, and two
+				// writers share the critical section. Chtimes can fail when an AV
+				// scanner or the indexer holds the file, so fall back to rewriting
+				// the same content, which refreshes the mtime through a path that
+				// usually still works.
+				if writeErr := os.WriteFile(path, []byte(nonce), 0o600); writeErr != nil {
+					// Neither path works: the file is gone or unwritable, so there
+					// is nothing to keep fresh.
+					return
+				}
+			}
 		}
 	}
 }

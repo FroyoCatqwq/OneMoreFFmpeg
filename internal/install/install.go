@@ -130,6 +130,7 @@ func Run(ctx context.Context, opts Options) (model.InstallData, error) {
 	}
 	committed := false
 	stageCommitted := false
+	restored := false
 	var restoreOnFailure func()
 	fail := func(cause error) (model.InstallData, error) {
 		if restoreOnFailure != nil {
@@ -178,9 +179,15 @@ func Run(ctx context.Context, opts Options) (model.InstallData, error) {
 		return fail(err)
 	}
 	restoreOnFailure = func() {
-		if committed {
+		// v0.6.x: fail() calls this, and the deferred call below runs it again.
+		// The second pass used to RemoveAll(targetDir) *after* the first pass had
+		// moved the quarantined previous install back there -- deleting the very
+		// copy it had just restored, with a journal that still pointed at the
+		// (now empty) quarantine. Both halves must run at most once.
+		if committed || restored {
 			return
 		}
+		restored = true
 		if quarantine != "" || stageCommitted {
 			_ = os.RemoveAll(targetDir)
 		}
@@ -202,7 +209,7 @@ func Run(ctx context.Context, opts Options) (model.InstallData, error) {
 
 	tempDir := filepath.Join(opts.DataRoot, "tmp", journalID)
 	if err := os.MkdirAll(tempDir, 0o755); err != nil {
-		return fail(apperrors.New(apperrors.E5005, "temporary install directory cannot be created").WithCause(err.Error()))
+		return fail(apperrors.New(apperrors.E5009, "temporary install directory cannot be created").WithCause(err.Error()))
 	}
 	recordEntry.TempDir = tempDir
 	_ = journal.Write(journalDir, recordEntry)
@@ -218,7 +225,7 @@ func Run(ctx context.Context, opts Options) (model.InstallData, error) {
 
 	stage := filepath.Join(tempDir, "stage")
 	if err := os.MkdirAll(filepath.Join(stage, "bin"), 0o755); err != nil {
-		return fail(apperrors.New(apperrors.E5005, "staging directory cannot be created").WithCause(err.Error()))
+		return fail(apperrors.New(apperrors.E5009, "staging directory cannot be created").WithCause(err.Error()))
 	}
 	binaries := model.InstallBinaries{}
 	for _, name := range []string{"ffmpeg", "ffprobe", "ffplay"} {
@@ -279,14 +286,14 @@ func Run(ctx context.Context, opts Options) (model.InstallData, error) {
 	}
 
 	if err := os.MkdirAll(filepath.Dir(targetDir), 0o755); err != nil {
-		return fail(apperrors.New(apperrors.E5005, "install parent directory cannot be created").WithCause(err.Error()))
+		return fail(apperrors.New(apperrors.E5009, "install parent directory cannot be created").WithCause(err.Error()))
 	}
 	if err := platform.RenamePath(stage, targetDir); err != nil {
 		if quarantine != "" {
 			_ = os.MkdirAll(filepath.Dir(restoreTarget), 0o755)
 			_ = platform.RenamePath(quarantine, restoreTarget)
 		}
-		return fail(apperrors.New(apperrors.E5005, "install directory cannot be committed").WithCause(err.Error()))
+		return fail(apperrors.New(apperrors.E5009, "install directory cannot be committed").WithCause(err.Error()))
 	}
 	stageCommitted = true
 

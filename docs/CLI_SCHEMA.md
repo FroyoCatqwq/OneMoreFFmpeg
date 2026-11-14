@@ -75,7 +75,7 @@
 | `--config <PATH>` / `-c` | `<data-root>/config.toml`（存在时） | 显式指定 TOML；显式路径不存在、或 `ONE_MORE_FFMPEG_HOME` 非绝对路径 → `OMF-E7007` |
 | `--log-level <LEVEL>` | 配置值或 `info` | 覆盖 `[log] level`；当前 `trace` 与 `debug` 输出相同（保留级别，写入类命令实现后再区分） |
 | `--quiet` | false | 强制 `error` 级；与 `--log-level` 同时出现时 `--quiet` 优先 |
-| `--in-detail-usage` | false | 打印内置完整使用指南并退出 0；首次使用注意事项写 stderr，并以 `<data-root>/.first-use` 标记只提示一次 |
+| `--in-detail-usage` | false | 打印内置完整使用指南并退出 0；与 `--json` 互斥（stdout 只留 JSON，冲突返回 `OMF-E1001`）。程序启动不再打印任何提示 |
 
 配置加载顺序（已实现）：
 

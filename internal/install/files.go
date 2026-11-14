@@ -60,7 +60,7 @@ func checksumOfString(value string) string {
 func checksumFile(ctx context.Context, path string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return "", apperrors.New(apperrors.E5005, "binary cannot be read").WithCause(err.Error())
+		return "", apperrors.New(apperrors.E5009, "binary cannot be read").WithCause(err.Error())
 	}
 	defer file.Close()
 	sum, _, err := checksum.StreamSHA256(ctx, file)
@@ -143,7 +143,7 @@ func copyDocs(sourceRoot, stage string) {
 func copyFile(source, destination string) error {
 	in, err := os.Open(source)
 	if err != nil {
-		return apperrors.New(apperrors.E5005, "archive binary cannot be read").WithCause(err.Error())
+		return apperrors.New(apperrors.E5009, "archive binary cannot be read").WithCause(err.Error())
 	}
 	defer in.Close()
 	info, _ := in.Stat()
@@ -153,15 +153,15 @@ func copyFile(source, destination string) error {
 	}
 	out, err := os.OpenFile(destination, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode)
 	if err != nil {
-		return apperrors.New(apperrors.E5005, "archive binary cannot be written").WithCause(err.Error())
+		return apperrors.New(apperrors.E5009, "archive binary cannot be written").WithCause(err.Error())
 	}
 	_, copyErr := io.Copy(out, in)
 	closeErr := out.Close()
 	if copyErr != nil {
-		return apperrors.New(apperrors.E5005, "archive binary cannot be written").WithCause(copyErr.Error())
+		return apperrors.New(apperrors.E5009, "archive binary cannot be written").WithCause(copyErr.Error())
 	}
 	if closeErr != nil {
-		return apperrors.New(apperrors.E5005, "archive binary cannot be closed").WithCause(closeErr.Error())
+		return apperrors.New(apperrors.E5009, "archive binary cannot be closed").WithCause(closeErr.Error())
 	}
 	return nil
 }

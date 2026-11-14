@@ -510,7 +510,7 @@ func shellQuote(value string) string { return "'" + strings.ReplaceAll(value, "'
 func readShellRC(profile string) (bool, string, error) {
 	body, err := os.ReadFile(profile)
 	if err != nil && !os.IsNotExist(err) {
-		return false, "", apperrors.New(apperrors.E6004, "shell rc cannot be read").WithCause(err.Error())
+		return false, "", apperrors.New(apperrors.E5009, "shell rc cannot be read").WithCause(err.Error())
 	}
 	return strings.Contains(string(body), shellRCMarkerStart), string(body), nil
 }
@@ -535,17 +535,17 @@ func stripShellRCBlock(body string) string {
 
 func updateShellRC(profile, body, desired, journalDir string, details map[string]string) error {
 	if err := os.MkdirAll(journalDir, 0o755); err != nil {
-		return apperrors.New(apperrors.E6004, "shell rc backup directory cannot be created").WithCause(err.Error())
+		return apperrors.New(apperrors.E5009, "shell rc backup directory cannot be created").WithCause(err.Error())
 	}
 	backup, err := os.CreateTemp(journalDir, "profile-*.bak")
 	if err != nil {
-		return apperrors.New(apperrors.E6004, "shell rc backup cannot be created").WithCause(err.Error())
+		return apperrors.New(apperrors.E5009, "shell rc backup cannot be created").WithCause(err.Error())
 	}
 	backupPath := backup.Name()
 	_, writeErr := backup.WriteString(body)
 	closeErr := backup.Close()
 	if writeErr != nil || closeErr != nil {
-		return apperrors.New(apperrors.E6004, "shell rc backup cannot be written").WithCause(fmt.Sprint(writeErr, closeErr))
+		return apperrors.New(apperrors.E5009, "shell rc backup cannot be written").WithCause(fmt.Sprint(writeErr, closeErr))
 	}
 	details["shell_rc_backup"] = backupPath
 	updated := body
@@ -555,7 +555,7 @@ func updateShellRC(profile, body, desired, journalDir string, details map[string
 		updated = strings.TrimRight(stripShellRCBlock(body), "\n") + desired
 	}
 	if err := writeFileAtomic(profile, []byte(updated), 0o644); err != nil {
-		return apperrors.New(apperrors.E6004, "shell rc cannot be written").WithCause(err.Error())
+		return apperrors.New(apperrors.E5009, "shell rc cannot be written").WithCause(err.Error())
 	}
 	return nil
 }
@@ -563,7 +563,7 @@ func updateShellRC(profile, body, desired, journalDir string, details map[string
 func restoreShellRC(backup, profile string) error {
 	content, err := os.ReadFile(backup)
 	if err != nil {
-		return apperrors.New(apperrors.E6004, "shell rc backup cannot be read").WithCause(err.Error())
+		return apperrors.New(apperrors.E5009, "shell rc backup cannot be read").WithCause(err.Error())
 	}
 	return writeFileAtomic(profile, content, 0o644)
 }

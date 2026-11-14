@@ -48,6 +48,7 @@
 | 35 | `README.md` / `docs/README.md` | 入口与索引，不承担规则裁决 |
 | 36 | [`FULL_AUDIT_2026-11-14.md`](FULL_AUDIT_2026-11-14.md) | 2026-11-14 用户/代码双视角全量审查与修复 |
 | 36b | [`FULL_AUDIT_2026-11-14b.md`](FULL_AUDIT_2026-11-14b.md) | 同日第二轮：事务锁语义、journal 路径白名单、只读命令写盘；含未修清单 |
+| 36d | [`FULL_AUDIT_2026-11-14d.md`](FULL_AUDIT_2026-11-14d.md) | 同日第三轮：移除首次提示、--force 恢复幂等、锁心跳降级、错误码 E5009 |
 | 37 | [`SYSTEM_REQUIREMENTS.md`](SYSTEM_REQUIREMENTS.md) | 最低/推荐系统要求、权限授权模型与事务锁 |
 | 38 | [`releases/release-v0.7.0.md`](releases/release-v0.7.0.md) | v0.7.0 release notes |
 | 39 | [`HOWTO.md`](HOWTO.md) | 新手上手指南（第一次使用必读） |

@@ -78,7 +78,7 @@ func checkDiskSpace(destDir string, need int64) error {
 		return nil
 	}
 	if available < uint64(need) {
-		return apperrors.New(apperrors.E5005, "insufficient disk space for extraction").WithDetails(map[string]any{
+		return apperrors.New(apperrors.E5009, "insufficient disk space for extraction").WithDetails(map[string]any{
 			"available": available, "needed": need,
 		})
 	}
@@ -139,7 +139,7 @@ func extractZip(ctx context.Context, archivePath, destDir string, compressed int
 			return apperrors.New(apperrors.E5002, "archive exceeds extraction size limit").WithDetails(map[string]any{"entry": entry.Name})
 		}
 		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-			return apperrors.New(apperrors.E5005, "archive directory cannot be created").WithCause(err.Error())
+			return apperrors.New(apperrors.E5009, "archive directory cannot be created").WithCause(err.Error())
 		}
 		source, err := entry.Open()
 		if err != nil {
@@ -217,14 +217,14 @@ func extractTar(ctx context.Context, archivePath, destDir, format string, compre
 		switch header.Typeflag {
 		case tar.TypeDir:
 			if err := os.MkdirAll(target, 0o755); err != nil {
-				return apperrors.New(apperrors.E5005, "archive directory cannot be created").WithCause(err.Error())
+				return apperrors.New(apperrors.E5009, "archive directory cannot be created").WithCause(err.Error())
 			}
 		case tar.TypeReg:
 			if header.Size > maxFileSize || total+header.Size > maxTotal {
 				return apperrors.New(apperrors.E5002, "archive exceeds extraction size limit").WithDetails(map[string]any{"entry": header.Name})
 			}
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-				return apperrors.New(apperrors.E5005, "archive directory cannot be created").WithCause(err.Error())
+				return apperrors.New(apperrors.E5009, "archive directory cannot be created").WithCause(err.Error())
 			}
 			written, writeErr := writeFile(target, tarReader, os.FileMode(header.Mode).Perm())
 			total += written
@@ -249,16 +249,16 @@ func writeFile(target string, source io.Reader, mode os.FileMode) (int64, error)
 	}
 	file, err := os.OpenFile(target, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode)
 	if err != nil {
-		return 0, apperrors.New(apperrors.E5005, "archive file cannot be written").WithCause(err.Error())
+		return 0, apperrors.New(apperrors.E5009, "archive file cannot be written").WithCause(err.Error())
 	}
 	written, copyErr := io.Copy(file, io.LimitReader(source, maxFileSize+1))
 	closeErr := file.Close()
 	if copyErr != nil {
 		_ = os.Remove(target)
-		return written, apperrors.New(apperrors.E5005, "archive file cannot be written").WithCause(copyErr.Error())
+		return written, apperrors.New(apperrors.E5009, "archive file cannot be written").WithCause(copyErr.Error())
 	}
 	if closeErr != nil {
-		return written, apperrors.New(apperrors.E5005, "archive file cannot be closed").WithCause(closeErr.Error())
+		return written, apperrors.New(apperrors.E5009, "archive file cannot be closed").WithCause(closeErr.Error())
 	}
 	if written > maxFileSize {
 		_ = os.Remove(target)
@@ -291,7 +291,7 @@ func safePath(destDir, name string) (string, error) {
 	target := filepath.Join(destDir, relative)
 	root, err := filepath.Abs(destDir)
 	if err != nil {
-		return "", apperrors.New(apperrors.E5005, "archive destination is invalid").WithCause(err.Error())
+		return "", apperrors.New(apperrors.E5009, "archive destination is invalid").WithCause(err.Error())
 	}
 	absolute, err := filepath.Abs(target)
 	if err != nil {

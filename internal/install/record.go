@@ -43,7 +43,7 @@ func readRecord(dir string) (record, bool) {
 func writeLock(dir string, data model.InstallData) error {
 	payload, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
-		return apperrors.New(apperrors.E5005, "trio lock cannot be encoded").WithCause(err.Error())
+		return apperrors.New(apperrors.E5009, "trio lock cannot be encoded").WithCause(err.Error())
 	}
 	return writeAtomic(filepath.Join(dir, "ffmpeg-trio.lock"), payload)
 }
@@ -51,18 +51,18 @@ func writeLock(dir string, data model.InstallData) error {
 func writeAtomic(path string, payload []byte) error {
 	temp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*.tmp")
 	if err != nil {
-		return apperrors.New(apperrors.E5005, "install metadata temp file cannot be created").WithCause(err.Error())
+		return apperrors.New(apperrors.E5009, "install metadata temp file cannot be created").WithCause(err.Error())
 	}
 	tempPath := temp.Name()
 	_, writeErr := temp.Write(payload)
 	closeErr := temp.Close()
 	if writeErr != nil || closeErr != nil {
 		_ = os.Remove(tempPath)
-		return apperrors.New(apperrors.E5005, "install metadata cannot be written").WithCause(fmt.Sprint(writeErr, closeErr))
+		return apperrors.New(apperrors.E5009, "install metadata cannot be written").WithCause(fmt.Sprint(writeErr, closeErr))
 	}
 	if err := os.Rename(tempPath, path); err != nil {
 		_ = os.Remove(tempPath)
-		return apperrors.New(apperrors.E5005, "install metadata cannot be committed").WithCause(err.Error())
+		return apperrors.New(apperrors.E5009, "install metadata cannot be committed").WithCause(err.Error())
 	}
 	return nil
 }

@@ -1,15 +1,5 @@
 package cli
 
-const firstUseNotice = `OneMoreFFmpeg first-use notes:
-- No config file was found; built-in defaults are in use.
-- Install/uninstall/rollback/provider add write actions are dry-run by default; add --apply to change files.
-- download and capabilities cache may write files immediately; use --no-cache to disable capability cache writes.
-- stdout is reserved for JSON; diagnostics go to stderr. Use --json for scripts.
-- nonfree builds require --allow-nonfree and are for local use only.
-- New here? Read docs/HOWTO.md. Quick start: install --apply, then env set --apply, then open a NEW terminal.
-- Run --in-detail-usage for the complete guide, or read docs/USAGE.md.
-`
-
 const detailedUsage = `OneMoreFFmpeg - detailed usage
 
 BASICS

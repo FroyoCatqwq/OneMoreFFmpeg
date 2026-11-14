@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
 	urfave "github.com/urfave/cli/v3"
@@ -48,6 +47,15 @@ func Run(ctx context.Context, opts RunOptions) (code int) {
 		opts.Args = []string{"one-more-ffmpeg"}
 	}
 	if hasInDetailUsage(opts.Args) {
+		if wantsJSON(opts.Args) {
+			// stdout is JSON-only by contract. Printing a plain-text guide there
+			// produced output no caller could parse, so the combination is
+			// refused -- and the refusal itself is a valid error envelope.
+			err := apperrors.New(apperrors.E1001,
+				"--in-detail-usage writes plain text; drop --json (stdout stays JSON-only)")
+			writeFailure(opts.Stdout, opts.Stderr, true, err)
+			return apperrors.ExitCode(err)
+		}
 		_, _ = fmt.Fprint(opts.Stdout, detailedUsage)
 		return 0
 	}
@@ -71,50 +79,9 @@ func Run(ctx context.Context, opts RunOptions) (code int) {
 	return 0
 }
 
-func showFirstUseNotice(stderr io.Writer, persist bool) {
-	root, err := paths.DataRoot()
-	if err == nil {
-		marker := filepath.Join(root, ".first-use")
-		if _, statErr := os.Stat(marker); statErr == nil {
-			return
-		}
-		// Only a command that is allowed to write drops the marker. A read-only
-		// command (version / detect / doctor) or a --dry-run used to create the
-		// data root and a marker file, which contradicted "dry-run writes
-		// nothing".
-		if persist {
-			_ = os.MkdirAll(root, 0o755)
-			_ = os.WriteFile(marker, []byte("seen\n"), 0o644)
-		}
-	}
-	_, _ = fmt.Fprint(stderr, firstUseNotice)
-}
-
-// writesSomething reports whether the invocation is allowed to create files.
-// Besides --apply commands, download always writes and capabilities writes its
-// cache unless --no-cache is given; read-only commands and dry-runs write nothing.
-func writesSomething(args []string) bool {
-	for _, arg := range args {
-		if arg == "--apply" {
-			return true
-		}
-	}
-	if len(args) == 0 {
-		return false
-	}
-	switch args[0] {
-	case "download":
-		return true
-	case "capabilities":
-		for _, arg := range args {
-			if arg == "--no-cache" {
-				return false
-			}
-		}
-		return true
-	}
-	return false
-}
+// v0.6.x: the first-use banner is gone. Start-up prints nothing beyond the
+// command's own output; the same guidance lives in --in-detail-usage and
+// docs/HOWTO.md, where it is read on purpose instead of on every run.
 
 func New(opts RunOptions) (*urfave.Command, error) {
 	if opts.Stdout == nil {
@@ -171,9 +138,6 @@ func New(opts RunOptions) (*urfave.Command, error) {
 				"log_level", cfg.Log.Level,
 				"log_json", cfg.Log.JSON,
 			)
-			if configPath == "" {
-				showFirstUseNotice(opts.Stderr, writesSomething(cmd.Args().Slice()))
-			}
 			ctx = withConfig(ctx, cfg)
 			return logging.WithLogger(ctx, logger), nil
 		},

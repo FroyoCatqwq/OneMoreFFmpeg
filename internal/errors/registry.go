@@ -56,6 +56,10 @@ const (
 	E5006 Code = "OMF-E5006"
 	E5007 Code = "OMF-E5007"
 	E5008 Code = "OMF-E5008"
+	// E5009 is the general "a file or directory operation failed" code. E5005
+	// keeps its documented meaning (ROLLBACK_FAILED); it used to be borrowed for
+	// every write failure, which made the code useless for callers.
+	E5009 Code = "OMF-E5009"
 
 	E6001 Code = "OMF-E6001"
 	E6002 Code = "OMF-E6002"
@@ -143,14 +147,20 @@ var codeInfo = map[Code]struct {
 	E5003: {"INSTALL_DIR_CONFLICT", "install directory conflict"},
 	E5004: {"CURRENT_SWITCH_FAILED", "current pointer switch failed"},
 	E5005: {"ROLLBACK_FAILED", "rollback failed"},
+	// E5006 is reserved: the number is part of the frozen registry, but no code
+	// path emits it today (RenamePath retries a busy executable instead).
 	E5006: {"EXECUTABLE_BUSY", "executable is busy"},
 	E5007: {"QUARANTINE_FAILED", "quarantine failed"},
 	E5008: {"INSTALL_VALIDATION_FAILED", "post-install validation failed"},
+	E5009: {"IO_FAILED", "file or directory operation failed"},
 
 	E6001: {"ENV_READ_FAILED", "environment read failed"},
 	E6002: {"ENV_WRITE_FAILED", "environment write failed"},
 	E6003: {"SYSTEM_SCOPE_DENIED", "system scope denied or not elevated"},
-	E6004: {"SHELL_RC_DENIED", "shell rc not allowed or backup failed"},
+	// E6004 is reserved for "a policy refused to touch the shell rc". The IO
+	// failures that used to borrow it (read/write/backup) now report E5009, so
+	// a caller can tell "not allowed" (exit 2) from "the disk said no" (exit 1).
+	E6004: {"SHELL_RC_DENIED", "shell rc not allowed"},
 	E6005: {"JOURNAL_FAILED", "journal operation failed"},
 	E6006: {"DOCTOR_UNHEALTHY", "doctor detected unrecoverable state"},
 	E6007: {"NON_MANAGED_FILE", "file is not managed by OneMoreFFmpeg"},

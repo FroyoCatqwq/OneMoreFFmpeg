@@ -7,8 +7,8 @@
 ## 1. 第一次使用注意
 
 1. 写操作默认 dry-run：`install`、`uninstall`、`env set/unset/rollback`、`journal rollback`、`provider add` 都需要 `--apply` 才修改文件；`download` 与能力缓存会立即写文件。
-2. stdout 只输出 JSON；诊断、首次使用提示写 stderr。脚本请始终加 `--json`。
-3. 没有配置文件时使用内置默认值；首次运行会在 stderr 打印一次注意事项，并写入 `<data-root>/.first-use` 标记。
+2. stdout 只输出 JSON；诊断写 stderr。脚本请始终加 `--json`。
+3. 没有配置文件时使用内置默认值；启动时**不打印任何提示**，也不写标记文件。需要完整说明用 `--in-detail-usage` 或读本文档。
 4. data root 由 `ONE_MORE_FFMPEG_HOME` 决定；未设置时 Windows 为 `%LOCALAPPDATA%\OneMoreFFmpeg`，Linux 为 `~/.local/share/onemoreffmpeg`。
 5. nonfree 构建必须显式 `--allow-nonfree`，且只在本机使用；不会随公开产物分发。
 6. 写操作会写 journal；出问题先用 `journal list --json` 找 ID，再 `journal rollback --journal <id> --apply --json`。

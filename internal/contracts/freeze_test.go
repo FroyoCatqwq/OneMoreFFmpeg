@@ -95,7 +95,7 @@ func TestExitCodeContract(t *testing.T) {
 	}
 	exit1 := []apperrors.Code{
 		apperrors.E1001, apperrors.E2001, apperrors.E3002, apperrors.E4001, apperrors.E4002,
-		apperrors.E5004, apperrors.E5005, apperrors.E6005, apperrors.E6006, apperrors.E6009,
+		apperrors.E5004, apperrors.E5005, apperrors.E5009, apperrors.E6005, apperrors.E6006, apperrors.E6009,
 		apperrors.E7006, apperrors.E9001,
 	}
 	for _, code := range exit1 {
