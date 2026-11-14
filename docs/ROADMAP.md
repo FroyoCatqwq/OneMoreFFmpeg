@@ -187,6 +187,9 @@ snap / flatpak 专门适配
 
 ## Phase 6：CLI 外部调用契约
 
+> 状态：**已完成**（2026-11-14）。命令集 / JSON v1 schema / 退出码冻结，`internal/contracts/freeze_test.go` 守护；
+> 外部调用示例见 `examples/external-caller/`；实施与验证见 [`PHASE6_STATUS.md`](PHASE6_STATUS.md)。
+
 内容：
 
 - CLI 子命令稳定化；

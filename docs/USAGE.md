@@ -76,7 +76,7 @@ PowerShell 7 推荐 `Out-File -Encoding utf8`；PowerShell 5 的 `>` 会生成 U
 
 Windows `env set` 写 HKCU\Environment 并广播 `WM_SETTINGCHANGE`；Linux 写 `~/.local/bin` shim 与 `~/.profile` 托管块（`--no-shell-rc`、`--no-path`、`--no-variables`、`--lae-compat` 可控制内容）。当前进程不会立即看到新的 PATH，请打开新终端。`doctor` 默认退出 0，即使 `healthy=false`，脚本必须读取 `data.healthy`；加 `--strict` 后不健康会返回 `OMF-E6006` 并退出 1（报告在 `details.report`）。
 
-系统级（全局）环境：`env set --system --apply` 写 Windows HKLM 系统环境或 Linux `/usr/local/bin` + `/etc/profile.d/onemoreffmpeg.sh`。需要授权——以 Administrator/root 直接运行可放行；否则须显式 `--authorize-system` 表示同意，未授权返回 `OMF-E6003`。工具不会自动 sudo/提权；例如全局安装到 `/root` 必须自行用 `sudo` 运行。详见 [`SYSTEM_REQUIREMENTS.md`](SYSTEM_REQUIREMENTS.md)。
+系统级（全局）环境：`env set --system --apply` 写 Windows HKLM 系统环境或 Linux `/usr/local/bin` + `/etc/profile.d/onemoreffmpeg.sh`。授权——以 Administrator/root 直接运行可放行；未提权时 dry-run 可加 `--authorize-system` 预览，但 `--apply` 必须真正提权（`--authorize-system` 只记录同意、不能替代提权），否则 `OMF-E6003`。工具不会自动 sudo/提权；例如全局安装到 `/root` 必须自行用 `sudo` 运行。详见 [`SYSTEM_REQUIREMENTS.md`](SYSTEM_REQUIREMENTS.md)。
 
 ## 6. 卸载与回滚
 

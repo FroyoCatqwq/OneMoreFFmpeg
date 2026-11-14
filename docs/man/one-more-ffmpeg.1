@@ -74,9 +74,10 @@ dry-run by default and need
 .BR --apply .
 .B --system
 writes system scope (HKLM on Windows, /usr/local/bin + /etc/profile.d on Linux)
-and requires elevation: root/Administrator proceeds directly, otherwise pass
+and requires elevation: root/Administrator proceeds directly. When not elevated,
 .B --authorize-system
-to consent (OMF-E6003 if neither). The tool never elevates itself.
+only permits a dry-run preview; --apply still requires a truly elevated process
+(OMF-E6003 otherwise). Consent cannot grant elevation. The tool never elevates itself.
 .TP
 .B doctor --json [--strict]
 Check data root, current pointer, trio, PATH and pending journals. By default

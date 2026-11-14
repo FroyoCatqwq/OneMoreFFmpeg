@@ -520,7 +520,7 @@ provider 摘要：
 
 参数：`--apply`（默认 dry-run）、`--no-path`、`--no-variables`、`--lae-compat`、`--no-shell-rc`、`--system`、`--authorize-system`；`env rollback --journal <id> --apply` 恢复备份，默认 dry-run。Windows 写入后广播 `WM_SETTINGCHANGE`；Linux 维护 `~/.profile` 托管块与 `~/.local/bin` shim，并支持 `--no-path` / `--no-variables` / `--lae-compat` 控制托管块内容。
 
-`--system` 切换到系统级作用域（Windows `HKLM` 系统环境；Linux `/usr/local/bin` shim + `/etc/profile.d/onemoreffmpeg.sh`）。系统级操作需要授权：进程已提权（root / Administrator）直接放行；否则必须显式传 `--authorize-system` 表示用户同意，未授权返回 `OMF-E6003`（退出 2）。工具绝不自动提权。详见 [`SYSTEM_REQUIREMENTS.md`](SYSTEM_REQUIREMENTS.md)。
+`--system` 切换到系统级作用域（Windows `HKLM` 系统环境；Linux `/usr/local/bin` shim + `/etc/profile.d/onemoreffmpeg.sh`）。授权规则：进程已提权（root / Administrator）直接放行；未提权时 dry-run 可用 `--authorize-system` 预览，但 **`--apply` 必须真正提权**——`--authorize-system` 只记录同意、不能替代提权，未提权的 `--apply` 返回 `OMF-E6003`（退出 2）。工具绝不自动提权。详见 [`SYSTEM_REQUIREMENTS.md`](SYSTEM_REQUIREMENTS.md)。
 
 `env set|unset|rollback` 的 `--apply` 路径持有全局 data root 事务锁 `<data-root>/.transaction.lock`；被其他事务占用且等待超时返回 `OMF-E6009`（退出 1）。
 
@@ -579,6 +579,10 @@ provider 摘要：
 ---
 
 ## 5. 版本与兼容性
+
+> **Phase 6 契约冻结（2026-11-14）**：命令集（18 个 result.command）、`data.schema` 集（17 个，全 `/v1`）与退出码映射已冻结，
+> 由 `internal/contracts/freeze_test.go` 在 CI 中守护——任何静默改动都会使测试失败。契约变更必须走主版本升级与 [`VERSIONING.md`](VERSIONING.md)。
+> 外部消费者见 [`../examples/external-caller/`](../examples/external-caller/README.md)。
 
 - 每个命令的 `data` 对象必须包含 `schema` 字段并带版本；顶层 `onemoreffmpeg.result/v1` 只表示信封；
 - 新增可选字段允许；

@@ -4,7 +4,7 @@
 
 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg>
 
-状态：**Phase 1–5 已完成；已通过全量审查、二次修复与 Windows/Linux e2e。**
+状态：**Phase 1–6 已完成；已通过全量审查、二次修复与 Windows/Linux e2e；CLI 外部契约已冻结。**
 
 > 已实现：`version` / `detect` / `validate` / `capabilities [--only]` / `provider list|add` / `resolve` / `download` / `install` / `uninstall` / `release list|install` / `journal list|rollback` / `env status|set|unset|rollback` / `doctor`。
 > install/uninstall/rollback/provider add 默认 dry-run；download 与能力缓存会立即写文件。

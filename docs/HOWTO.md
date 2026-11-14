@@ -166,7 +166,7 @@ omf install --channel stable --apply --force  # 再干净地装一次
 |---|---|---|
 | `OMF-E3001: provider id is not registered` | provider 名字写错/没写值 | 用 `omf provider list` 里的**完整 id**：`btbn` 或 `bnqdzj-nonfree`。`--provider` 后面必须跟值。 |
 | `OMF-E7001: provider does not offer the requested variant` | 该 provider 没有你要的 variant | nonfree provider 只提供 nonfree：加 `--variant nonfree --allow-nonfree`。 |
-| `OMF-E6003: system scope requires elevation` | 用了 `--system` 但没授权 | 普通用户别用 `--system`；确需全局安装请用 sudo/管理员运行，或加 `--authorize-system`。 |
+| `OMF-E6003: system scope requires elevation` | 用了 `--system` 但未提权 | 普通用户别用 `--system`；确需全局安装请用 sudo/管理员运行。`--authorize-system` 只能用于 dry-run 预览，不能替代提权。 |
 | `OMF-E6009: data root is locked` | 另一个 install/env 正在跑 | 等它结束再试。 |
 | `doctor healthy=false` | 有检查项没过 | 看具体哪行 false，对照 §5。 |
 

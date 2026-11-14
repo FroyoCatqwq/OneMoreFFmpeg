@@ -44,12 +44,18 @@ OneMoreFFmpeg **绝不自动提权**（不会静默调用 `sudo` / `runas`）。
 - 默认所有写入都在用户级 data root 与用户环境（Windows `HKCU\Environment`、Linux `~/.local/bin` + `~/.profile`），普通用户即可完成。
 - 系统级操作（`env set/unset --system`：Windows `HKLM` 系统环境、Linux `/usr/local/bin` + `/etc/profile.d/onemoreffmpeg.sh`）需要授权：
   - 进程**已提权**（Linux `root` / euid 0；Windows Administrator 提升令牌）→ 视为已授权，可直接操作；
-  - 其他情况必须由用户**显式授权**（传 `--authorize-system`）；未授权返回 `OMF-E6003`（退出 2）并告知用户用 `sudo` / 管理员身份运行。
-- 非管理员请求系统级操作时明确拒绝并告知；具备管理员权限但未直接以超户运行的用户，同样需要显式授权。
+  - **未提权 + dry-run**：传 `--authorize-system` 可预览将发生的改动；未传则 `OMF-E6003`（退出 2）；
+  - **未提权 + `--apply`**：一律 `OMF-E6003`（退出 2）。`--authorize-system` 只记录用户同意，**不能替代提权**——写 HKLM / `/usr/local/bin` 必须由真正提权的进程执行，否则会产生半写入的系统作用域。
+- 非管理员请求系统级操作时明确拒绝并告知；具备管理员权限但未直接以超户运行的用户，`--apply` 同样必须先提权（sudo/管理员）。
 - 例：把 FFmpeg 全局安装到 `/root` 等特权目录，必须用 `sudo`（此时进程为 root，直接放行）。
 
 ---
 
 ## 3. 事务并发
 
-`install` / `uninstall` / `env set|unset|rollback` / `journal rollback` 的 `--apply` 路径持有全局 data root 事务锁 `<data-root>/.transaction.lock`，避免并发写互相交错。锁超过 30 秒视为陈旧（进程崩溃）自动回收；活跃锁等待超过 5 秒返回 `OMF-E6009`（退出 1）。dry-run 预览不加锁。
+`install` / `uninstall` / `env set|unset|rollback` / `journal rollback` 的 `--apply` 路径持有全局 data root 事务锁 `<data-root>/.transaction.lock`，避免并发写互相交错。锁文件写入持有者 nonce（`<pid>-<8字节hex>`），持有期间每 5 秒心跳续期，因此**活锁不会**被误判过期；只有崩溃进程停止续期、超过 30 秒才被视为陈旧并回收。释放时校验 nonce，绝不删除别人的锁。活跃锁等待超过 5 秒返回 `OMF-E6009`（退出 1）。dry-run 预览不加锁。
+
+## 4. 回滚路径白名单与只读不写盘
+
+- `env rollback` 从 journal 读取 shim 目录与 shell profile 路径时会做白名单校验（`internal/env/rollback_guard.go`）：shim 目录必须落在 data root 内；shell profile 仅接受 `~/.profile` 与 `/etc/profile.d/onemoreffmpeg.sh`（后者仅 Linux）；越界/相对/空白一律 `OMF-E7001`，dry-run 与 `--apply` 共用同一判断。这防止有人篡改 journal 文件后让回滚往任意目录写文件。
+- 只读命令（`version` / `detect` / `doctor` 等）与所有 dry-run **不创建 data root、不落 `.first-use` 标记**；首次使用提示照常打印到 stderr，但标记仅在带 `--apply` 的调用时写入。

@@ -190,7 +190,7 @@ OMF-Wxxxx  警告码（不导致命令失败）
 
 - `journal rollback` / `env rollback` 的 journal id 强制白名单（拒绝 `..` 与路径分隔符）；id 非法、记录不存在或读取/解析失败统一 `OMF-E6005`（退出 1），dry-run 预览同样先校验；
 - 记录已回滚（`rolled-back`）、action 不在支持列表，或 `env rollback` 指向非 env 记录，属于用法错误 `OMF-E7001`（退出 2），不复用 `E6005`。
-- 系统级授权模型：进程已提权（Linux root / Windows Administrator）直接放行；否则需用户显式 `--authorize-system`，未授权返回 `OMF-E6003`。工具绝不自动 `sudo`/提权；非管理员被拒绝并告知用 sudo/管理员运行。
+- 系统级授权模型：进程已提权（Linux root / Windows Administrator）直接放行；未提权时 dry-run 需 `--authorize-system` 才预览，而 **`--apply` 必须真正提权**（`--authorize-system` 只记录同意、不能替代提权），否则 `OMF-E6003`。工具绝不自动 `sudo`/提权；非管理员被拒绝并告知用 sudo/管理员运行。
 - `doctor` 默认退出 0；`--strict` 在 `healthy=false` 时返回 `OMF-E6006`（退出 1），报告置于 `details.report`。
 - `OMF-E6009` 为 data root 事务锁竞争（install/env/uninstall/rollback 的 `--apply`）；锁超过 30 秒视为陈旧自动回收，活跃锁等待超过 5 秒返回该码。
 

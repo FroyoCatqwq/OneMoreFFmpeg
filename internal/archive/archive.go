@@ -17,12 +17,16 @@ import (
 	"github.com/ulikunitz/xz"
 
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
 )
 
 const (
 	maxEntries  = 100000
 	maxFileSize = 2 << 30
 	maxTotal    = 8 << 30
+	// maxRatio caps uncompressed:compressed expansion to blunt zip/tar bombs.
+	// FFmpeg archives expand well under 100x; 1000x is a generous safety margin.
+	maxRatio = 1000
 )
 
 // FormatFor returns the archive format implied by a file name.
@@ -51,12 +55,39 @@ func Extract(ctx context.Context, archivePath, destDir string) error {
 	if err := ensureEmptyDir(destDir); err != nil {
 		return err
 	}
+	compressed := int64(0)
+	if info, err := os.Stat(archivePath); err == nil {
+		compressed = info.Size()
+	}
 	switch format {
 	case "zip":
-		return extractZip(ctx, archivePath, destDir)
+		return extractZip(ctx, archivePath, destDir, compressed)
 	default:
-		return extractTar(ctx, archivePath, destDir, format)
+		return extractTar(ctx, archivePath, destDir, format, compressed)
 	}
+}
+
+// checkDiskSpace fails early when the volume clearly cannot hold the expected
+// extraction. It is best-effort: an unavailable estimate never blocks extraction.
+func checkDiskSpace(destDir string, need int64) error {
+	if need <= 0 {
+		return nil
+	}
+	available, err := platform.AvailableBytes(destDir)
+	if err != nil {
+		return nil
+	}
+	if available < uint64(need) {
+		return apperrors.New(apperrors.E5005, "insufficient disk space for extraction").WithDetails(map[string]any{
+			"available": available, "needed": need,
+		})
+	}
+	return nil
+}
+
+// ratioExceeded reports whether actual expansion blows past the bomb ceiling.
+func ratioExceeded(total, compressed int64) bool {
+	return compressed > 0 && total > compressed*maxRatio
 }
 
 func ensureEmptyDir(dir string) error {
@@ -70,7 +101,7 @@ func ensureEmptyDir(dir string) error {
 	return nil
 }
 
-func extractZip(ctx context.Context, archivePath, destDir string) error {
+func extractZip(ctx context.Context, archivePath, destDir string, compressed int64) error {
 	reader, err := zip.OpenReader(archivePath)
 	if err != nil {
 		return apperrors.New(apperrors.E5001, "archive cannot be opened").WithCause(err.Error())
@@ -78,6 +109,13 @@ func extractZip(ctx context.Context, archivePath, destDir string) error {
 	defer reader.Close()
 	if len(reader.File) > maxEntries {
 		return apperrors.New(apperrors.E5002, "archive has too many entries").WithDetails(map[string]any{"entries": len(reader.File)})
+	}
+	var declared int64
+	for _, entry := range reader.File {
+		declared += int64(entry.UncompressedSize64)
+	}
+	if err := checkDiskSpace(destDir, declared); err != nil {
+		return err
 	}
 	var total int64
 	for _, entry := range reader.File {
@@ -113,11 +151,14 @@ func extractZip(ctx context.Context, archivePath, destDir string) error {
 		if copyErr != nil {
 			return copyErr
 		}
+		if ratioExceeded(total, compressed) {
+			return apperrors.New(apperrors.E5002, "archive expansion ratio exceeds the safety limit").WithDetails(map[string]any{"entry": entry.Name})
+		}
 	}
 	return nil
 }
 
-func extractTar(ctx context.Context, archivePath, destDir, format string) error {
+func extractTar(ctx context.Context, archivePath, destDir, format string, compressed int64) error {
 	file, err := os.Open(archivePath)
 	if err != nil {
 		return apperrors.New(apperrors.E5001, "archive cannot be opened").WithCause(err.Error())
@@ -190,6 +231,9 @@ func extractTar(ctx context.Context, archivePath, destDir, format string) error 
 			if writeErr != nil {
 				return writeErr
 			}
+			if ratioExceeded(total, compressed) {
+				return apperrors.New(apperrors.E5002, "archive expansion ratio exceeds the safety limit").WithDetails(map[string]any{"entry": header.Name})
+			}
 		default:
 			return apperrors.New(apperrors.E5002, "archive contains a non-regular entry").WithDetails(map[string]any{
 				"entry": header.Name,
@@ -224,20 +268,23 @@ func writeFile(target string, source io.Reader, mode os.FileMode) (int64, error)
 }
 
 // safePath joins name under destDir and rejects escapes, absolute paths and
-// Windows-specific tricks.
+// Windows-specific tricks (drive letters, NTFS alternate data streams, reserved
+// device names, trailing dot/space aliases).
 func safePath(destDir, name string) (string, error) {
 	if name == "" {
 		return "", apperrors.New(apperrors.E5002, "archive entry has an empty name")
 	}
 	cleaned := strings.ReplaceAll(name, "\\", "/")
 	if strings.HasPrefix(cleaned, "/") || strings.Contains(cleaned, "\x00") ||
-		(len(cleaned) >= 2 && cleaned[1] == ':') ||
-		strings.HasPrefix(cleaned, "//") {
+		strings.Contains(cleaned, ":") || strings.HasPrefix(cleaned, "//") {
 		return "", apperrors.New(apperrors.E5002, "archive entry has an unsafe path").WithDetails(map[string]any{"entry": name})
 	}
-	for _, part := range strings.Split(cleaned, "/") {
-		if part == ".." {
+	for _, part := range strings.Split(strings.TrimSuffix(cleaned, "/"), "/") {
+		if part == "" || part == "." || part == ".." {
 			return "", apperrors.New(apperrors.E5002, "archive entry escapes the destination").WithDetails(map[string]any{"entry": name})
+		}
+		if strings.HasSuffix(part, ".") || strings.HasSuffix(part, " ") || isWindowsReservedName(part) {
+			return "", apperrors.New(apperrors.E5002, "archive entry has an unsafe path").WithDetails(map[string]any{"entry": name})
 		}
 	}
 	relative := filepath.FromSlash(cleaned)
@@ -255,4 +302,21 @@ func safePath(destDir, name string) (string, error) {
 		return "", apperrors.New(apperrors.E5002, "archive entry escapes the destination").WithDetails(map[string]any{"entry": name})
 	}
 	return target, nil
+}
+
+// isWindowsReservedName reports legacy DOS device names that Windows resolves
+// specially regardless of extension (e.g. NUL, NUL.txt, COM1.log).
+func isWindowsReservedName(part string) bool {
+	base := strings.ToUpper(part)
+	if dot := strings.IndexByte(base, '.'); dot >= 0 {
+		base = base[:dot]
+	}
+	switch base {
+	case "CON", "PRN", "AUX", "NUL":
+		return true
+	}
+	if len(base) == 4 && (strings.HasPrefix(base, "COM") || strings.HasPrefix(base, "LPT")) {
+		return base[3] >= '1' && base[3] <= '9'
+	}
+	return false
 }

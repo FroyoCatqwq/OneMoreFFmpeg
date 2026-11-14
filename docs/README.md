@@ -1,9 +1,9 @@
 # 文档索引与权威顺序
 
 > 项目：OneMoreFFmpeg
-> 状态：Phase 1–5 已完成并通过全量审查与 Windows/Linux e2e
+> 状态：Phase 1–6 已完成并通过全量审查与 Windows/Linux e2e；CLI 外部契约已冻结
 > 日期：2026-11-14
-> 更新：用户视角 + 代码视角全量审查、缺陷修复、双机 e2e 与文档同步完成，见 `FULL_AUDIT_2026-11-14.md`
+> 更新：Phase 6 契约稳定化（冻结测试 + 外部调用示例）、P2-5 解压加固、deepseek 第二轮改动文档 reconcile，见 `PHASE6_STATUS.md` 与 `FULL_AUDIT_2026-11-14b.md`
 
 ---
 
@@ -51,6 +51,8 @@
 | 37 | [`SYSTEM_REQUIREMENTS.md`](SYSTEM_REQUIREMENTS.md) | 最低/推荐系统要求、权限授权模型与事务锁 |
 | 38 | [`releases/release-v0.7.0.md`](releases/release-v0.7.0.md) | v0.7.0 release notes |
 | 39 | [`HOWTO.md`](HOWTO.md) | 新手上手指南（第一次使用必读） |
+| 40 | [`PHASE6_STATUS.md`](PHASE6_STATUS.md) | Phase 6 CLI 外部契约稳定化与冻结 |
+| 41 | [`../examples/external-caller/README.md`](../examples/external-caller/README.md) | 外部调用示例（不依赖 Go） |
 
 冲突时：
 
