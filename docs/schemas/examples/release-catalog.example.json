@@ -1,0 +1,25 @@
+{
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "release.list",
+  "data": {
+    "schema": "onemoreffmpeg.release-catalog/v1",
+    "provider": "btbn",
+    "channel": "daily",
+    "days": 7,
+    "count": 1,
+    "source": "github:FFmpeg-Builds/FFmpeg-Builds",
+    "entries": [
+      {
+        "channel": "daily",
+        "version": "autobuild-2026-11-09-12-42",
+        "snapshot": "autobuild-2026-11-09-12-42",
+        "release_tag": "autobuild-2026-11-09-12-42",
+        "asset_name": "ffmpeg-master-latest-win64-gpl.zip",
+        "asset_url": "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/autobuild-2026-11-09-12-42/ffmpeg-master-latest-win64-gpl.zip",
+        "published_at": "2026-11-09T12:42:00Z",
+        "provider": "btbn"
+      }
+    ]
+  }
+}

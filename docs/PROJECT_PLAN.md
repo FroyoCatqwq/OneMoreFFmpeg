@@ -312,6 +312,10 @@ DoD：
 
 ### Phase 6：CLI 外部调用契约
 
+> 状态：**已完成**（2026-11-14）。命令集（18 个）、`data.schema` 集（17 个，全 `/v1`）与退出码映射
+> 由 `internal/contracts/freeze_test.go` 守护；外部调用示例在 `examples/external-caller/`；
+> 实施与验证见 [`PHASE6_STATUS.md`](PHASE6_STATUS.md)。
+
 目标：让 LAE / VideoDamage / 脚本通过调用可执行文件稳定集成。
 
 步骤：
@@ -456,6 +460,8 @@ M0 不通过，不进入下载/安装/环境变量写入实现。
 - 未下载任何 FFmpeg；
 - 未安装任何 FFmpeg；
 - 未修改 PATH；
+- （下面几行是**该阶段当时**的范围之外；provider resolve / download 与 install / env 已在 Phase 4–5 实现，
+  Phase 6 冻结契约。包管理器识别与 Go API / 插件仍是**明确不做**，见 ROADMAP。）
 - 未实现 provider resolve / download、install/env；
 - 未实现包管理器识别；
 - 未实现 Go API / 插件；

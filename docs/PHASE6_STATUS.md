@@ -14,7 +14,7 @@
 | schema 冻结 | `internal/model` / `internal/contracts` | 17 个 `data.schema` 全为 `/v1`；`ValidateData` 拒绝未注册 schema（含主版本升级） |
 | 字段级校验 | `internal/contracts` | `ValidateDataFields` 对每个 schema 做运行时字段校验，stdout 输出前必过 |
 | 退出码契约 | `internal/errors` | `exitFor` 唯一裁决：0 成功 / 2 用法 / 1 运行期 / 130 取消；警告码 0 |
-| stdout/stderr 分离 | `internal/cli` | stdout 仅 JSON 信封（result/v1 或 error/v1）；诊断/日志/首次提示走 stderr |
+| stdout/stderr 分离 | `internal/cli` | stdout 仅 JSON 信封（result/v1 或 error/v1）；诊断与日志走 stderr。启动**不打印任何提示**（首次使用提示已于 2026-11-14 移除，见 `FULL_AUDIT_2026-11-14d.md`） |
 | 文件产物 | `internal/install` / `download` | install.json、ffmpeg-trio.lock、artifact.json、SHA256SUMS（release）形状稳定 |
 | 契约冻结测试 | `internal/contracts/freeze_test.go` | 快照命令集 / schema 集 / 退出码；主版本升级与未知命令被拒绝 |
 | 外部调用示例 | `examples/external-caller/` | Python + PowerShell，仅消费 stdout JSON，不 import Go / 不链接 Go runtime |

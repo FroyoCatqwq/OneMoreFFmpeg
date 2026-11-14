@@ -70,4 +70,6 @@
 | P2-4 | 压缩炸弹比例检查依赖 `os.Stat`，失败时静默失效；tar 路径没有磁盘空间预检 |
 | P2-5 | `install --json` 的 dry-run 输出 `journal_id: ""`，而 `env-set` / `uninstall` 直接省略该字段 |
 
-这几项都不影响默认 dry-run 路径；P2-2/P2-5 建议与 Phase 6 的 schema 稳定化一起做。
+这几项都不影响默认 dry-run 路径。Phase 6 的契约冻结随后已完成（18 命令 / 17 个 `/v1` data schema /
+退出码，见 [`PHASE6_STATUS.md`](PHASE6_STATUS.md)），17 个 data schema 现在每个都有 golden example；
+P2-2（journal 损坏记录可见性）与 P2-5（`journal_id` 空串 vs 省略）留待 Phase 7 或单独一轮。

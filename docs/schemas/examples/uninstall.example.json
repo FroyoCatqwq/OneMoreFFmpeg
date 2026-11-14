@@ -1,0 +1,12 @@
+{
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "uninstall",
+  "data": {
+    "schema": "onemoreffmpeg.uninstall/v1",
+    "root_dir": "D:/OneMoreFFmpeg/apps/btbn/autobuild-2026-11-09-12-42/0123456789abcdef",
+    "dry_run": true,
+    "applied": false,
+    "journal_id": "journal-0123456789abcdef"
+  }
+}

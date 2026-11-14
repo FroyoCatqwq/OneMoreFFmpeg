@@ -107,7 +107,8 @@
 | `release list` / `release install` | 已实现（动态官方版本 + 近 7 天快照） |
 | `capabilities --only <kind>` | 已实现（单命令、单列表输出） |
 
-未实现命令的 data 表与示例仍是**计划契约**，用于冻结字段形状；调用会得到 `OMF-E7001`。
+18 个命令的 data 表与示例**均已实现**，并由 `internal/contracts` 做字段级校验；`data.schema` 冻结为
+`/v1`，未注册的 schema 或主版本升级会得到 `OMF-E7001`（见 [`PHASE6_STATUS.md`](PHASE6_STATUS.md)）。
 
 ### 4.1 `version`
 

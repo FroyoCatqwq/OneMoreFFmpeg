@@ -1,0 +1,12 @@
+{
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "journal.rollback",
+  "data": {
+    "schema": "onemoreffmpeg.journal-action/v1",
+    "journal_id": "journal-0123456789abcdef",
+    "action": "install",
+    "applied": true,
+    "detail": "restored previous installation from quarantine"
+  }
+}

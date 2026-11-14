@@ -24,9 +24,40 @@ func repoRoot(t *testing.T) string {
 
 func TestValidateExamples(t *testing.T) {
 	root := repoRoot(t)
-	count, err := contracts.ValidateExamplesDir(filepath.Join(root, "docs", "schemas", "examples"))
+	dir := filepath.Join(root, "docs", "schemas", "examples")
+	_, err := contracts.ValidateExamplesDir(dir)
 	require.NoError(t, err)
-	require.Equal(t, 13, count)
+
+	// A schema without a golden example has no field-level guard at all, which
+	// is how uninstall / journal-* / capability-list / release-catalog went
+	// unchecked until now. Require one example per frozen data schema instead of
+	// pinning a count that silently drifts.
+	covered := make(map[string]bool, len(model.KnownDataSchemas))
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+		payload, readErr := os.ReadFile(filepath.Join(dir, entry.Name()))
+		require.NoError(t, readErr)
+		var envelope struct {
+			Data struct {
+				Schema string `json:"schema"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(payload, &envelope), entry.Name())
+		if envelope.Data.Schema != "" {
+			covered[envelope.Data.Schema] = true
+		}
+	}
+	var missing []string
+	for schema := range model.KnownDataSchemas {
+		if !covered[schema] {
+			missing = append(missing, schema)
+		}
+	}
+	require.Empty(t, missing, "data schemas without an example: %v", missing)
 }
 
 func TestValidateErrorRegistryDocsBidirectional(t *testing.T) {
