@@ -76,16 +76,19 @@ jobs:
         run: |
           # Public releases must never ship FFmpeg/nonfree binaries. Only our
           # two CLI executables plus checksums are allowed in dist/.
+          # Only the two CLI executables may exist here. Releasing FFmpeg
+          # binaries is prevented by allow-listing filenames, not by scanning
+          # binary contents (the CLI itself contains strings like "nonfree"
+          # for its provider id, which a content grep would falsely reject).
           allowed_re='^one-more-ffmpeg-v[0-9.]+-windows-amd64\.exe$|^one-more-ffmpeg-v[0-9.]+-linux-amd64$'
-          find dist -maxdepth 1 -type f -printf '%f\n' | while read -r f; do
+          count=0
+          while IFS= read -r f; do
+            count=$((count + 1))
             echo "$f" | grep -Eq "$allowed_re" || { echo "unexpected asset: $f" >&2; exit 1; }
-          done
-          if grep -rqiE 'ffmpeg-n[0-9]|autobuild-|nonfree' dist; then
-            echo "release assets appear to contain FFmpeg/nonfree payloads" >&2
-            exit 1
-          fi
-          file dist/* | grep -q 'PE32' || { echo "missing Windows PE binary" >&2; exit 1; }
-          file dist/* | grep -q 'ELF' || { echo "missing Linux ELF binary" >&2; exit 1; }
+          done < <(find dist -maxdepth 1 -type f -printf '%f\n' | sort)
+          [ "$count" -eq 2 ] || { echo "expected exactly 2 release binaries, found $count" >&2; exit 1; }
+          file dist/*.exe | grep -q 'PE32' || { echo "missing Windows PE binary" >&2; exit 1; }
+          file dist/one-more-ffmpeg-v*-linux-amd64 | grep -q 'ELF' || { echo "missing Linux ELF binary" >&2; exit 1; }
 
       - name: Generate checksums
         shell: bash
