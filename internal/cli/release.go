@@ -39,6 +39,9 @@ func releaseCommand() *urfave.Command {
 			if cmd.NArg() > 0 {
 				return apperrors.New(apperrors.E7001, "unknown release subcommand")
 			}
+			if err := rejectPlainTextUnderJSON(cmd); err != nil {
+				return err
+			}
 			return urfave.DefaultShowSubcommandHelp(cmd)
 		},
 	}

@@ -52,6 +52,15 @@ func TestFrozenCommandSet(t *testing.T) {
 	require.Equal(t, frozenCommands, actual, "the CLI command set is frozen; change it only via a contract revision")
 }
 
+func TestFrozenCommandsHaveSchemaMapping(t *testing.T) {
+	for _, command := range frozenCommands {
+		allowed, ok := CommandDataSchemas[command]
+		require.True(t, ok, "frozen command has no command->schema mapping: %s", command)
+		require.NotEmpty(t, allowed, "command has no allowed data schema: %s", command)
+	}
+	require.Len(t, CommandDataSchemas, len(frozenCommands), "command->schema map must match the frozen set exactly")
+}
+
 func TestFrozenSchemaSet(t *testing.T) {
 	actual := make([]string, 0, len(model.KnownDataSchemas))
 	for schema := range model.KnownDataSchemas {

@@ -1,0 +1,115 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to release (e.g. v0.9.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+env:
+  CGO_ENABLED: "0"
+  GO_VERSION: "1.27.x"
+
+jobs:
+  release:
+    name: build, verify, publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Resolve version from ref
+        id: version
+        shell: bash
+        run: |
+          ref="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
+          version="${ref#v}"
+          echo "tag=$ref" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          case "$version" in
+            *[!0-9.]*|"") echo "invalid semver-ish version: $version" >&2; exit 1 ;;
+          esac
+
+      - name: Verify release notes exist
+        shell: bash
+        run: |
+          notes="docs/releases/release-${{ steps.version.outputs.tag }}.md"
+          if [ ! -f "$notes" ]; then
+            echo "missing $notes; add release notes before tagging" >&2
+            exit 1
+          fi
+
+      - name: Pre-release quality gate
+        run: go test -count=1 ./...
+
+      - name: Build release binaries (VERSIONING.md naming)
+        shell: bash
+        run: |
+          mkdir -p dist
+          VERSION="${{ steps.version.outputs.version }}"
+          COMMIT="${{ github.sha }}"
+          BUILT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          LDFLAGS="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildTime=${BUILT}"
+          GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "$LDFLAGS" \
+            -o "dist/one-more-ffmpeg-v${VERSION}-windows-amd64.exe" ./cmd/one-more-ffmpeg
+          GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "$LDFLAGS" \
+            -o "dist/one-more-ffmpeg-v${VERSION}-linux-amd64" ./cmd/one-more-ffmpeg
+
+      - name: Guard - release assets must be CLI binaries only
+        shell: bash
+        run: |
+          # Public releases must never ship FFmpeg/nonfree binaries. Only our
+          # two CLI executables plus checksums are allowed in dist/.
+          allowed_re='^one-more-ffmpeg-v[0-9.]+-windows-amd64\.exe$|^one-more-ffmpeg-v[0-9.]+-linux-amd64$'
+          find dist -maxdepth 1 -type f -printf '%f\n' | while read -r f; do
+            echo "$f" | grep -Eq "$allowed_re" || { echo "unexpected asset: $f" >&2; exit 1; }
+          done
+          if grep -rqiE 'ffmpeg-n[0-9]|autobuild-|nonfree' dist; then
+            echo "release assets appear to contain FFmpeg/nonfree payloads" >&2
+            exit 1
+          fi
+          file dist/* | grep -q 'PE32' || { echo "missing Windows PE binary" >&2; exit 1; }
+          file dist/* | grep -q 'ELF' || { echo "missing Linux ELF binary" >&2; exit 1; }
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          cd dist
+          sha256sum one-more-ffmpeg-v*-windows-amd64.exe one-more-ffmpeg-v*-linux-amd64 > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/one-more-ffmpeg-v*-*
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          notes="docs/releases/release-${tag}.md"
+          gh release create "$tag" \
+            --title "OneMoreFFmpeg ${tag}" \
+            --notes-file "$notes" \
+            --verify-tag \
+            dist/one-more-ffmpeg-v*-windows-amd64.exe \
+            dist/one-more-ffmpeg-v*-linux-amd64 \
+            dist/SHA256SUMS.txt

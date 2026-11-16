@@ -60,18 +60,21 @@ func Run(ctx context.Context, opts RunOptions) (code int) {
 	if len(opts.Args) == 0 {
 		opts.Args = []string{"one-more-ffmpeg"}
 	}
-	if hasInDetailUsage(opts.Args) {
+	plainTextRequest := hasInDetailUsage(opts.Args) || hasHelpFlag(opts.Args)
+	if plainTextRequest {
 		if wantsJSON(opts.Args) {
-			// stdout is JSON-only by contract. Printing a plain-text guide there
-			// produced output no caller could parse, so the combination is
-			// refused -- and the refusal itself is a valid error envelope.
+			// stdout is JSON-only by contract. Help/usage text has no JSON
+			// envelope, so the combination is refused with a valid error
+			// envelope rather than dumping plain text onto stdout.
 			err := apperrors.New(apperrors.E1001,
-				"--in-detail-usage writes plain text; drop --json (stdout stays JSON-only)")
+				"help/usage writes plain text; drop --json (stdout stays JSON-only)")
 			writeFailure(opts.Stdout, opts.Stderr, true, err)
 			return apperrors.ExitCode(err)
 		}
-		_, _ = fmt.Fprint(opts.Stdout, detailedUsage)
-		return 0
+		if hasInDetailUsage(opts.Args) {
+			_, _ = fmt.Fprint(opts.Stdout, detailedUsage)
+			return 0
+		}
 	}
 	defer func() {
 		if recovered := recover(); recovered != nil {
@@ -164,6 +167,9 @@ func New(opts RunOptions) (*urfave.Command, error) {
 			if cmd.NArg() > 0 {
 				return apperrors.New(apperrors.E7001, "unknown command").WithDetails(map[string]any{"args": cmd.Args().Slice()})
 			}
+			if err := rejectPlainTextUnderJSON(cmd); err != nil {
+				return err
+			}
 			return urfave.ShowRootCommandHelp(cmd)
 		},
 		OnUsageError: func(ctx context.Context, cmd *urfave.Command, err error, isSubcommand bool) error {
@@ -210,6 +216,9 @@ var takesValue = map[string]bool{
 func hasInDetailUsage(args []string) bool {
 	for index := 0; index < len(args); index++ {
 		arg := args[index]
+		if arg == "--" {
+			break
+		}
 		if arg == "--in-detail-usage" || arg == "-in-detail-usage" {
 			return true
 		}
@@ -219,6 +228,51 @@ func hasInDetailUsage(args []string) bool {
 		}
 	}
 	return false
+}
+
+// hasHelpFlag detects --help/-h requested as a flag (not as a flag value).
+// Combined with --json it must be refused so stdout stays JSON-only.
+func hasHelpFlag(args []string) bool {
+	for index := 0; index < len(args); index++ {
+		arg := args[index]
+		if arg == "--" {
+			break
+		}
+		if arg == "--help" || arg == "-h" || arg == "-help" {
+			return true
+		}
+		name, _, hasEquals := strings.Cut(arg, "=")
+		if takesValue[name] && !hasEquals {
+			index++
+		}
+	}
+	return false
+}
+
+// rejectPlainTextUnderJSON guards parent commands whose action only prints
+// human-readable help. Under --json such output has no envelope.
+func rejectPlainTextUnderJSON(cmd *urfave.Command) error {
+	if jsonEnabled(cmd) {
+		return apperrors.New(apperrors.E1001,
+			"help/usage writes plain text; drop --json (stdout stays JSON-only)")
+	}
+	return nil
+}
+
+// rejectOfflineResolveFlags rejects provider flags that are silently ignored
+// when an offline --release file is supplied. Failing fast avoids download and
+// install acting on a source the caller did not intend.
+func rejectOfflineResolveFlags(cmd *urfave.Command) error {
+	if strings.TrimSpace(cmd.String("release")) == "" {
+		return nil
+	}
+	for _, name := range []string{"provider", "channel", "target", "variant", "linkage", "release-line", "release-tag"} {
+		if cmd.IsSet(name) {
+			return apperrors.New(apperrors.E1001, "--release cannot be combined with provider resolve flags").
+				WithDetails(map[string]any{"flag": "--" + name})
+		}
+	}
+	return nil
 }
 
 func sanitizePanic(recovered any) string {

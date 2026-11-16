@@ -44,10 +44,81 @@ var knownCommands = map[string]struct{}{
 	"release.list":     {},
 }
 
+// commandDataSchemas is the authoritative command -> allowed data.schema map.
+// It is shared by example validation, freeze tests and runtime result output so
+// a command can never emit a schema it is not contracted to emit.
+var CommandDataSchemas = map[string][]string{
+	"version":          {model.VersionSchema},
+	"detect":           {model.DetectSchema},
+	"validate":         {model.ValidateSchema},
+	"capabilities":     {model.CapabilitiesSchema, model.CapabilityListSchema}, // --only emits a capability-list
+	"provider.list":    {model.ProviderListSchema},
+	"provider.add":     {model.ProviderAddSchema},
+	"resolve":          {model.ReleaseSchema},
+	"download":         {model.ArtifactSchema},
+	"install":          {model.InstallSchema},
+	"env.status":       {model.EnvStatusSchema},
+	"env.set":          {model.EnvSetSchema},
+	"env.unset":        {model.EnvSetSchema},
+	"env.rollback":     {model.EnvSetSchema},
+	"doctor":           {model.DoctorSchema},
+	"uninstall":        {model.UninstallSchema},
+	"journal.list":     {model.JournalListSchema},
+	"journal.rollback": {model.JournalActionSchema},
+	"release.list":     {model.ReleaseCatalogSchema},
+}
+
 // ValidateCommand checks that a result command is part of the frozen CLI set.
 func ValidateCommand(command string) error {
 	if _, ok := knownCommands[command]; !ok {
 		return apperrors.New(apperrors.E7003, "unknown result.command").WithDetails(map[string]any{"command": command})
+	}
+	return nil
+}
+
+// ValidateCommandData checks that (command, data.schema) is an allowed pair.
+// It is the single source of truth used at runtime and for golden examples.
+func ValidateCommandData(command string, data any) error {
+	if err := ValidateCommand(command); err != nil {
+		return err
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return apperrors.New(apperrors.E7006, "data cannot be serialized").WithCause(err.Error())
+	}
+	var object map[string]any
+	if err := json.Unmarshal(raw, &object); err != nil {
+		return apperrors.New(apperrors.E7003, "data is not a JSON object").WithCause(err.Error())
+	}
+	schema, _ := object["schema"].(string)
+	allowed := CommandDataSchemas[command]
+	for _, candidate := range allowed {
+		if schema == candidate {
+			return nil
+		}
+	}
+	return apperrors.New(apperrors.E7003, "command emits an unexpected data.schema").
+		WithDetails(map[string]any{"command": command, "schema": schema, "allowed": allowed})
+}
+
+// ErrorObjectFieldsAreValid enforces the published error-envelope field rules.
+func ErrorObjectFieldsAreValid(code, message string, details map[string]any, cause string) error {
+	if !apperrors.IsKnown(code) {
+		return apperrors.New(apperrors.E7003, "unknown error.code").WithDetails(map[string]any{"code": code})
+	}
+	if message == "" || utf8.RuneCountInString(message) > 200 {
+		return apperrors.New(apperrors.E7003, "error.message must be 1..200 characters")
+	}
+	if details == nil {
+		return apperrors.New(apperrors.E7003, "error.details must be an object")
+	}
+	if cause != "" {
+		if utf8.RuneCountInString(cause) > 500 {
+			return apperrors.New(apperrors.E7003, "error.cause must be at most 500 characters")
+		}
+		if looksLikeCredential(cause) {
+			return apperrors.New(apperrors.E7003, "error.cause must not contain credentials")
+		}
 	}
 	return nil
 }
@@ -110,9 +181,6 @@ func ValidateExample(path string) error {
 		if !ok || command == "" {
 			return apperrors.New(apperrors.E7003, "result.command is required")
 		}
-		if _, ok := knownCommands[command]; !ok {
-			return apperrors.New(apperrors.E7003, "unknown result.command").WithDetails(map[string]any{"command": command})
-		}
 		data, ok := obj["data"].(map[string]any)
 		if !ok {
 			return apperrors.New(apperrors.E7003, "result.data is required")
@@ -123,6 +191,10 @@ func ValidateExample(path string) error {
 		}
 		if _, ok := model.KnownDataSchemas[dataSchema]; !ok {
 			return apperrors.New(apperrors.E7003, "unknown result.data.schema").WithDetails(map[string]any{"schema": dataSchema})
+		}
+		// The example must use a schema the command is actually allowed to emit.
+		if err := ValidateCommandData(command, data); err != nil {
+			return err
 		}
 		if err := validateDataFields(dataSchema, data); err != nil {
 			return err
@@ -136,24 +208,19 @@ func ValidateExample(path string) error {
 		if !ok || code == "" {
 			return apperrors.New(apperrors.E7003, "error.code is required")
 		}
-		if !apperrors.IsKnown(code) {
-			return apperrors.New(apperrors.E7003, "unknown error.code").WithDetails(map[string]any{"code": code})
-		}
 		message, ok := obj["message"].(string)
-		if !ok || message == "" || utf8.RuneCountInString(message) > 200 {
-			return apperrors.New(apperrors.E7003, "error.message must be 1..200 characters")
+		if !ok {
+			return apperrors.New(apperrors.E7003, "error.message is required")
 		}
-		if _, ok := obj["details"].(map[string]any); !ok {
-			return apperrors.New(apperrors.E7003, "error.details must be an object")
-		}
+		details, _ := obj["details"].(map[string]any)
+		cause, _ := obj["cause"].(string)
 		if rawCause, present := obj["cause"]; present {
-			cause, ok := rawCause.(string)
-			if !ok || utf8.RuneCountInString(cause) > 500 {
-				return apperrors.New(apperrors.E7003, "error.cause must be a string of at most 500 characters")
+			if _, ok := rawCause.(string); !ok {
+				return apperrors.New(apperrors.E7003, "error.cause must be a string")
 			}
-			if looksLikeCredential(cause) {
-				return apperrors.New(apperrors.E7003, "error.cause must not contain credentials")
-			}
+		}
+		if err := ErrorObjectFieldsAreValid(code, message, details, cause); err != nil {
+			return err
 		}
 	default:
 		return apperrors.New(apperrors.E7003, "unknown example schema")
@@ -494,6 +561,22 @@ func validateCapabilities(data map[string]any) error {
 	} {
 		if _, ok := data[field]; !ok {
 			return apperrors.New(apperrors.E7003, "capabilities field missing").WithDetails(map[string]any{"field": field})
+		}
+	}
+	if fingerprint, ok := data["fingerprint"].(string); !ok || !sha256Pattern.MatchString(fingerprint) {
+		return apperrors.New(apperrors.E7003, "capabilities.fingerprint must be lowercase hex sha256")
+	}
+	for _, field := range []string{"version", "license", "help"} {
+		if _, ok := data[field].(map[string]any); !ok {
+			return apperrors.New(apperrors.E7003, "capabilities field must be an object").WithDetails(map[string]any{"field": field})
+		}
+	}
+	for _, field := range []string{
+		"muxers", "demuxers", "devices", "decoders", "encoders", "filters",
+		"pixel_formats", "channel_layouts", "sample_formats", "warnings",
+	} {
+		if _, ok := data[field].([]any); !ok {
+			return apperrors.New(apperrors.E7003, "capabilities field must be an array").WithDetails(map[string]any{"field": field})
 		}
 	}
 	return nil

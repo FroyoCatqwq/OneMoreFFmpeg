@@ -233,7 +233,8 @@ func (c *Collector) runCommands(ctx context.Context, installation model.Installa
 				if recovered := recover(); recovered != nil {
 					mu.Lock()
 					if panicErr == nil {
-						panicErr = apperrors.New(apperrors.E9002, "panic recovered during capability collection").WithCause(fmt.Sprint(recovered)).WithDetails(map[string]any{"command": spec.Key})
+						// Only the panic type is safe on the wire; payloads may carry paths or tokens.
+						panicErr = apperrors.New(apperrors.E9002, "panic recovered during capability collection").WithCause(fmt.Sprintf("panic of type %T", recovered)).WithDetails(map[string]any{"command": spec.Key})
 					}
 					mu.Unlock()
 				}

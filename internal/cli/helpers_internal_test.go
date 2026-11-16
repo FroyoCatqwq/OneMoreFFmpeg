@@ -7,6 +7,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 )
 
 func TestOutsideAppsOnlyRejectsTrueParent(t *testing.T) {
@@ -29,6 +32,28 @@ func TestWarnToStderrUsesInjectedWriter(t *testing.T) {
 	ctx := withStderr(context.Background(), &buf)
 	warnToStderr(ctx)("degraded")
 	require.Contains(t, buf.String(), "warning: degraded")
+}
+
+func TestHasHelpFlag(t *testing.T) {
+	require.True(t, hasHelpFlag([]string{"--json", "--help"}))
+	require.True(t, hasHelpFlag([]string{"provider", "-h"}))
+	require.False(t, hasHelpFlag([]string{"--help-topic", "--help"}), "flag value must be skipped")
+	require.False(t, hasHelpFlag([]string{"--", "--help"}), "args after -- are not flags")
+}
+
+func TestHasInDetailUsageStopsAtSeparator(t *testing.T) {
+	require.False(t, hasInDetailUsage([]string{"--", "--in-detail-usage"}))
+	require.True(t, hasInDetailUsage([]string{"version", "--in-detail-usage"}))
+}
+
+func TestErrorObjectDegradesOffContractEnvelope(t *testing.T) {
+	long := strings.Repeat("x", 600)
+	obj := errorObject(apperrors.New(apperrors.E7001, long))
+	require.Equal(t, model.ErrorSchema, obj.Schema)
+	require.Equal(t, string(apperrors.E9001), obj.Code)
+	require.NotContains(t, obj.Message, long)
+	require.Equal(t, map[string]any{}, obj.Details)
+	require.Empty(t, obj.Cause)
 }
 
 func TestTakesValueHasCompleteSet(t *testing.T) {

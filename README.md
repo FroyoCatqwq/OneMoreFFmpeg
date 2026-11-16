@@ -4,8 +4,9 @@
 
 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg>
 
-状态：**v0.9.0**（2026-11-14）：Phase 1–6 已完成，CLI 外部契约已冻结；Phase 1–6 收口轮修完
-全部登记缺陷；本地 Windows + Fedora 45 + Windows Server 2025 三机 `go test` / e2e 全绿。
+状态：**v0.9.0**（2026-11-14，Phase 7 质量门禁于 2026-11-16 落地）：Phase 1–7 已完成，CLI 外部契约已冻结；
+Phase 1–6 收口轮及 Phase 7 审查发现的缺陷均已修复；本地 Windows + Linux CI 服务器 + Docker 全新环境
+`go test` / e2e 全绿，GitHub Actions 含 gofmt/vet/govulncheck/fuzz 门禁与 tag 发布流水线。
 当前产物见 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/tag/v0.9.0)。
 
 > 已实现：`version` / `detect` / `validate` / `capabilities [--only]` / `provider list|add` / `resolve` / `download` / `install` / `uninstall` / `release list|install` / `journal list|rollback` / `env status|set|unset|rollback` / `doctor`。

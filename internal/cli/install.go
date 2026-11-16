@@ -40,6 +40,9 @@ func installCommand() *urfave.Command {
 			if err := rejectExtraArgs(cmd); err != nil {
 				return err
 			}
+			if err := rejectOfflineResolveFlags(cmd); err != nil {
+				return err
+			}
 			var release model.Release
 			var err error
 			if path := strings.TrimSpace(cmd.String("release")); path != "" {
@@ -118,6 +121,11 @@ func installArchivePath(ctx context.Context, cmd *urfave.Command, cfg config.Con
 		if err != nil {
 			return "", err
 		}
+	}
+	if len(release.AssetSHA256) < 16 {
+		return "", apperrors.New(apperrors.E3002, "release asset sha256 is too short").WithDetails(map[string]any{
+			"asset": release.AssetName, "sha256": release.AssetSHA256,
+		})
 	}
 	expected := filepath.Join(directory, release.AssetSHA256[:16], release.AssetName)
 	if !apply {

@@ -47,6 +47,9 @@ func downloadCommand() *urfave.Command {
 			if err := rejectExtraArgs(cmd); err != nil {
 				return err
 			}
+			if err := rejectOfflineResolveFlags(cmd); err != nil {
+				return err
+			}
 			cfg := configFrom(ctx)
 			maxBytes := cfg.Download.MaxBytes
 			if cmd.IsSet("max-bytes") {

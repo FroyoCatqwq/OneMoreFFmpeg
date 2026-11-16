@@ -1,0 +1,11 @@
+services:
+  e2e-fresh:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: omf-e2e-fresh:local
+    # The container only needs outbound access to GitHub (Bats) and PyPI (uv).
+    # No host data root is mounted: everything is created from scratch inside.
+    init: true
+    # Note: do not mount /tmp as tmpfs here - Go builds test binaries there and
+    # the default tmpfs is noexec, which breaks `go test`.

@@ -25,6 +25,9 @@ func providerCommand() *urfave.Command {
 			if cmd.NArg() > 0 {
 				return apperrors.New(apperrors.E7001, "unknown provider subcommand").WithDetails(map[string]any{"args": cmd.Args().Slice()})
 			}
+			if err := rejectPlainTextUnderJSON(cmd); err != nil {
+				return err
+			}
 			return urfave.DefaultShowSubcommandHelp(cmd)
 		},
 	}

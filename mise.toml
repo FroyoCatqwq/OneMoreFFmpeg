@@ -7,7 +7,7 @@ OMF_E2E_PYTHON = "3.14"
 
 [tasks."e2e-pytest"]
 description = "Run cross-platform CLI e2e tests with pytest/asyncio"
-run = "uv run --python 3.14 --with-requirements tests/e2e/requirements.txt pytest -n auto --timeout=180 tests/e2e/test_cli_e2e.py"
+run = "uv run --python 3.14 --with-requirements tests/e2e/requirements.txt pytest -n auto --timeout=180 tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py"
 
 [tasks."e2e-robot"]
 description = "Run Robot Framework smoke suite"
@@ -24,3 +24,21 @@ run = "uv run --python 3.14 --with-requirements tests/e2e/requirements.txt pytho
 [tasks."e2e-all"]
 description = "Run the default cross-platform e2e suites (pytest + Robot). Bats needs bats-core and e2e-linux-server needs a configured server; run those separately."
 depends = ["e2e-pytest", "e2e-robot"]
+
+[tasks.fuzz]
+description = "Short fuzz smoke across parsers/URL and input guards"
+run = """
+go test ./internal/capabilities -run='^$' -fuzz=FuzzParseList -fuzztime=20s
+go test ./internal/capabilities -run='^$' -fuzz=FuzzParseVersion -fuzztime=20s
+go test ./internal/contracts -run='^$' -fuzz=FuzzIsHTTPS -fuzztime=20s
+go test ./internal/contracts -run='^$' -fuzz=FuzzSafeAssetName -fuzztime=20s
+go test ./internal/cli -run='^$' -fuzz=FuzzNormalizeJSONInput -fuzztime=20s
+"""
+
+[tasks.quality]
+description = "go vet + go test + fuzz smoke (gofmt gate is enforced in CI)"
+depends = ["fuzz"]
+run = """
+go vet ./...
+go test -count=1 ./...
+"""

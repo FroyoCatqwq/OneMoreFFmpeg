@@ -82,7 +82,9 @@ func encodeJSON(w io.Writer, value any) error {
 }
 
 func writeResult(cmd *urfave.Command, command string, data any, human string) error {
-	if err := contracts.ValidateCommand(command); err != nil {
+	// Validate the contracted (command, data.schema) pair before anything is
+	// written so a regression can never leak an unparseable/off-contract payload.
+	if err := contracts.ValidateCommandData(command, data); err != nil {
 		return err
 	}
 	if err := contracts.ValidateDataFields(data); err != nil {
@@ -104,7 +106,7 @@ func writeResult(cmd *urfave.Command, command string, data any, human string) er
 
 func errorObject(err error) model.ErrorObject {
 	typed := apperrors.From(err)
-	return model.ErrorObject{
+	obj := model.ErrorObject{
 		Schema:  model.ErrorSchema,
 		OK:      false,
 		Code:    string(typed.Code),
@@ -112,6 +114,19 @@ func errorObject(err error) model.ErrorObject {
 		Details: typed.Details,
 		Cause:   typed.Cause,
 	}
+	// Never emit an off-contract error envelope: an oversized or credential-
+	// bearing message/cause must degrade to a fixed safe error rather than
+	// leaking data or breaking consumers' parsers.
+	if validationErr := contracts.ErrorObjectFieldsAreValid(obj.Code, obj.Message, obj.Details, obj.Cause); validationErr != nil {
+		return model.ErrorObject{
+			Schema:  model.ErrorSchema,
+			OK:      false,
+			Code:    string(apperrors.E9001),
+			Message: "internal error envelope violated the contract",
+			Details: map[string]any{},
+		}
+	}
+	return obj
 }
 
 func writeFailure(stdout, stderr io.Writer, asJSON bool, err error) {

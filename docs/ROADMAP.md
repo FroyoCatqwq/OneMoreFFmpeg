@@ -1,6 +1,6 @@
 # 路线图
 
-> 状态：Phase 0–6 已完成（2026-11-14），Phase 7 未开始；当前版本 v0.9.0
+> 状态：Phase 0–7 全部完成（Phase 7 于 2026-11-16 完成）；当前版本 v0.9.0
 > 原则：先只读、后写入；先 CLI-first，后考虑 API/插件/包管理器
 
 ---
@@ -211,19 +211,26 @@ snap / flatpak 专门适配
 
 ---
 
-## Phase 7：质量 / CI / Release（未开始）
+## Phase 7：质量 / CI / Release（已完成，2026-11-16）
 
-内容：
+> 工作流水线与验证结果见 [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml)、
+> [`.github/workflows/release.yml`](../.github/workflows/release.yml)、[`Dockerfile`](../Dockerfile)、
+> [`E2E_TESTING.md`](E2E_TESTING.md)。
 
-- GitHub Actions；
-- Windows + Linux；
-- Go 1.27.4；
-- `gofmt` / `go vet` / `go test`；
-- `govulncheck`；
-- fuzz URL / parser；
-- 真实资产集成测试；
-- checksum / provenance；
-- 公开 Release 不含 nonfree 二进制。
+已落地：
+
+- GitHub Actions：`.github/workflows/e2e.yml`（`quality-e2e`）含 `gofmt` / `go vet` / `go test` / `govulncheck` / fuzz 短跑质量门禁，
+  Windows + Linux e2e 矩阵（pytest 全量 / Robot / Bats），可选远程 Linux server job；
+- `.github/workflows/release.yml`：tag 触发，产出符合 `VERSIONING.md` 命名的双平台二进制、`SHA256SUMS.txt`、
+  build provenance attestation，并在发布前守卫“资产只含 CLI、不含 FFmpeg/nonfree 二进制”；
+- fuzz：`internal/capabilities`（`FuzzParseVersion` / `FuzzParseList` / `FuzzValidateHelpTopic`）、
+  `internal/contracts`（`FuzzIsHTTPS` / `FuzzSafeAssetName` / `FuzzIsAbsoluteLike`）、
+  `internal/cli`（`FuzzNormalizeJSONInput`）；
+- e2e：`tests/e2e/test_cli_full_e2e.py` 覆盖全部冻结命令的 JSON 信封、capabilities 字段级解析、
+  9 种 `--only`、缓存命中/刷新、参数互斥、stdout JSON-only 契约；
+- 全新环境验证：`Dockerfile` + `docker-compose.yml` 在干净容器里跑完整 go test + pytest + Robot + Bats。
+
+仍为持续工作（非阻塞）：真实上游资产集成测试依赖外网稳定性，按需人工触发；远程 Windows server 自动化尚未接入 CI。
 
 ---
 

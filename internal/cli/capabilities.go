@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	urfave "github.com/urfave/cli/v3"
 
@@ -28,7 +29,7 @@ func capabilitiesFlags() []urfave.Flag {
 		&urfave.StringFlag{Name: "cache-dir", Usage: "capability cache directory"},
 		&urfave.BoolFlag{Name: "refresh", Usage: "ignore existing capability cache"},
 		&urfave.BoolFlag{Name: "no-cache", Usage: "do not read or write capability cache"},
-		&urfave.StringFlag{Name: "only", Usage: "run and output only one list: muxers|demuxers|devices|decoders|encoders|filters|pixel_formats|channel_layouts|sample_formats"},
+		&urfave.StringFlag{Name: "only", Usage: "run and output only one list: " + strings.Join(appcaps.CapabilityKinds(), "|")},
 	)
 }
 
@@ -52,6 +53,11 @@ func capabilitiesCommand() *urfave.Command {
 		Action: func(ctx context.Context, cmd *urfave.Command) error {
 			if err := rejectExtraArgs(cmd); err != nil {
 				return err
+			}
+			only := cmd.String("only")
+			if only != "" && cmd.IsSet("help-topic") {
+				return apperrors.New(apperrors.E1001,
+					"--only cannot be combined with --help-topic").WithDetails(map[string]any{"only": only})
 			}
 			topic := cmd.String("help-topic")
 			if err := appcaps.ValidateHelpTopic(topic); err != nil {
