@@ -155,7 +155,7 @@ jobs:
                 "hash": "${HASH}"
               }
             },
-            "bin": "one-more-ffmpeg-v${VERSION}-windows-amd64.exe",
+            "bin": [["one-more-ffmpeg-v${VERSION}-windows-amd64.exe", "one-more-ffmpeg"]],
             "checkver": {
               "github": "https://github.com/${{ github.repository }}"
             },
