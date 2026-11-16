@@ -3,6 +3,7 @@ package lock
 import (
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -19,43 +20,41 @@ func TestDataRootAcquireRelease(t *testing.T) {
 	_, err = os.Stat(path)
 	require.NoError(t, err, "lock file must exist while held")
 	unlock()
-	_, err = os.Stat(path)
-	require.True(t, os.IsNotExist(err), "lock file must be removed on release")
+	// The lock file is intentionally kept (its identity is the lock's identity);
+	// a fresh acquire must still succeed after release.
+	again, err := DataRoot(root)
+	require.NoError(t, err, "lock must be re-acquirable after release")
+	again()
 }
 
 func TestAcquireContentionFails(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, fileName)
-	require.NoError(t, os.WriteFile(path, []byte("held"), 0o600))
+	unlock, err := acquire(path, defaultWait())
+	require.NoError(t, err)
 
-	_, err := acquire(path, 120*time.Millisecond, 30*time.Second)
+	_, err = acquire(path, 120*time.Millisecond)
 	typed, ok := apperrors.As(err)
 	require.True(t, ok)
 	require.Equal(t, apperrors.E6009, typed.Code)
-}
-
-func TestAcquireReclaimsStaleLock(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, fileName)
-	require.NoError(t, os.WriteFile(path, []byte("abandoned"), 0o600))
-	old := time.Now().Add(-time.Minute)
-	require.NoError(t, os.Chtimes(path, old, old))
-
-	unlock, err := acquire(path, time.Second, 30*time.Second)
-	require.NoError(t, err, "an abandoned lock must be reclaimed")
 	unlock()
 }
 
 func TestAcquireWaitsForRelease(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, fileName)
-	require.NoError(t, os.WriteFile(path, []byte("held"), 0o600))
+	unlock, err := acquire(path, defaultWait())
+	require.NoError(t, err)
+
+	var acquired atomic.Bool
 	go func() {
 		time.Sleep(80 * time.Millisecond)
-		_ = os.Remove(path)
+		acquired.Store(true)
+		unlock()
 	}()
 
-	unlock, err := acquire(path, 2*time.Second, 30*time.Second)
+	got, err := acquire(path, 2*time.Second)
 	require.NoError(t, err, "acquire must succeed once the holder releases")
-	unlock()
+	require.True(t, acquired.Load())
+	got()
 }

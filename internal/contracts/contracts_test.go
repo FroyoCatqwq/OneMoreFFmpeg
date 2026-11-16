@@ -24,7 +24,7 @@ func repoRoot(t *testing.T) string {
 
 func TestValidateExamples(t *testing.T) {
 	root := repoRoot(t)
-	dir := filepath.Join(root, "docs", "schemas", "examples")
+	dir := filepath.Join(root, "docs", "reference", "schemas", "examples")
 	_, err := contracts.ValidateExamplesDir(dir)
 	require.NoError(t, err)
 
@@ -72,7 +72,7 @@ func schemaAllowed(schemas []string, candidate string) bool {
 }
 
 func TestGoldenExamplesCoverEveryFrozenCommand(t *testing.T) {
-	dir := filepath.Join(repoRoot(t), "docs", "schemas", "examples")
+	dir := filepath.Join(repoRoot(t), "docs", "reference", "schemas", "examples")
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
 	seen := make(map[string]bool, len(contracts.CommandDataSchemas))
@@ -105,7 +105,7 @@ func TestGoldenExamplesCoverEveryFrozenCommand(t *testing.T) {
 
 func TestValidateErrorRegistryDocsBidirectional(t *testing.T) {
 	root := repoRoot(t)
-	docsPath := filepath.Join(root, "docs", "ERROR_CODES.md")
+	docsPath := filepath.Join(root, "docs", "reference", "ERROR_CODES.md")
 	require.NoError(t, contracts.ValidateErrorRegistryDocs(docsPath, apperrors.IsKnown))
 
 	codes := make([]string, 0, len(apperrors.KnownCodes()))
@@ -299,7 +299,7 @@ func TestValidateExampleRejectsArtifactContractHoles(t *testing.T) {
 }
 
 func TestValidateDataFieldsRejectsMalformedCapabilities(t *testing.T) {
-	body, err := os.ReadFile(filepath.Join("..", "..", "docs", "schemas", "examples", "capabilities.example.json"))
+	body, err := os.ReadFile(filepath.Join("..", "..", "docs", "reference", "schemas", "examples", "capabilities.example.json"))
 	require.NoError(t, err)
 	var wrapper map[string]any
 	require.NoError(t, json.Unmarshal(body, &wrapper))
@@ -370,7 +370,7 @@ func TestValidateExampleRejectsInvalidProviderData(t *testing.T) {
 }
 
 func TestValidateCapabilitiesExampleWithCustomHelpTopic(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join(repoRoot(t), "docs", "schemas", "examples", "capabilities.example.json"))
+	raw, err := os.ReadFile(filepath.Join(repoRoot(t), "docs", "reference", "schemas", "examples", "capabilities.example.json"))
 	require.NoError(t, err)
 	var obj map[string]any
 	require.NoError(t, json.Unmarshal(raw, &obj))

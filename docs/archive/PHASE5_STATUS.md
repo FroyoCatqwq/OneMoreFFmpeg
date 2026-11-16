@@ -135,7 +135,7 @@ profile 追加行、`current`、journal、缓存），再用同一份源码部�
 - journal rollback / env rollback 默认 dry-run，需 `--apply`；
 - install/uninstall/current/journal 临时文件随机化；provider add 全链路锁；
 - 首次使用提示只显示一次；`--release` 支持 UTF-16；运行时 command/data 契约校验；
-- release catalog、capabilities 单类缓存、Linux `/tmp` 显式扫描、远程 e2e 等细节见 [`FULL_AUDIT_2026-11-13.md`](FULL_AUDIT_2026-11-13.md)；
+- release catalog、capabilities 单类缓存、Linux `/tmp` 显式扫描、远程 e2e 等细节见 [`FULL_AUDIT_2026-11-13.md`](FULL_AUDIT_2026-11-14.md)；
 - 二次复核修复了 Linux 新建 shim 回滚残留、`~/.profile` 无变更回滚误覆写、`--force` 中途失败未恢复 quarantine、非托管 shim 导致 dry-run 失败等问题。
 
 ## 10. 已知限制

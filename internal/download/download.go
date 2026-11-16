@@ -101,11 +101,33 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
 		return model.Artifact{}, apperrors.New(apperrors.E4005, "cannot create download directory").WithCause(err.Error())
 	}
-	// Only a directory this call created may be removed on failure. Never
-	// delete a shared directory another concurrent run may be writing into.
+	// Take ownership of an empty directory with a unique marker so a concurrent
+	// fetch cannot have its directory removed by our cleanup. The marker is
+	// removed (and the directory with it) only if it is still ours and the
+	// directory still contains nothing else.
+	var ownerMarker string
+	if createdDir {
+		marker, err := os.CreateTemp(targetDir, ".owner-*")
+		if err == nil {
+			ownerMarker = marker.Name()
+			_ = marker.Close()
+		}
+	}
 	cleanupDir := func() {
-		if createdDir {
-			_ = os.Remove(targetDir) // os.Remove is a no-op when it is non-empty
+		if ownerMarker == "" {
+			return
+		}
+		entries, err := os.ReadDir(targetDir)
+		if err != nil || len(entries) != 1 || entries[0].Name() != filepath.Base(ownerMarker) {
+			return // somebody else is using this directory
+		}
+		_ = os.Remove(ownerMarker)
+		_ = os.Remove(targetDir) // succeeds only while empty
+	}
+	clearOwnerMarker := func() {
+		if ownerMarker != "" {
+			_ = os.Remove(ownerMarker)
+			ownerMarker = ""
 		}
 	}
 	finalPath := filepath.Join(targetDir, name)
@@ -120,6 +142,7 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 
 	downloaded := false
 	if matches, err := fileMatches(ctx, finalPath, sha); err != nil {
+		clearOwnerMarker()
 		return model.Artifact{}, err
 	} else if !matches {
 		if err := d.download(ctx, release.AssetURL, finalPath, sha); err != nil {
@@ -137,10 +160,11 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 			// Only the file this call downloaded may be removed; a non-empty
 			// shared targetDir fails to remove harmlessly, keeping others' files.
 			_ = os.Remove(finalPath)
-			cleanupDir()
 		}
+		cleanupDir()
 		return model.Artifact{}, err
 	}
+	clearOwnerMarker()
 	return artifact, nil
 }
 

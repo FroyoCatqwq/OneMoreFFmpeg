@@ -114,6 +114,21 @@ func expansionCap(compressed int64) int64 {
 	return compressed * maxRatio
 }
 
+// globalExpansionCap is the bomb ceiling for the WHOLE archive. Per-entry caps
+// alone are not enough: many individually acceptable entries can still expand
+// far beyond compressed*maxRatio in aggregate. Saturating multiplication keeps
+// attacker-controlled sizes from wrapping.
+func globalExpansionCap(compressed int64) int64 {
+	if compressed <= 0 || compressed > int64(maxTotal)/maxRatio {
+		return maxTotal
+	}
+	cap := compressed * maxRatio
+	if cap > maxTotal {
+		return maxTotal
+	}
+	return cap
+}
+
 func ensureEmptyDir(dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -143,6 +158,11 @@ func extractZip(ctx context.Context, archivePath, destDir string, compressed int
 			break
 		}
 		declared += int64(entry.UncompressedSize64)
+	}
+	globalCap := globalExpansionCap(compressed)
+	if declared > globalCap {
+		return apperrors.New(apperrors.E5002, "archive exceeds expansion ratio limit").
+			WithDetails(map[string]any{"declared": declared, "limit": globalCap})
 	}
 	if err := checkDiskSpace(destDir, declared); err != nil {
 		return err
@@ -181,6 +201,12 @@ func extractZip(ctx context.Context, archivePath, destDir string, compressed int
 		limit := expansionCap(compressed)
 		if limit > maxFileSize {
 			limit = maxFileSize
+		}
+		if remaining := globalCap - total; remaining <= 0 {
+			_ = source.Close()
+			return apperrors.New(apperrors.E5002, "archive exceeds expansion ratio limit").WithDetails(map[string]any{"entry": entry.Name})
+		} else if limit > remaining {
+			limit = remaining
 		}
 		written, copyErr := writeFile(target, source, entry.Mode().Perm(), limit)
 		_ = source.Close()
@@ -227,6 +253,7 @@ func extractTar(ctx context.Context, archivePath, destDir, format string, compre
 	}
 
 	tarReader := tar.NewReader(reader)
+	globalCap := globalExpansionCap(compressed)
 	var total int64
 	entries := 0
 	for {
@@ -269,6 +296,11 @@ func extractTar(ctx context.Context, archivePath, destDir, format string, compre
 			limit := expansionCap(compressed)
 			if limit > maxFileSize {
 				limit = maxFileSize
+			}
+			if remaining := globalCap - total; remaining <= 0 {
+				return apperrors.New(apperrors.E5002, "archive exceeds expansion ratio limit").WithDetails(map[string]any{"entry": header.Name})
+			} else if limit > remaining {
+				limit = remaining
 			}
 			written, writeErr := writeFile(target, tarReader, os.FileMode(header.Mode).Perm(), limit)
 			total += written

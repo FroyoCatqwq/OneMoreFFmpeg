@@ -1,7 +1,10 @@
 package archive
 
 import (
+	"archive/zip"
 	"bytes"
+	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -72,6 +75,50 @@ func TestExtractionCapSafety(t *testing.T) {
 	require.Equal(t, int64(1000), expansionCap(1))
 	require.Equal(t, int64(maxFileSize), expansionCap(maxFileSize))
 	require.Equal(t, int64(maxFileSize), expansionCap(0), "unknown size is conservative")
+}
+
+func TestGlobalExpansionCap(t *testing.T) {
+	require.Equal(t, int64(1000), globalExpansionCap(1))
+	require.Equal(t, int64(maxTotal), globalExpansionCap(maxTotal), "unknown/huge size saturates at maxTotal")
+	require.Equal(t, int64(maxTotal), globalExpansionCap(0))
+	require.Equal(t, int64(maxTotal), globalExpansionCap(1<<40), "no overflow wrap")
+}
+
+func TestZipHighCompressionStillExtracts(t *testing.T) {
+	// Deflate tops out near 1032:1, so a real archive cannot easily exceed the
+	// 1000x ceiling. Verify the guard does not reject legitimate highly
+	// compressible content: declared total must stay under globalExpansionCap.
+	dir := t.TempDir()
+	archivePath := filepath.Join(dir, "data.zip")
+	f, err := os.Create(archivePath)
+	require.NoError(t, err)
+	zw := zip.NewWriter(f)
+	entry := bytes.Repeat([]byte("A"), 64*1024)
+	for i := 0; i < 8; i++ {
+		w, err := zw.Create(fmt.Sprintf("entry%d.bin", i))
+		require.NoError(t, err)
+		_, err = w.Write(entry)
+		require.NoError(t, err)
+	}
+	require.NoError(t, zw.Close())
+	require.NoError(t, f.Close())
+
+	dest := filepath.Join(dir, "out")
+	require.NoError(t, os.MkdirAll(dest, 0o755))
+	require.NoError(t, Extract(context.Background(), archivePath, dest))
+	entries, err := os.ReadDir(dest)
+	require.NoError(t, err)
+	require.Len(t, entries, 8)
+}
+
+func TestDeclaredTotalUsesGlobalCap(t *testing.T) {
+	// The zip pre-check must compare declared expansion against the ratio cap,
+	// not only the absolute maxTotal. A 1 KiB archive may declare at most
+	// 1 KiB * maxRatio, never 8 GiB.
+	compressed := int64(1024)
+	require.Equal(t, int64(1024*maxRatio), globalExpansionCap(compressed))
+	require.Less(t, globalExpansionCap(compressed), int64(maxTotal))
+	require.True(t, ratioExceeded(globalExpansionCap(compressed)+1, compressed))
 }
 
 func TestRatioExceeded(t *testing.T) {

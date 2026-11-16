@@ -78,4 +78,3 @@ func safeShimDir(path string) bool {
 	}
 	return false
 }
-

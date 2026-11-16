@@ -212,6 +212,13 @@ func restoreCurrentState(dataRoot, target, kind string) error {
 	return restoreCurrent(dataRoot, target, kind)
 }
 
+// RestoreCurrent re-establishes the `current` pointer after a failed write
+// transaction. Exported so CLI-level workflows (e.g. uninstall) can roll back
+// a partially switched pointer using the same, tested logic.
+func RestoreCurrent(dataRoot, target, kind string) error {
+	return restoreCurrent(dataRoot, target, kind)
+}
+
 func removeCurrent(dataRoot string) error {
 	current := filepath.Join(dataRoot, "current")
 	// A plain file or directory at <root>/current was not created by us.

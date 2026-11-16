@@ -10,7 +10,7 @@
 - **显式提权授权**：系统级操作需授权——以 root/Administrator 直接运行放行；否则须显式 `--authorize-system`，未授权返回 `OMF-E6003`。工具绝不自动 sudo/提权；非管理员被明确拒绝并告知。
 - **doctor 严格模式**：`doctor --strict` 在 `healthy=false` 时返回 `OMF-E6006`（退出 1），报告置于 `details.report`；默认行为不变（退出 0）。
 - **Windows symlink 回退**：current 指针回退链 junction → 目录 symlink → pointer_file；symlink 在开发者模式 / Win11 24H2 sudo / gsudo 下可用，`ReplaceLink` 返回真实 kind。新增 `scripts/elevate.ps1` 与 `scripts/enable-developer-mode.ps1`。
-- **系统要求文档**：新增 [`SYSTEM_REQUIREMENTS.md`](../SYSTEM_REQUIREMENTS.md)——Windows 最低 Win10 1809 / 推荐 Win11 24H2；Linux 最低 glibc 2.28（RHEL8）/ 推荐 glibc 2.39（RHEL10、Debian 13+）。
+- **系统要求文档**：新增 [`SYSTEM_REQUIREMENTS.md`](../reference/SYSTEM_REQUIREMENTS.md)——Windows 最低 Win10 1809 / 推荐 Win11 24H2；Linux 最低 glibc 2.28（RHEL8）/ 推荐 glibc 2.39（RHEL10、Debian 13+）。
 
 ## 修复与健壮性
 

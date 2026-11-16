@@ -28,8 +28,8 @@ $env:OMF_BINARY = "C:\path\one-more-ffmpeg.exe"; ./call_omf.ps1
    { "schema": "onemoreffmpeg.error/v1", "ok": false, "code": "OMF-E6003", "message": "...", "details": {} }
    ```
 3. **退出码由错误码唯一决定**：`0` 成功；`2` 用法/配置/契约错误；`1` 运行期错误；`130` 取消。
-   消费者按 `code` 分支，不要解析人类文本。完整注册表见 [`docs/ERROR_CODES.md`](../../docs/ERROR_CODES.md)。
-4. **schema 主版本冻结**：当前所有 `data.schema` 均为 `/v1`。主版本变化即破坏性变更（见 [`docs/VERSIONING.md`](../../docs/VERSIONING.md)）；
+   消费者按 `code` 分支，不要解析人类文本。完整注册表见 [`docs/ERROR_CODES.md`](../../docs/reference/ERROR_CODES.md)。
+4. **schema 主版本冻结**：当前所有 `data.schema` 均为 `/v1`。主版本变化即破坏性变更（见 [`docs/VERSIONING.md`](../../docs/reference/VERSIONING.md)）；
    `internal/contracts/freeze_test.go` 会在 CI 中拒绝命令集/schema 集/退出码的静默改动。
 5. **只读 vs 写入**：`detect` / `validate` / `capabilities` / `doctor` / `env status` / `journal list` / `release list` 只读；
    `install` / `uninstall` / `env set|unset|rollback` / `journal rollback` / `provider add` 默认 dry-run，需 `--apply`。

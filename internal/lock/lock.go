@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -16,60 +15,65 @@ import (
 
 const (
 	fileName     = ".transaction.lock"
-	staleAfter   = 30 * time.Second
 	waitTimeout  = 5 * time.Second
 	pollInterval = 50 * time.Millisecond
-
-	// heartbeatEvery must stay well below staleAfter: the mtime is the only
-	// liveness signal, so a holder that stops refreshing is reclaimable.
-	heartbeatEvery = 5 * time.Second
 )
 
 // DataRoot acquires the global data-root transaction lock so install, env and
-// uninstall writers cannot interleave. The returned function releases it. A
-// lock whose mtime has not moved for staleAfter is treated as abandoned (a
-// crashed process stops refreshing) and reclaimed; a live lock held past
-// waitTimeout yields OMF-E6009.
+// uninstall writers cannot interleave. The returned function releases it.
+//
+// The mutex is an OS advisory lock (flock on Unix, LockFileEx on Windows) bound
+// to an open file descriptor. The kernel drops it when the descriptor closes,
+// including when the process crashes -- there is no mtime "stale" heuristic and
+// therefore no reclaim-vs-acquire TOCTOU. The lock file itself is intentionally
+// never deleted: deleting and recreating a lock file changes its identity and
+// would let two waiters hold locks on different inodes at the same time.
 func DataRoot(dataRoot string) (func(), error) {
-	return acquire(filepath.Join(dataRoot, fileName), waitTimeout, staleAfter)
+	return acquire(filepath.Join(dataRoot, fileName), waitTimeout)
 }
 
-func acquire(path string, wait, stale time.Duration) (func(), error) {
+// FilePath takes the same OS-level advisory lock on an arbitrary lock file,
+// for configuration files (e.g. providers.toml) that need cross-process
+// serialization. The returned function releases it.
+func FilePath(lockFilePath string) (func(), error) {
+	return acquire(lockFilePath, waitTimeout)
+}
+
+// acquire opens (or creates) the lock file and takes the OS lock. wait bounds
+// how long to poll when another process holds it. The stale parameter is kept
+// out of the signature on purpose; callers previously passed a TTL which no
+// longer applies.
+func acquire(path string, wait time.Duration) (func(), error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, apperrors.New(apperrors.E6009, "cannot create transaction lock directory").WithCause(err.Error())
 	}
-	nonce := ownerNonce()
 	deadline := time.Now().Add(wait)
 	for {
-		file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
-		if err == nil {
-			// Record who holds it before anybody can see an empty file: the
-			// name is what release() and the heartbeat check.
-			_, _ = file.WriteString(nonce)
+		file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
+		if err != nil {
+			return nil, apperrors.New(apperrors.E6009, "cannot open transaction lock").WithCause(err.Error())
+		}
+		locked, lockErr := tryOSLock(file)
+		if lockErr != nil {
 			_ = file.Close()
-			stop := make(chan struct{})
-			go keepFresh(path, nonce, stop)
+			return nil, apperrors.New(apperrors.E6009, "cannot acquire transaction lock").WithCause(lockErr.Error())
+		}
+		if locked {
+			// Nonce is informational only (diagnostics); correctness comes from
+			// the kernel lock, so a stale/foreign nonce can never drive release.
+			nonce := ownerNonce()
+			_ = file.Truncate(0)
+			_, _ = file.WriteString(nonce)
+			_ = file.Sync()
 			var once sync.Once
 			return func() {
 				once.Do(func() {
-					close(stop)
-					release(path, nonce)
+					releaseOSLock(file)
+					_ = file.Close()
 				})
 			}, nil
 		}
-		if !os.IsExist(err) {
-			return nil, apperrors.New(apperrors.E6009, "cannot create transaction lock").WithCause(err.Error())
-		}
-		if info, statErr := os.Stat(path); statErr == nil && time.Since(info.ModTime()) > stale {
-			// The heartbeat is the liveness signal: a holder that is still
-			// working refreshes the mtime every heartbeatEvery, so an old
-			// mtime means a crashed process -- except when the file is ours
-			// from an earlier call, which cannot happen while we hold once.
-			if owner(path) != nonce {
-				_ = os.Remove(path)
-			}
-			continue
-		}
+		_ = file.Close()
 		if time.Now().After(deadline) {
 			return nil, apperrors.New(apperrors.E6009, "data root is locked by another transaction").WithDetails(map[string]any{"lock": path})
 		}
@@ -77,56 +81,8 @@ func acquire(path string, wait, stale time.Duration) (func(), error) {
 	}
 }
 
-// keepFresh refreshes the lock's mtime until stop is closed. Without it a
-// legitimate multi-minute install (extract 512 MiB, copy, probe, journal) used
-// to look abandoned after 30 s and a second process would walk in.
-func keepFresh(path, nonce string, stop <-chan struct{}) {
-	ticker := time.NewTicker(heartbeatEvery)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-stop:
-			return
-		case <-ticker.C:
-			if owner(path) != nonce {
-				// Somebody reclaimed and re-created it: never touch a lock
-				// that is not ours any more.
-				return
-			}
-			now := time.Now()
-			if err := os.Chtimes(path, now, now); err != nil {
-				// v0.6.x: ignoring this silently broke the mutex 30 s later -- the
-				// mtime stops moving, another process reclaims the lock, and two
-				// writers share the critical section. Chtimes can fail when an AV
-				// scanner or the indexer holds the file, so fall back to rewriting
-				// the same content, which refreshes the mtime through a path that
-				// usually still works.
-				if writeErr := os.WriteFile(path, []byte(nonce), 0o600); writeErr != nil {
-					// Neither path works: the file is gone or unwritable, so there
-					// is nothing to keep fresh.
-					return
-				}
-			}
-		}
-	}
-}
-
-// release removes the lock only while it still carries our nonce. The old
-// unconditional Remove deleted a lock a second process had legitimately
-// acquired after reclaiming ours, handing two writers the same critical section.
-func release(path, nonce string) {
-	if owner(path) == nonce {
-		_ = os.Remove(path)
-	}
-}
-
-func owner(path string) string {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(data))
-}
+// waitTimeout is exposed for tests that need the default bound.
+func defaultWait() time.Duration { return waitTimeout }
 
 func ownerNonce() string {
 	var raw [8]byte

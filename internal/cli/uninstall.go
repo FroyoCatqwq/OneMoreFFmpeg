@@ -107,25 +107,45 @@ func uninstallCommand() *urfave.Command {
 				return err
 			}
 			record.Details["quarantine"] = quarantine
+			// Persist the quarantine path before any destructive pointer change. If
+			// anything below fails, the journal already has everything needed to
+			// restore both the directory and `current`.
+			journalDir := filepath.Join(dataRoot, "journal")
+			if err := journal.Write(journalDir, record); err != nil {
+				_ = platform.RenamePath(quarantine, root)
+				return apperrors.New(apperrors.E5009, "uninstall journal cannot be written").WithCause(err.Error())
+			}
+			fail := func(msg string, cause error) error {
+				record.Status = journal.StatusFailed
+				record.Details["error"] = msg
+				if writeErr := journal.Write(journalDir, record); writeErr != nil {
+					return apperrors.New(apperrors.E5009,
+						"uninstall failed and its journal could not be saved; run doctor and restore "+quarantine).
+						WithCause(fmt.Sprintf("%s; journal: %v", msg, writeErr))
+				}
+				return apperrors.New(apperrors.E5004, msg).WithCause(cause.Error())
+			}
 			if currentTarget != "" && samePath(currentTarget, root) {
 				if err := platform.RemoveLink(filepath.Join(dataRoot, "current")); err != nil {
 					_ = platform.RenamePath(quarantine, root)
-					record.Status = journal.StatusFailed
-					record.Details["error"] = err.Error()
-					_ = journal.Write(filepath.Join(dataRoot, "journal"), record)
-					return apperrors.New(apperrors.E5004, "current pointer cannot be removed").WithCause(err.Error())
+					return fail("current pointer cannot be removed", err)
 				}
 				if err := os.Remove(filepath.Join(dataRoot, "current.pointer")); err != nil && !os.IsNotExist(err) {
+					// Restore the link we just removed so `current` is not left dangling.
+					_ = install.RestoreCurrent(dataRoot, currentTarget, kind)
 					_ = platform.RenamePath(quarantine, root)
-					record.Status = journal.StatusFailed
-					record.Details["error"] = "current pointer file cannot be removed: " + err.Error()
-					_ = journal.Write(filepath.Join(dataRoot, "journal"), record)
-					return apperrors.New(apperrors.E5004, "current pointer file cannot be removed").WithCause(err.Error())
+					return fail("current pointer file cannot be removed", err)
 				}
 			}
 			record.Status = journal.StatusCommitted
-			if err := journal.Write(filepath.Join(dataRoot, "journal"), record); err != nil {
-				return err
+			if err := journal.Write(journalDir, record); err != nil {
+				// The directory is quarantined and `current` may be gone. Everything
+				// needed to restore is in the last persisted journal record (pending
+				// with quarantine); surface a recovery hint rather than a bare error.
+				return apperrors.New(apperrors.E5009,
+					"uninstall committed changes but the final journal write failed; "+
+						"run `journal rollback --journal "+journalID+" --apply` to restore").
+					WithCause(err.Error())
 			}
 			data.Applied = true
 			return writeResult(cmd, "uninstall", data, fmt.Sprintf("quarantined %s (rollback: journal rollback --journal %s)\n", root, journalID))

@@ -414,6 +414,14 @@ func RollbackWithStore(ctx context.Context, dataRoot, journalID string, store pl
 		}
 	}
 	if backup := record.Details["shell_rc_backup"]; backup != "" {
+		// A journal is an ordinary file: never let a forged backup path make us
+		// read an arbitrary file and write it into a shell profile. Backups are
+		// always created under <data-root>/journal by updateShellRC.
+		if !safeRollbackPath(backup, dataRoot) {
+			return model.EnvSetData{}, apperrors.New(apperrors.E7001,
+				"journal shell rc backup is not inside the data root").
+				WithDetails(map[string]any{"shell_rc_backup": backup})
+		}
 		profile := record.Details["shell_rc_path"]
 		if profile != "" && !safeShellProfile(profile) {
 			return model.EnvSetData{}, apperrors.New(apperrors.E7001,
@@ -446,9 +454,20 @@ func managedVariables(lae bool) []string {
 	return names
 }
 
+// pathEntryEqual compares PATH entries with case folding only on Windows:
+// Unix filesystems are case-sensitive, so EqualFold there would treat
+// /home/u/.LOCAL/bin and /home/u/.local/bin as the same entry.
+func pathEntryEqual(left, right string) bool {
+	left, right = filepath.Clean(left), filepath.Clean(right)
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(left, right)
+	}
+	return left == right
+}
+
 func appendPath(previous, entry string) string {
 	for _, part := range filepath.SplitList(previous) {
-		if strings.EqualFold(filepath.Clean(part), filepath.Clean(entry)) {
+		if pathEntryEqual(part, entry) {
 			return previous
 		}
 	}
@@ -463,7 +482,7 @@ func removePath(previous, entry string) (string, bool) {
 	kept := make([]string, 0, len(parts))
 	removed := false
 	for _, part := range parts {
-		if strings.EqualFold(filepath.Clean(part), filepath.Clean(entry)) {
+		if pathEntryEqual(part, entry) {
 			removed = true
 			continue
 		}

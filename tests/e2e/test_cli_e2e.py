@@ -305,4 +305,11 @@ def test_install_releases_transaction_lock(cli, fake_trio: Path, tmp_path: Path)
     applied = cli.run("install", "--release", str(release_path),
                       "--artifact", str(archive), "--apply", "--json")
     assert applied.returncode == 0, applied.stdout
-    assert not (cli.data_root / ".transaction.lock").exists(), "lock must be released after install"
+    # The lock file is intentionally kept (its identity is the OS lock's
+    # identity). What matters is that the lock is released: a second write
+    # command must acquire it and reach its own business logic (E5003 =
+    # directory already exists), never E6009 = lock contention.
+    second = cli.run("install", "--release", str(release_path),
+                     "--artifact", str(archive), "--apply", "--json")
+    assert second.returncode != 0
+    assert second.json()["code"] != "OMF-E6009", "lock must be released after install"
