@@ -63,13 +63,13 @@ func uninstallCommand() *urfave.Command {
 			}
 			root = filepath.Clean(root)
 			appsRoot := filepath.Join(dataRoot, "apps")
-			if rel, err := filepath.Rel(appsRoot, root); err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+			if rel, err := filepath.Rel(appsRoot, root); err != nil || rel == "." || outsideApps(rel) {
 				return apperrors.New(apperrors.E6007, "refusing to remove a path outside the managed apps directory").WithDetails(map[string]any{"root": root})
 			}
 			if resolved, err := filepath.EvalSymlinks(root); err == nil {
 				resolvedApps, appsErr := filepath.EvalSymlinks(appsRoot)
 				if appsErr == nil {
-					if rel, err := filepath.Rel(resolvedApps, resolved); err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+					if rel, err := filepath.Rel(resolvedApps, resolved); err != nil || rel == "." || outsideApps(rel) {
 						return apperrors.New(apperrors.E6007, "installation path resolves outside the managed apps directory").WithDetails(map[string]any{"root": root, "resolved": resolved})
 					}
 				}
@@ -115,7 +115,13 @@ func uninstallCommand() *urfave.Command {
 					_ = journal.Write(filepath.Join(dataRoot, "journal"), record)
 					return apperrors.New(apperrors.E5004, "current pointer cannot be removed").WithCause(err.Error())
 				}
-				_ = os.Remove(filepath.Join(dataRoot, "current.pointer"))
+				if err := os.Remove(filepath.Join(dataRoot, "current.pointer")); err != nil && !os.IsNotExist(err) {
+					_ = platform.RenamePath(quarantine, root)
+					record.Status = journal.StatusFailed
+					record.Details["error"] = "current pointer file cannot be removed: " + err.Error()
+					_ = journal.Write(filepath.Join(dataRoot, "journal"), record)
+					return apperrors.New(apperrors.E5004, "current pointer file cannot be removed").WithCause(err.Error())
+				}
 			}
 			record.Status = journal.StatusCommitted
 			if err := journal.Write(filepath.Join(dataRoot, "journal"), record); err != nil {
@@ -125,6 +131,13 @@ func uninstallCommand() *urfave.Command {
 			return writeResult(cmd, "uninstall", data, fmt.Sprintf("quarantined %s (rollback: journal rollback --journal %s)\n", root, journalID))
 		},
 	}
+}
+
+// outsideApps reports whether a relative path escapes its base directory.
+// It avoids the too-broad strings.HasPrefix(rel, ".."), which also rejected
+// legitimate names such as "..stable".
+func outsideApps(rel string) bool {
+	return rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 func samePath(left, right string) bool {

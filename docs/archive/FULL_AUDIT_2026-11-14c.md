@@ -1,5 +1,6 @@
 # 全量审查与修复记录（2026-11-14 · 第三轮）
 
+> 历史快照（截至对应阶段日期），不代表当前状态；当前规则见 docs/README.md §1、§3 与代码。
 > 承接 [`FULL_AUDIT_2026-11-14.md`](FULL_AUDIT_2026-11-14.md)（F1–F14）与 [`FULL_AUDIT_2026-11-14b.md`](FULL_AUDIT_2026-11-14b.md)（deepseek 第二轮）。
 > 本轮在 Phase 6 之后再做代码 + 文档全量审查，重点复核第二轮引入的并发/回滚/下载改动，修掉两处真实 bug 并补回归测试。
 > 环境：Windows 本地 go1.27.4；`go build`/`go vet`/`go test ./...` 全绿（22 包）；fedora45 + win2025server e2e 全绿。

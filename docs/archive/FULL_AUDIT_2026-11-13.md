@@ -1,5 +1,6 @@
 # 全量审查、二次检查与修复记录（2026-11-13）
 
+> 历史快照（截至对应阶段日期），不代表当前状态；当前规则见 docs/README.md §1、§3 与代码。
 > 环境：PowerShell 7 + `C:\Program Files\coreutils`；Linux 使用 `Linux-Server-Info.txt` 指向的服务器。
 > 方法：用户视角只读审计 + 代码视角只读审计 + 逐条核实 + 回归测试 + Windows/Linux e2e + 文档/契约一致性检查。
 

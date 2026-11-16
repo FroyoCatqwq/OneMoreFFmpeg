@@ -1,6 +1,6 @@
 # CLI JSON 契约 v1
 
-> 状态：Phase 0 契约
+> 状态：Phase 1-6 已完成（2026-11-14），外部契约已冻结；v0.9.0
 > 日期：2026-11-10
 > 适用：当前唯一外部集成方式：调用 `one-more-ffmpeg` 可执行文件
 > 配套：[`ERROR_CODES.md`](ERROR_CODES.md)、[`schemas/`](schemas/)
@@ -568,7 +568,7 @@ provider 摘要：
 
 - `channel=stable`：版本号来自 FFmpeg 官网 release 页，9.0 线展示其最后一个补丁（如 9.0.2），8.1 线展示 8.1.3；下载资产从 provider release URL 解析；`--days` 对 stable 不适用并输出 0，`--count` 会截断排序后的版本；
 - `channel=daily`：默认展示最近 7 天的 `autobuild-*` 快照；`--days` 改变窗口，`--count` 限制数量；版本从资产名解析，无法解析时回退为 snapshot tag（覆盖 `master` / `nX.Y-latest` 资产）；
-- `release install`：`--version` 或 `--snapshot` 选择（二者互斥），未指定时安装列表第一个；为支持选择旧版本，内部会忽略 `--count` 并扩大查找窗口；默认 dry-run，`--apply` 才安装；nonfree provider 需 `--allow-nonfree`，未显式指定 `--variant` 时自动使用 `nonfree`。
+- `release install`：`--version` 或 `--snapshot` 选择（二者互斥），未指定时安装列表第一个；为支持选择旧版本，内部会忽略 `--count` 并扩大查找窗口；默认 dry-run，`--apply` 才安装；nonfree provider 需 `--allow-nonfree`，未显式指定 `--variant` 时自动使用 `nonfree`。`release install` 输出的 `result.command` 为 `install`，复用 install 的 data schema，**不作为独立 result.command 计入 18 个冻结命令**。
 
 ### 4.16 `journal list` / `journal rollback`（已实现）
 
@@ -604,4 +604,4 @@ docs/schemas/examples/
 ```
 
 它们是 v1 形状基准，不是完整 JSON Schema Draft 文件。
-Phase 1 可以基于这些示例生成或手写 JSON Schema、Go struct validator 与 golden test。
+这些示例即当前 golden 基准，由 `internal/contracts/TestValidateExamples` 与 `TestGoldenExamplesCoverEveryFrozenCommand` 在 CI 中守护；新增或修改命令/schema 必须同步更新示例与冻结测试。

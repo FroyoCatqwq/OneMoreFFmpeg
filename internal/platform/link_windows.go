@@ -69,10 +69,14 @@ func createJunction(link, target string) error {
 // junctionSubstituteName maps a target to the NT object-manager path stored in
 // the reparse buffer. UNC targets need the \??\UNC\ prefix instead of \??\.
 func junctionSubstituteName(target string) string {
-	if strings.HasPrefix(target, `\\`) {
-		return `\??\UNC\` + strings.TrimPrefix(target, `\\`)
+	// Windows accepts both \\server\share and //server/share as UNC paths.
+	// Normalize before choosing the NT prefix, otherwise a forward-slash UNC
+	// data root produces a junction to the invalid path \??\//server/share.
+	normalized := strings.ReplaceAll(target, "/", `\`)
+	if strings.HasPrefix(normalized, `\\`) {
+		return `\??\UNC\` + strings.TrimPrefix(normalized, `\\`)
 	}
-	return `\??\` + target
+	return `\??\` + normalized
 }
 
 func buildMountPointBuffer(substitute, printName string) []byte {

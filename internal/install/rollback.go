@@ -11,6 +11,17 @@ import (
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
 )
 
+// containedIn reports whether candidate is strictly inside root (never the
+// root itself) after lexical cleaning. It rejects ".." prefix tricks without
+// rejecting names like "..stable" that merely start with two dots.
+func containedIn(root, candidate string) bool {
+	rel, err := filepath.Rel(filepath.Clean(root), filepath.Clean(candidate))
+	if err != nil || rel == "." || rel == ".." {
+		return false
+	}
+	return !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
 // Quarantine moves a managed installation aside so uninstall is reversible.
 func Quarantine(dataRoot, root, journalID string) (string, error) {
 	appsRoot := filepath.Join(dataRoot, "apps")
@@ -34,11 +45,26 @@ func Rollback(dataRoot string, record journal.Record) (string, error) {
 		return "", apperrors.New(apperrors.E6005, "journal has no target")
 	}
 	appsRoot := filepath.Join(dataRoot, "apps")
-	if rel, err := filepath.Rel(appsRoot, target); err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+	if !containedIn(appsRoot, target) {
 		return "", apperrors.New(apperrors.E6007, "journal target is outside apps").WithDetails(map[string]any{"target": target})
 	}
 	quarantine := record.Details["quarantine"]
 	currentTarget := record.Details["current_target"]
+	original := record.Details["quarantine_original"]
+
+	// Every path that comes from a journal must be confined to the data root.
+	// Journals are ordinary files; trusting their strings let a tampered record
+	// move arbitrary directories into apps/ or point `current` anywhere.
+	quarantineRoot := filepath.Join(dataRoot, "quarantine")
+	if quarantine != "" && !containedIn(quarantineRoot, quarantine) {
+		return "", apperrors.New(apperrors.E6007, "journal quarantine path is outside the data root").WithDetails(map[string]any{"quarantine": quarantine})
+	}
+	if original != "" && !containedIn(appsRoot, original) {
+		return "", apperrors.New(apperrors.E6007, "journal quarantine_original is outside apps").WithDetails(map[string]any{"original": original})
+	}
+	if currentTarget != "" && !containedIn(dataRoot, currentTarget) {
+		return "", apperrors.New(apperrors.E6007, "journal current_target is outside the data root").WithDetails(map[string]any{"current_target": currentTarget})
+	}
 
 	switch record.Action {
 	case "uninstall":
@@ -65,7 +91,7 @@ func Rollback(dataRoot string, record journal.Record) (string, error) {
 		return "installation restored from " + quarantine, nil
 	case "install":
 		restorePath := target
-		if original := record.Details["quarantine_original"]; original != "" {
+		if original != "" {
 			restorePath = original
 		}
 		if _, err := os.Stat(target); err == nil {
@@ -151,10 +177,25 @@ func quarantineExistingInstalls(dataRoot, targetDir, journalID string, force boo
 }
 
 func restoreCurrent(dataRoot, target, kind string) error {
-	if kind == model.CurrentMissing || target == "" {
+	current := filepath.Join(dataRoot, "current")
+	if kind == model.CurrentMissing {
 		return removeCurrent(dataRoot)
 	}
-	current := filepath.Join(dataRoot, "current")
+	if target == "" {
+		// The pointer existed but had no resolvable target (an empty pointer
+		// file or a dangling link). Remove any link the failed switch left and
+		// restore an empty pointer file, so `current` never points at an install
+		// directory that no longer exists. Never delete a foreign entry here.
+		if _, err := os.Lstat(current); err == nil {
+			if !platform.IsLink(current) {
+				return apperrors.New(apperrors.E5004, "current exists and is not a managed link")
+			}
+			if err := platform.RemoveLink(current); err != nil {
+				return err
+			}
+		}
+		return os.WriteFile(filepath.Join(dataRoot, "current.pointer"), []byte("\n"), 0o644)
+	}
 	if kind == model.CurrentPointerFile {
 		_ = platform.RemoveLink(current)
 		return os.WriteFile(filepath.Join(dataRoot, "current.pointer"), []byte(target+"\n"), 0o644)
@@ -172,7 +213,18 @@ func restoreCurrentState(dataRoot, target, kind string) error {
 }
 
 func removeCurrent(dataRoot string) error {
-	if err := platform.RemoveLink(filepath.Join(dataRoot, "current")); err != nil {
+	current := filepath.Join(dataRoot, "current")
+	// A plain file or directory at <root>/current was not created by us.
+	// platform.RemoveLink would os.Remove it; never destroy foreign data while
+	// rolling back a transaction that could not even take over `current`.
+	if _, err := os.Lstat(current); err == nil {
+		if !platform.IsLink(current) {
+			return apperrors.New(apperrors.E5004, "current exists and is not a managed link").WithDetails(map[string]any{"path": current})
+		}
+		if err := platform.RemoveLink(current); err != nil {
+			return err
+		}
+	} else if !os.IsNotExist(err) {
 		return err
 	}
 	if err := os.Remove(filepath.Join(dataRoot, "current.pointer")); err != nil && !os.IsNotExist(err) {

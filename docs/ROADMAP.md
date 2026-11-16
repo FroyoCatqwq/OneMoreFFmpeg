@@ -1,6 +1,6 @@
 # 路线图
 
-> 状态：Phase 0 计划
+> 状态：Phase 0–6 已完成（2026-11-14），Phase 7 未开始；当前版本 v0.9.0
 > 原则：先只读、后写入；先 CLI-first，后考虑 API/插件/包管理器
 
 ---
@@ -161,7 +161,7 @@ snap / flatpak 专门适配
 
 ---
 
-## Phase 5：Install / Env / Rollback
+## Phase 5：Install / Env / Rollback（已完成）
 
 > 状态：Phase 5 全部核心（install / env / journal / uninstall / release catalog / 单类能力探测 / doctor）已完成并通过全量审查与 e2e。见 [`PHASE5_STATUS.md`](archive/PHASE5_STATUS.md) 与 [`FULL_AUDIT_2026-11-13.md`](archive/FULL_AUDIT_2026-11-13.md)。
 
@@ -211,7 +211,7 @@ snap / flatpak 专门适配
 
 ---
 
-## Phase 7：质量 / CI / Release
+## Phase 7：质量 / CI / Release（未开始）
 
 内容：
 

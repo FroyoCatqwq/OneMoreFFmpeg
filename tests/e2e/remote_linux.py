@@ -2,8 +2,8 @@
 """Deploy and run the OneMoreFFmpeg Linux e2e suite on the configured server.
 
 Connection details come from the file pointed to by OMF_LINUX_SERVER_INFO
-(default: d:/cb-workpath/Linux-Server-Info.txt). The file is never copied to
-the remote host and credentials are never printed.
+(default: <workspace>/Linux-Server-Info.txt, next to this repo). The file is
+never copied to the remote host and credentials are never printed.
 """
 from __future__ import annotations
 
@@ -17,7 +17,8 @@ from pathlib import Path
 import paramiko
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_INFO = Path("d:/cb-workpath/Linux-Server-Info.txt")
+# Repo lives in <workspace>/OneMoreFFmpeg; the info files sit one level above.
+DEFAULT_INFO = ROOT.parent / "Linux-Server-Info.txt"
 REMOTE_DIR = "~/omf-e2e"
 IGNORED_DIRS = {".git", ".venv", "dist", "__pycache__", "results", ".pytest_cache", ".mypy_cache"}
 IGNORED_SUFFIXES = {".pyc", ".log", ".html", ".xml"}
@@ -27,12 +28,17 @@ def connection_info(path: Path) -> tuple[str, str, str]:
     text = path.read_text(encoding="utf-8", errors="replace")
     user_host = None
     password = None
+    user_hint = None
     for line in text.splitlines():
         line = line.strip()
         if line.startswith("ssh "):
             user_host = line[4:].strip()
         elif line.lower().startswith("password:"):
             password = line.split(":", 1)[1].strip()
+        elif not line.startswith("#") and " " in line and user_hint is None and password is None:
+            # Info files written as two lines: "ssh user@host" then "user <password>".
+            user_hint, password = line.split(None, 1)
+            password = password.strip()
     if not user_host or not password:
         raise SystemExit(f"cannot parse ssh/password from {path}")
     user, host = user_host.split("@", 1)
@@ -128,7 +134,7 @@ def main():
                    f"export OMF_BINARY={binary}; cd {remote_root}; "
                    "mise trust mise.toml >/dev/null 2>&1 || true; ")
             run(client, env + "go test -count=1 ./...")
-            uv = "uv run --python 3.15 --with-requirements tests/e2e/requirements.txt"
+            uv = "uv run --python 3.14 --with-requirements tests/e2e/requirements.txt"
             run(client, env + uv + " pytest -c tests/e2e/pytest.ini -n 2 -q tests/e2e/test_cli_e2e.py")
             run(client, env + uv + " robot --outputdir tests/e2e/results/robot tests/e2e/robot")
             run(client, env + "rm -rf /tmp/bats-core && git clone --depth 1 "

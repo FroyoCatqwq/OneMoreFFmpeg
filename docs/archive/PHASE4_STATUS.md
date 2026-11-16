@@ -1,5 +1,6 @@
 # Phase 4 实施状态
 
+> 历史快照（截至对应阶段日期），不代表当前状态；当前规则见 docs/README.md §1、§3 与代码。
 > 日期：2026-11-12
 > 范围：Provider / Resolve / Download
 > 决策：D1（latest + release_id/published_at/asset_sha256）、D5（`--allow-nonfree`）、D7（Job Object 推迟 Phase 5）

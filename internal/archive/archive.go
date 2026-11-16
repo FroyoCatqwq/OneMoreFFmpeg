@@ -97,8 +97,21 @@ func checkDiskSpace(destDir string, need int64) error {
 }
 
 // ratioExceeded reports whether actual expansion blows past the bomb ceiling.
+// Kept as the canonical definition of the ratio guard; extraction enforces the
+// same ceiling incrementally via expansionCap while streaming each entry.
 func ratioExceeded(total, compressed int64) bool {
 	return compressed > 0 && total > compressed*maxRatio
+}
+
+// expansionCap returns the per-entry byte budget implied by the bomb ceiling.
+// It is enforced while streaming so a single entry cannot write gigabytes
+// before being rejected. A non-positive or overflowing compressed size yields
+// a conservative cap of maxFileSize.
+func expansionCap(compressed int64) int64 {
+	if compressed <= 0 || compressed > int64(maxFileSize)/maxRatio {
+		return maxFileSize
+	}
+	return compressed * maxRatio
 }
 
 func ensureEmptyDir(dir string) error {
@@ -123,6 +136,12 @@ func extractZip(ctx context.Context, archivePath, destDir string, compressed int
 	}
 	var declared int64
 	for _, entry := range reader.File {
+		// Saturating add: attacker-controlled 64-bit sizes must not wrap into a
+		// negative number and bypass the disk-space pre-check.
+		if entry.UncompressedSize64 > uint64(maxTotal-declared) {
+			declared = maxTotal
+			break
+		}
 		declared += int64(entry.UncompressedSize64)
 	}
 	if err := checkDiskSpace(destDir, declared); err != nil {
@@ -156,14 +175,18 @@ func extractZip(ctx context.Context, archivePath, destDir string, compressed int
 		if err != nil {
 			return apperrors.New(apperrors.E5001, "archive entry cannot be read").WithCause(err.Error())
 		}
-		written, copyErr := writeFile(target, source, entry.Mode().Perm())
+		// Cap this entry's write at the bomb ceiling as we stream, not after
+		// the whole entry lands. Otherwise a single highly-compressible entry
+		// can write up to maxFileSize before the post-hoc ratio check fires.
+		limit := expansionCap(compressed)
+		if limit > maxFileSize {
+			limit = maxFileSize
+		}
+		written, copyErr := writeFile(target, source, entry.Mode().Perm(), limit)
 		_ = source.Close()
 		total += written
 		if copyErr != nil {
 			return copyErr
-		}
-		if ratioExceeded(total, compressed) {
-			return apperrors.New(apperrors.E5002, "archive expansion ratio exceeds the safety limit").WithDetails(map[string]any{"entry": entry.Name})
 		}
 	}
 	return nil
@@ -243,13 +266,14 @@ func extractTar(ctx context.Context, archivePath, destDir, format string, compre
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return apperrors.New(apperrors.E5009, "archive directory cannot be created").WithCause(err.Error())
 			}
-			written, writeErr := writeFile(target, tarReader, os.FileMode(header.Mode).Perm())
+			limit := expansionCap(compressed)
+			if limit > maxFileSize {
+				limit = maxFileSize
+			}
+			written, writeErr := writeFile(target, tarReader, os.FileMode(header.Mode).Perm(), limit)
 			total += written
 			if writeErr != nil {
 				return writeErr
-			}
-			if ratioExceeded(total, compressed) {
-				return apperrors.New(apperrors.E5002, "archive expansion ratio exceeds the safety limit").WithDetails(map[string]any{"entry": header.Name})
 			}
 		default:
 			return apperrors.New(apperrors.E5002, "archive contains a non-regular entry").WithDetails(map[string]any{
@@ -260,15 +284,20 @@ func extractTar(ctx context.Context, archivePath, destDir, format string, compre
 	}
 }
 
-func writeFile(target string, source io.Reader, mode os.FileMode) (int64, error) {
+func writeFile(target string, source io.Reader, mode os.FileMode, limit int64) (int64, error) {
 	if mode == 0 {
 		mode = 0o644
+	}
+	if limit <= 0 || limit > maxFileSize {
+		limit = maxFileSize
 	}
 	file, err := os.OpenFile(target, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode)
 	if err != nil {
 		return 0, apperrors.New(apperrors.E5009, "archive file cannot be written").WithCause(err.Error())
 	}
-	written, copyErr := io.Copy(file, io.LimitReader(source, maxFileSize+1))
+	// Stop at limit+1 so we can distinguish "exactly at the budget" from
+	// "tried to exceed it", and never materialize more than one byte past it.
+	written, copyErr := io.Copy(file, io.LimitReader(source, limit+1))
 	closeErr := file.Close()
 	if copyErr != nil {
 		_ = os.Remove(target)
@@ -277,9 +306,9 @@ func writeFile(target string, source io.Reader, mode os.FileMode) (int64, error)
 	if closeErr != nil {
 		return written, apperrors.New(apperrors.E5009, "archive file cannot be closed").WithCause(closeErr.Error())
 	}
-	if written > maxFileSize {
+	if written > limit {
 		_ = os.Remove(target)
-		return written, apperrors.New(apperrors.E5002, "archive entry exceeds size limit").WithDetails(map[string]any{"file": filepath.Base(target)})
+		return written, apperrors.New(apperrors.E5002, "archive entry exceeds size or expansion limit").WithDetails(map[string]any{"file": filepath.Base(target), "limit": limit})
 	}
 	return written, nil
 }

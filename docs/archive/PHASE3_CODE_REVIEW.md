@@ -1,5 +1,6 @@
 # Phase 3 代码审查与修复记录
 
+> 历史快照（截至对应阶段日期），不代表当前状态；当前规则见 docs/README.md §1、§3 与代码。
 > 日期：2026-11-11
 > 范围：`internal/capabilities/`、`internal/model/`、`internal/cli/`、`internal/testutil/` 及 Phase 3 相关文档
 > 状态：P1 已修复，Phase 3 可冻结

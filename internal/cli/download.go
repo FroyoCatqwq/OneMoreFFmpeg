@@ -23,8 +23,13 @@ import (
 
 // warnToStderr surfaces a non-fatal degradation (a release with no independent
 // checksums file, say) without changing the exit code or the JSON payload.
-func warnToStderr(msg string) {
-	fmt.Fprintf(os.Stderr, "warning: %s\n", msg)
+// It writes to the stderr supplied by the caller via context, never directly
+// to os.Stderr, so embedded hosts and tests can capture every warning.
+func warnToStderr(ctx context.Context) func(string) {
+	stderr := stderrFrom(ctx)
+	return func(msg string) {
+		fmt.Fprintf(stderr, "warning: %s\n", msg)
+	}
 }
 
 func downloadCommand() *urfave.Command {
@@ -96,7 +101,7 @@ func downloadCommand() *urfave.Command {
 				MaxBytes:     maxBytes,
 				MaxRedirects: cfg.Download.MaxRedirects,
 				Timeout:      timeout,
-				Warn:         warnToStderr,
+				Warn:         warnToStderr(ctx),
 			})
 			if err != nil {
 				return err

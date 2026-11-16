@@ -106,5 +106,5 @@ jobs:
           export OMF_LINUX_SERVER_INFO="$RUNNER_TEMP/Linux-Server-Info.txt"
           mkdir -p dist
           go build -trimpath -o dist/one-more-ffmpeg-linux-amd64 ./cmd/one-more-ffmpeg
-          uv run --python 3 --with-requirements tests/e2e/requirements.txt \
+          uv run --python 3.14 --with-requirements tests/e2e/requirements.txt \
             python tests/e2e/remote_linux.py all

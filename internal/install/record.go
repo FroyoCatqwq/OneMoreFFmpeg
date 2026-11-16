@@ -8,6 +8,7 @@ import (
 
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
 )
 
 const recordName = "install.json"
@@ -60,7 +61,7 @@ func writeAtomic(path string, payload []byte) error {
 		_ = os.Remove(tempPath)
 		return apperrors.New(apperrors.E5009, "install metadata cannot be written").WithCause(fmt.Sprint(writeErr, closeErr))
 	}
-	if err := os.Rename(tempPath, path); err != nil {
+	if err := platform.RenamePath(tempPath, path); err != nil {
 		_ = os.Remove(tempPath)
 		return apperrors.New(apperrors.E5009, "install metadata cannot be committed").WithCause(err.Error())
 	}

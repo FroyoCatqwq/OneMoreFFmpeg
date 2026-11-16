@@ -22,5 +22,5 @@ description = "Deploy and run Linux e2e on the configured server"
 run = "uv run --python 3.14 --with-requirements tests/e2e/requirements.txt python tests/e2e/remote_linux.py all"
 
 [tasks."e2e-all"]
-description = "Run every e2e suite"
+description = "Run the default cross-platform e2e suites (pytest + Robot). Bats needs bats-core and e2e-linux-server needs a configured server; run those separately."
 depends = ["e2e-pytest", "e2e-robot"]

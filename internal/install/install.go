@@ -203,9 +203,15 @@ func Run(ctx context.Context, opts Options) (model.InstallData, error) {
 				}
 			}
 		}
-		if recordEntry.Details["current_existed"] == "0" {
+		switch {
+		case recordEntry.Details["current_existed"] == "0":
 			_ = restoreCurrentState(opts.DataRoot, "", model.CurrentMissing)
-		} else if previousTarget != "" {
+		case previousTarget == "":
+			// The pointer existed but had no target (empty pointer file or
+			// dangling link). Restore that degraded state instead of leaving
+			// a link that points into a directory we just removed.
+			_ = restoreCurrentState(opts.DataRoot, "", previousKind)
+		default:
 			_ = restoreCurrent(opts.DataRoot, previousTarget, previousKind)
 		}
 	}
@@ -230,6 +236,18 @@ func Run(ctx context.Context, opts Options) (model.InstallData, error) {
 		return fail(err)
 	}
 	defer os.Remove(privateArchive)
+	// Re-verify the copy itself: the shared source may have been swapped between
+	// the pin check and the copy. The bytes we unpack must be the pinned bytes.
+	copySum, err := checksumFile(ctx, privateArchive)
+	if err != nil {
+		return fail(err)
+	}
+	if copySum != strings.ToLower(opts.Release.AssetSHA256) {
+		return fail(apperrors.New(apperrors.E4002, "private archive copy does not match the pinned sha256").WithDetails(map[string]any{
+			"expected": opts.Release.AssetSHA256,
+			"actual":   copySum,
+		}))
+	}
 	if err := archive.Extract(ctx, privateArchive, tempDir); err != nil {
 		return fail(err)
 	}

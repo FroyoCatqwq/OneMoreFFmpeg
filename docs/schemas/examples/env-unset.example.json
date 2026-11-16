@@ -1,0 +1,16 @@
+{
+  "schema": "onemoreffmpeg.result/v1",
+  "ok": true,
+  "command": "env.unset",
+  "data": {
+    "schema": "onemoreffmpeg.env-set/v1",
+    "dry_run": true,
+    "applied": false,
+    "operations": [
+      "PATH -= D:/OneMoreFFmpeg/current/bin",
+      "ONE_MORE_FFMPEG_DIR removed"
+    ],
+    "journal_id": "journal-0123456789abcdef",
+    "rollback_supported": true
+  }
+}

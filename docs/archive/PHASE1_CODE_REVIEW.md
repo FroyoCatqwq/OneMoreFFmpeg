@@ -1,5 +1,6 @@
 # Phase 1 代码审查与修复记录
 
+> 历史快照（截至对应阶段日期），不代表当前状态；当前规则见 docs/README.md §1、§3 与代码。
 > 日期：2026-11-10
 > 范围：`cmd/`、`internal/`、`go.mod`、`go.sum`、`config.example.toml`、`THIRD_PARTY_NOTICES.md`、Phase 1 文档
 > 方式：逐文件代码审查 + 独立只读审查 + 测试复现 + 修复后回归

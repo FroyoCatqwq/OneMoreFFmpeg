@@ -1,5 +1,6 @@
 # 全量审查与修复记录（2026-11-14）
 
+> 历史快照（截至对应阶段日期），不代表当前状态；当前规则见 docs/README.md §1、§3 与代码。
 > 环境：本地 Windows（PowerShell 7 + coreutils + mise go 1.27 / python 3.14 + uv）；
 > 远程 CI：`Linux-Server-Info.txt` 指向的 fedora45 与 `Windows-Server-Info.txt` 指向的 win2025server。
 > 方法：用户运行视角审计 + 代码视角审计 + 逐条核实 + 回归测试 + 本地/双机 e2e + 文档/契约一致性检查。

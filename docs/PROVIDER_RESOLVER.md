@@ -1,6 +1,6 @@
 # Provider Resolver 细则
 
-> 状态：Phase 0 契约补充
+> 状态：Phase 1-6 已完成（2026-11-14），外部契约已冻结；v0.9.0
 > 日期：2026-11-10
 > 配套：[`PROVIDERS.md`](PROVIDERS.md)、[`ERROR_CODES.md`](ERROR_CODES.md)、[`CLI_SCHEMA.md`](CLI_SCHEMA.md)
 

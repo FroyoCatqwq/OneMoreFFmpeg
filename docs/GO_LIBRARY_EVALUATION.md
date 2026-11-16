@@ -1,7 +1,7 @@
 # Go 依赖库评估
 
 > 日期：2026-11-10
-> 状态：Phase 0 依赖评估结论
+> 状态：Phase 1-6 已完成（2026-11-14），外部契约已冻结；v0.9.0
 > 适用：OneMoreFFmpeg 当前 CLI-first 范围
 > 数据来源：Go module proxy `@latest`、GitHub API、项目官方 README
 

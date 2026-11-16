@@ -1,5 +1,6 @@
 # Phase 6 实施状态：CLI 外部调用契约
 
+> 历史快照（截至对应阶段日期），不代表当前状态；当前规则见 docs/README.md §1、§3 与代码。
 > 日期：2026-11-14
 > 范围：CLI 子命令 / `--json` schema / 退出码 / stdout-stderr 分离 / 文件产物稳定化；外部调用示例；契约冻结测试。
 > 状态：**Phase 6 完成**。明确不提供 Go API / JSON-RPC / C ABI。

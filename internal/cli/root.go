@@ -24,9 +24,23 @@ type RunOptions struct {
 }
 
 type configContextKey struct{}
+type stderrContextKey struct{}
 
 func withConfig(ctx context.Context, cfg config.Config) context.Context {
 	return context.WithValue(ctx, configContextKey{}, cfg)
+}
+
+func withStderr(ctx context.Context, stderr io.Writer) context.Context {
+	return context.WithValue(ctx, stderrContextKey{}, stderr)
+}
+
+// stderrFrom returns the caller-supplied stderr so non-fatal warnings from
+// download/install obey the same output contract as the rest of the CLI.
+func stderrFrom(ctx context.Context) io.Writer {
+	if w, ok := ctx.Value(stderrContextKey{}).(io.Writer); ok && w != nil {
+		return w
+	}
+	return os.Stderr
 }
 
 func configFrom(ctx context.Context) config.Config {
@@ -61,8 +75,12 @@ func Run(ctx context.Context, opts RunOptions) (code int) {
 	}
 	defer func() {
 		if recovered := recover(); recovered != nil {
+			// The raw panic value can contain URLs, headers or tokens. Keep the
+			// stable code/message on the wire and put only a short, sanitized
+			// type hint in cause. Full detail belongs to controlled logs, never
+			// to the external JSON/error contract.
 			writeFailure(opts.Stdout, opts.Stderr, wantsJSON(opts.Args),
-				apperrors.New(apperrors.E9002, "panic recovered").WithCause(fmt.Sprint(recovered)))
+				apperrors.New(apperrors.E9002, "panic recovered").WithCause(sanitizePanic(recovered)))
 			code = 1
 		}
 	}()
@@ -72,6 +90,7 @@ func Run(ctx context.Context, opts RunOptions) (code int) {
 		writeFailure(opts.Stdout, opts.Stderr, wantsJSON(opts.Args), err)
 		return apperrors.ExitCode(err)
 	}
+	ctx = withStderr(ctx, opts.Stderr)
 	if err := cmd.Run(ctx, opts.Args); err != nil {
 		writeFailure(opts.Stdout, opts.Stderr, wantsJSON(opts.Args), err)
 		return apperrors.ExitCode(err)
@@ -170,8 +189,13 @@ func New(opts RunOptions) (*urfave.Command, error) {
 	return root, nil
 }
 
-var globalValueFlags = map[string]bool{
+// takesValue is the single source of truth for "which flag eats the next
+// argument". Both wantsJSON (json.go) and hasInDetailUsage must agree, or a
+// flag value equal to --in-detail-usage is misread as the usage request.
+var takesValue = map[string]bool{
 	"--config": true, "-c": true, "--log-level": true,
+	"--dir": true, "--roots": true, "--max-depth": true, "--max-files": true,
+	"--timeout": true, "--probe-timeout": true,
 	"--provider": true, "--channel": true, "--target": true, "--variant": true,
 	"--linkage": true, "--release-line": true, "--release-tag": true,
 	"--release": true, "--artifact": true, "--root": true, "--journal": true,
@@ -190,11 +214,17 @@ func hasInDetailUsage(args []string) bool {
 			return true
 		}
 		name, _, hasEquals := strings.Cut(arg, "=")
-		if globalValueFlags[name] && !hasEquals {
+		if takesValue[name] && !hasEquals {
 			index++
 		}
 	}
 	return false
+}
+
+func sanitizePanic(recovered any) string {
+	// Only a bounded type label is safe on the wire. Do not include the value:
+	// panic payloads are arbitrary and may carry credentials.
+	return fmt.Sprintf("panic of type %T", recovered)
 }
 
 // loadConfig resolves the config source in this order:

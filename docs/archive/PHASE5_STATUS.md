@@ -1,5 +1,6 @@
 # Phase 5 实施状态：安装与 current 切换
 
+> 历史快照（截至对应阶段日期），不代表当前状态；当前规则见 docs/README.md §1、§3 与代码。
 > 日期：2026-11-13
 > 范围：`install`（解压、版本化目录、install.json、current、journal）+ 只读 `env status` / `doctor`
 > 后续补充（同一 Phase 内完成）：`env set/unset/rollback`、`uninstall`、Windows directory junction。

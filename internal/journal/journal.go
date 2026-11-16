@@ -15,6 +15,7 @@ import (
 	"time"
 
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
 )
 
 const Schema = "onemoreffmpeg.journal/v1"
@@ -87,7 +88,7 @@ func Write(dir string, record Record) error {
 		_ = os.Remove(tmpPath)
 		return apperrors.New(apperrors.E6005, "journal cannot be written").WithCause(fmt.Sprint(writeErr, closeErr))
 	}
-	if err := os.Rename(tmpPath, path); err != nil {
+	if err := platform.RenamePath(tmpPath, path); err != nil {
 		_ = os.Remove(tmpPath)
 		return apperrors.New(apperrors.E6005, "journal cannot be committed").WithCause(err.Error())
 	}

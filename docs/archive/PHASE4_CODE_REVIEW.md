@@ -1,5 +1,6 @@
 # Phase 4 代码审查与修复记录
 
+> 历史快照（截至对应阶段日期），不代表当前状态；当前规则见 docs/README.md §1、§3 与代码。
 > 日期：2026-11-12
 > 范围：`internal/provider`、`internal/provider/github`、`internal/download`、`internal/cli/{provider,resolve,download}.go`、`internal/config`、`internal/model`、契约文档
 > 方法：逐文件审查 + 独立只读审计 + 真实 GitHub/真实下载复验

@@ -152,22 +152,24 @@ func isExcludedDir(root, path string) bool {
 	if cleanRoot == cleanPath {
 		return false
 	}
-	if cleanRoot != string(filepath.Separator) && cleanRoot != "/" && cleanRoot != `\` {
-		if rel, err := filepath.Rel(cleanRoot, cleanPath); err == nil &&
-			rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-			return false
-		}
-	}
 	base := strings.ToLower(filepath.Base(path))
 	switch base {
 	case ".git", "node_modules", "$recycle.bin", "system volume information", "winsxs":
 		return true
 	}
-	normalized := strings.ReplaceAll(strings.ToLower(filepath.Clean(path)), `\`, "/")
+	normalized := strings.ReplaceAll(strings.ToLower(cleanPath), `\`, "/")
+	normalizedRoot := strings.ReplaceAll(strings.ToLower(cleanRoot), `\`, "/")
 	for _, prefix := range []string{"/proc", "/sys", "/dev", "/run", "/tmp", "/var/lib/docker"} {
-		if normalized == prefix || strings.HasPrefix(normalized, prefix+"/") {
-			return true
+		if normalized != prefix && !strings.HasPrefix(normalized, prefix+"/") {
+			continue
 		}
+		// An explicit root that itself lives under a system prefix is a
+		// deliberate opt-in (e.g. --roots /tmp/my-builds); do not exclude its
+		// subtree because of that prefix.
+		if normalizedRoot == prefix || strings.HasPrefix(normalizedRoot, prefix+"/") {
+			continue
+		}
+		return true
 	}
 	return false
 }

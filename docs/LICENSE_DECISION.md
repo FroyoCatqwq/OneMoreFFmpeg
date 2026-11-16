@@ -67,7 +67,7 @@ GPL-3.0-only 只覆盖 OneMoreFFmpeg 自己的代码与文档，不自动覆盖�
 - 不把 FFmpeg 二进制提交到 Git；
 - 不把 nonfree 资产上传为公开 CI artifact；
 - `install.json` 继续记录 `redistributable` 与 `license_hint`；
-- Phase 1 生成 `THIRD_PARTY_NOTICES` 与依赖许可证清单。
+- Phase 1 已生成 `THIRD_PARTY_NOTICES` 与依赖许可证清单初稿（见 §7 当前状态）。
 
 ---
 
@@ -91,23 +91,21 @@ ulikunitz/xz
 sethvargo/go-retry
 ```
 
-Phase 1 必须：
+Phase 1 阶段要求的检查项及当前状态：
 
-1. 生成依赖许可证清单；
-2. 复核 GPL-3.0-only 兼容性；
-3. 对不兼容依赖拒绝或替换；
-4. 在 `THIRD_PARTY_NOTICES` 中记录；
-5. CI 加许可证检查；
-6. 不把 nonfree FFmpeg 当作项目依赖打包。
+1. 生成依赖许可证清单 —— 已完成（初稿）；
+2. 复核 GPL-3.0-only 兼容性 —— 已完成；
+3. 对不兼容依赖拒绝或替换 —— 已完成；
+4. 在 `THIRD_PARTY_NOTICES` 中记录 —— 已完成；
+5. CI 加许可证检查 —— **未做**（当前 `.github/workflows/e2e.yml` 无许可证步骤，属 Phase 7 待办）；
+6. 不把 nonfree FFmpeg 当作项目依赖打包 —— 已遵守。
 
 ---
 
 ## 6. 仍需完成
 
-- `THIRD_PARTY_NOTICES`；
-- 依赖许可证清单；
-- `go-licenses` / 等价工具检查；
-- 公开 Release 资产许可证说明；
+- `go-licenses` / 等价工具检查并接入 CI（Phase 7 待办）；
+- 公开 Release 资产许可证说明的持续维护；
 - 若未来做 Go SDK / C ABI，重新评估 GPL 对宿主的影响；
 - 若用户改变许可证策略，必须写 ADR 并更新 `LICENSE`、README、审计报告。
 
@@ -121,7 +119,7 @@ Phase 1 必须：
 | README 许可证章节 | 已改为 GPL-3.0-only |
 | 代码许可证 | GPL-3.0-only |
 | 文档许可证 | GPL-3.0-only |
-| 第三方依赖清单 | Phase 1 生成 |
+| 第三方依赖清单 | 已生成初稿（`THIRD_PARTY_NOTICES.md`） |
 | nonfree 分发 | 明确禁止 |
 | 审计 P1-9 | **已关闭** |
 
@@ -133,4 +131,4 @@ Phase 1 必须：
 >
 > 根目录 `LICENSE` 已存在。
 >
-> 后续 Phase 1 只需完成第三方依赖许可证清单与 `THIRD_PARTY_NOTICES`，不再存在“许可证未选择”的阻塞项。
+> 第三方依赖许可证清单与 `THIRD_PARTY_NOTICES` 初稿已完成；剩余仅为 Phase 7 的许可证 CI 检查。许可证选择本身不再有阻塞项。

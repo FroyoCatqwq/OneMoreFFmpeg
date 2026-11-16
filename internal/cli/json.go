@@ -18,49 +18,12 @@ import (
 
 func wantsJSON(args []string) bool {
 	value := false
-	needsValue := map[string]bool{
-		"--config":          true,
-		"-c":                true,
-		"--log-level":       true,
-		"--dir":             true,
-		"--roots":           true,
-		"--max-depth":       true,
-		"--max-files":       true,
-		"--timeout":         true,
-		"--probe-timeout":   true,
-		"--installation-id": true,
-		"--help-topic":      true,
-		"--cache-dir":       true,
-		"--provider":        true,
-		"--channel":         true,
-		"--target":          true,
-		"--variant":         true,
-		"--linkage":         true,
-		"--release-line":    true,
-		"--release-tag":     true,
-		"--release":         true,
-		"--id":              true,
-		"--url":             true,
-		"--sha256":          true,
-		"--checksums-url":   true,
-		"--license-hint":    true,
-		"--max-bytes":       true,
-		"--artifact":        true,
-		"--root":            true,
-		"--journal":         true,
-		"--only":            true,
-		"--version":         true,
-		"--snapshot":        true,
-		"--days":            true,
-		"--count":           true,
-		"--releases-url":    true,
-	}
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if arg == "--" {
 			break
 		}
-		if needsValue[arg] {
+		if takesValue[arg] {
 			i++
 			continue
 		}
@@ -110,7 +73,10 @@ func encodeJSON(w io.Writer, value any) error {
 		return apperrors.New(apperrors.E7006, "stdout JSON serialization failed").WithCause(err.Error())
 	}
 	if _, err := w.Write(buf.Bytes()); err != nil {
-		return apperrors.New(apperrors.E7006, "stdout JSON write failed").WithCause(err.Error())
+		// Mark this specific error so writeFailure does not attempt a second
+		// stdout write (which would mix a partial object with an error object).
+		return apperrors.New(apperrors.E7006, "stdout JSON write failed").WithCause(err.Error()).
+			WithDetails(map[string]any{"stdout_write_started": true})
 	}
 	return nil
 }
@@ -150,9 +116,11 @@ func errorObject(err error) model.ErrorObject {
 
 func writeFailure(stdout, stderr io.Writer, asJSON bool, err error) {
 	obj := errorObject(err)
-	// A failed stdout write must not be followed by a second stdout write,
-	// which would mix human text and JSON / emit two JSON objects.
-	if obj.Code == string(apperrors.E7006) {
+	// Only an E7006 that actually started writing to stdout must stay on
+	// stderr: a second stdout write would mix a partial object with the error.
+	// An E7006 raised before any write (e.g. field validation) still owes the
+	// caller a parseable error envelope.
+	if obj.Code == string(apperrors.E7006) && obj.Details != nil && obj.Details["stdout_write_started"] == true {
 		_, _ = fmt.Fprintf(stderr, "error: %s: %s\n", obj.Code, obj.Message)
 		return
 	}

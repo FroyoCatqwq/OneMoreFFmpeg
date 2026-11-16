@@ -1,6 +1,6 @@
 # Provider、来源与 Release Pin
 
-> 状态：Phase 0 设计
+> 状态：Phase 1-6 已完成（2026-11-14），外部契约已冻结；v0.9.0
 > 目标：支持内置来源、自定义 URL、daily / stable，同时保证可复现
 > 当前外部集成：其他项目只通过调用 CLI 可执行文件读取产物文件；不通过 Go API / 插件
 > 解析细则：[`PROVIDER_RESOLVER.md`](PROVIDER_RESOLVER.md)；CLI 输出见 [`CLI_SCHEMA.md`](CLI_SCHEMA.md)；错误码见 [`ERROR_CODES.md`](ERROR_CODES.md)

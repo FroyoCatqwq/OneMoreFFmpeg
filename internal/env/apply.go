@@ -415,7 +415,7 @@ func RollbackWithStore(ctx context.Context, dataRoot, journalID string, store pl
 	}
 	if backup := record.Details["shell_rc_backup"]; backup != "" {
 		profile := record.Details["shell_rc_path"]
-		if profile != "" && !safeRollbackPath(profile, dataRoot) {
+		if profile != "" && !safeShellProfile(profile) {
 			return model.EnvSetData{}, apperrors.New(apperrors.E7001,
 				"journal shell profile is not a known profile path").
 				WithDetails(map[string]any{"shell_rc_path": profile})

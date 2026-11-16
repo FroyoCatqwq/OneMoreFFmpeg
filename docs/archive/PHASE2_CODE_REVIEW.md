@@ -1,5 +1,6 @@
 # Phase 2 代码审查与修复记录
 
+> 历史快照（截至对应阶段日期），不代表当前状态；当前规则见 docs/README.md §1、§3 与代码。
 > 日期：2026-11-11
 > 范围：`internal/detect/`、`internal/cli/`、`internal/model/`、`internal/testutil/`
 > 状态：P0/P1 已修复，Phase 2 可冻结

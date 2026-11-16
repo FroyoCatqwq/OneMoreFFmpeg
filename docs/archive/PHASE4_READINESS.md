@@ -1,5 +1,6 @@
 # Phase 4 准备与准入清单
 
+> 历史快照（截至对应阶段日期），不代表当前状态；当前规则见 docs/README.md §1、§3 与代码。
 > 日期：2026-11-11
 > 前置：[`PHASE3_CODE_REVIEW.md`](PHASE3_CODE_REVIEW.md)（Phase 3 已冻结）
 > 目标：进入 Phase 4（Provider / Resolve / Download）前，把契约冲突、代码缺口、真实上游事实与决策项一次列清

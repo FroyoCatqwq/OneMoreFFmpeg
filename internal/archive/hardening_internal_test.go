@@ -1,6 +1,8 @@
 package archive
 
 import (
+	"bytes"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -17,18 +19,18 @@ func TestSafePathRejectsUnsafeNames(t *testing.T) {
 		"//unc/share.txt",
 		"C:/drive.txt",
 		"C:\\drive.txt",
-		"file.txt:ads",          // NTFS alternate data stream
-		"file.txt::$DATA",       // NTFS ADS
-		"dir:name/child.txt",    // colon in a component
-		"nul",                   // reserved device
-		"NUL.txt",               // reserved with extension
+		"file.txt:ads",       // NTFS alternate data stream
+		"file.txt::$DATA",    // NTFS ADS
+		"dir:name/child.txt", // colon in a component
+		"nul",                // reserved device
+		"NUL.txt",            // reserved with extension
 		"con", "prn", "aux",
 		"COM1", "lpt9.log",
-		"trailing.",             // Windows strips trailing dot
-		"trailing ",             // Windows strips trailing space
-		"foo/./bar.txt",         // dot component
-		"foo//bar.txt",          // empty component
-		"bad\x00name.txt",       // NUL
+		"trailing.",       // Windows strips trailing dot
+		"trailing ",       // Windows strips trailing space
+		"foo/./bar.txt",   // dot component
+		"foo//bar.txt",    // empty component
+		"bad\x00name.txt", // NUL
 	}
 	for _, name := range unsafe {
 		t.Run(name, func(t *testing.T) {
@@ -54,6 +56,22 @@ func TestIsWindowsReservedName(t *testing.T) {
 	for _, name := range []string{"ffmpeg", "README.txt", "COM0", "LPT0", "COM10", "console", "null"} {
 		require.False(t, isWindowsReservedName(name), name)
 	}
+}
+
+func TestWriteFileStopsAtExpansionCap(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "entry.bin")
+	// A small compressed size yields a small streaming budget; the writer must
+	// fail well before the old 2 GiB ceiling and leave no partial file.
+	_, err := writeFile(target, bytes.NewReader(bytes.Repeat([]byte("A"), 4096)), 0o644, 1024)
+	require.Error(t, err)
+	_, statErr := os.Stat(target)
+	require.True(t, os.IsNotExist(statErr), "over-budget entry must be removed")
+}
+
+func TestExtractionCapSafety(t *testing.T) {
+	require.Equal(t, int64(1000), expansionCap(1))
+	require.Equal(t, int64(maxFileSize), expansionCap(maxFileSize))
+	require.Equal(t, int64(maxFileSize), expansionCap(0), "unknown size is conservative")
 }
 
 func TestRatioExceeded(t *testing.T) {

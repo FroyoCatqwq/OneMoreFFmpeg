@@ -36,24 +36,29 @@ func currentType(dataRoot, target string) string {
 	pointer := filepath.Join(dataRoot, "current.pointer")
 	info, err := os.Lstat(current)
 	if err == nil {
-		if resolved, evalErr := filepath.EvalSymlinks(current); evalErr == nil {
-			if target != "" {
-				expected, _ := filepath.EvalSymlinks(target)
-				if expected == resolved {
-					return linkKind(current)
+		// Only a real link is a managed pointer. A plain file or directory that
+		// happens to sit at <root>/current is NOT ours: EvalSymlinks succeeds
+		// for those too, which used to make doctor/env report a healthy junction
+		// and made rollback treat the foreign entry as removable.
+		if platform.IsLink(current) {
+			if resolved, evalErr := filepath.EvalSymlinks(current); evalErr == nil {
+				if target != "" {
+					expected, _ := filepath.EvalSymlinks(target)
+					if expected == resolved {
+						return linkKind(current)
+					}
 				}
+				return linkKind(current)
 			}
-			return linkKind(current)
+			if info.Mode()&os.ModeSymlink != 0 {
+				return model.CurrentSymlink
+			}
+			return model.CurrentJunction
 		}
 		if _, pointerErr := os.Stat(pointer); pointerErr == nil {
 			return model.CurrentPointerFile
 		}
-		if info.Mode()&os.ModeSymlink != 0 {
-			return model.CurrentSymlink
-		}
-		if info.IsDir() {
-			return model.CurrentJunction
-		}
+		return model.CurrentMissing
 	}
 	if _, err := os.Stat(pointer); err == nil {
 		return model.CurrentPointerFile

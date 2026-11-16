@@ -146,6 +146,15 @@ func ValidateExample(path string) error {
 		if _, ok := obj["details"].(map[string]any); !ok {
 			return apperrors.New(apperrors.E7003, "error.details must be an object")
 		}
+		if rawCause, present := obj["cause"]; present {
+			cause, ok := rawCause.(string)
+			if !ok || utf8.RuneCountInString(cause) > 500 {
+				return apperrors.New(apperrors.E7003, "error.cause must be a string of at most 500 characters")
+			}
+			if looksLikeCredential(cause) {
+				return apperrors.New(apperrors.E7003, "error.cause must not contain credentials")
+			}
+		}
 	default:
 		return apperrors.New(apperrors.E7003, "unknown example schema")
 	}
@@ -617,6 +626,18 @@ func validateArtifact(raw []byte, data map[string]any) error {
 		return apperrors.New(apperrors.E7003, "artifact verified must be true")
 	}
 	return nil
+}
+
+// looksLikeCredential is a conservative guard for golden error examples: a
+// documented cause must be a human-readable summary, never a token or header.
+func looksLikeCredential(value string) bool {
+	lower := strings.ToLower(value)
+	for _, marker := range []string{"authorization:", "bearer ", "ghp_", "github_pat_", "token=", "api_key="} {
+		if strings.Contains(lower, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 func isHTTPS(value string) bool {

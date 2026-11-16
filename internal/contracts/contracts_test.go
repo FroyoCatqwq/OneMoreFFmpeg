@@ -60,6 +60,71 @@ func TestValidateExamples(t *testing.T) {
 	require.Empty(t, missing, "data schemas without an example: %v", missing)
 }
 
+// commandDataSchema pins which data schema each frozen result.command emits.
+// It catches drift where an example is relabeled to a different command or a
+// command silently changes its payload schema.
+var commandDataSchema = map[string][]string{
+	"version":          {model.VersionSchema},
+	"detect":           {model.DetectSchema},
+	"validate":         {model.ValidateSchema},
+	"capabilities":     {model.CapabilitiesSchema, model.CapabilityListSchema}, // --only emits a capability-list
+	"provider.list":    {model.ProviderListSchema},
+	"provider.add":     {model.ProviderAddSchema},
+	"resolve":          {model.ReleaseSchema},
+	"download":         {model.ArtifactSchema},
+	"install":          {model.InstallSchema},
+	"env.status":       {model.EnvStatusSchema},
+	"env.set":          {model.EnvSetSchema},
+	"env.unset":        {model.EnvSetSchema},
+	"env.rollback":     {model.EnvSetSchema},
+	"doctor":           {model.DoctorSchema},
+	"uninstall":        {model.UninstallSchema},
+	"journal.list":     {model.JournalListSchema},
+	"journal.rollback": {model.JournalActionSchema},
+	"release.list":     {model.ReleaseCatalogSchema},
+}
+
+func schemaAllowed(schemas []string, candidate string) bool {
+	for _, schema := range schemas {
+		if schema == candidate {
+			return true
+		}
+	}
+	return false
+}
+
+func TestGoldenExamplesCoverEveryFrozenCommand(t *testing.T) {
+	dir := filepath.Join(repoRoot(t), "docs", "schemas", "examples")
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	seen := make(map[string]bool, len(commandDataSchema))
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+		payload, readErr := os.ReadFile(filepath.Join(dir, entry.Name()))
+		require.NoError(t, readErr)
+		var envelope struct {
+			Schema  string `json:"schema"`
+			Command string `json:"command"`
+			Data    struct {
+				Schema string `json:"schema"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(payload, &envelope), entry.Name())
+		if envelope.Schema != model.ResultSchema {
+			continue
+		}
+		allowed, known := commandDataSchema[envelope.Command]
+		require.True(t, known, "unknown command in %s: %s", entry.Name(), envelope.Command)
+		require.True(t, schemaAllowed(allowed, envelope.Data.Schema), "command/schema mismatch in %s: %s", entry.Name(), envelope.Data.Schema)
+		seen[envelope.Command] = true
+	}
+	for command := range commandDataSchema {
+		require.True(t, seen[command], "frozen command has no golden example: %s", command)
+	}
+}
+
 func TestValidateErrorRegistryDocsBidirectional(t *testing.T) {
 	root := repoRoot(t)
 	docsPath := filepath.Join(root, "docs", "ERROR_CODES.md")

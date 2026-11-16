@@ -1,5 +1,6 @@
 # 全量审查与修复记录（2026-11-11）
 
+> 历史快照（截至对应阶段日期），不代表当前状态；当前规则见 docs/README.md §1、§3 与代码。
 > 范围：`internal/*`、`cmd/`、`docs/`、`config.example.toml`、示例 JSON
 > 方法：4 路只读并行审计 + 逐条代码核实 + 真实 FFmpeg/真实 CLI 复验
 > 基线：Go 1.27.4 windows/amd64；FFmpeg `N-128713-g0f89d936b3-20261108`（win64 nonfree static）

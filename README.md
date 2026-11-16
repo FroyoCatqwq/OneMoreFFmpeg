@@ -142,7 +142,7 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 | [`docs/DETECTION_AND_VALIDATION.md`](docs/DETECTION_AND_VALIDATION.md) | PATH / 环境变量 / 指定目录 / 常见目录 / 全盘扫描 / 可用性校验 |
 | [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md) | PATH、环境变量、current 链接、回滚 |
 | [`docs/PLATFORM_ENVIRONMENT.md`](docs/PLATFORM_ENVIRONMENT.md) | Windows 注册表 / UAC / junction、Linux shim / shell rc / journal |
-| [`docs/API_AND_PLUGIN.md`](docs/API_AND_PLUGIN.md) | 未来 API/插件设计；当前不实现 |
+| [`docs/API_AND_PLUGIN.md`](docs/API_AND_PLUGIN.md) | 外部集成方式（只调用 CLI）+ 未来 API/插件设计储备；当前不实现 Go API/插件 |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phase 0–7 与 M0 门禁 |
 | [`docs/TECHNICAL_NOTES.md`](docs/TECHNICAL_NOTES.md) | Go 1.27、并发、安全、测试、注意点 |
 | [`docs/LICENSE_DECISION.md`](docs/LICENSE_DECISION.md) | 许可证决策记录（GPL-3.0-only） |
@@ -196,7 +196,7 @@ CLI 参数 + stdout JSON / 文件产物 + stderr 日志 + 退出码
 - Phase 4 `provider add` / `resolve` / `download`：已完成，状态见 [`docs/archive/PHASE4_STATUS.md`](docs/archive/PHASE4_STATUS.md)；
 - Phase 5 `install`（安全解压、版本化目录、install.json、current、journal）：已完成，状态见 [`docs/archive/PHASE5_STATUS.md`](docs/archive/PHASE5_STATUS.md)；
 - 全量审查与缺陷修复：见 [`docs/archive/FULL_AUDIT_2026-11-11.md`](docs/archive/FULL_AUDIT_2026-11-11.md)；
-- CLI：`version` / `detect` / `validate` / `capabilities` 已实现；
+- CLI：18 个命令全部实现并冻结（含 env 全套 / doctor / uninstall / release / journal）；
 - 本地单测 / `go vet` / Windows+Linux 交叉编译：通过；
 - 第三方许可证清单 / `THIRD_PARTY_NOTICES`：初稿完成，许可证文本已复制；
 - 下载/安装/环境变量修改：已实现（Phase 4/5，写入路径默认 dry-run）；

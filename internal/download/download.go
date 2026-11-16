@@ -22,6 +22,7 @@ import (
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/checksum"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
 )
 
 const (
@@ -95,8 +96,17 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 	}
 
 	targetDir := filepath.Join(d.options.Dir, sha[:16])
+	_, statErr := os.Stat(targetDir)
+	createdDir := os.IsNotExist(statErr)
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
 		return model.Artifact{}, apperrors.New(apperrors.E4005, "cannot create download directory").WithCause(err.Error())
+	}
+	// Only a directory this call created may be removed on failure. Never
+	// delete a shared directory another concurrent run may be writing into.
+	cleanupDir := func() {
+		if createdDir {
+			_ = os.Remove(targetDir) // os.Remove is a no-op when it is non-empty
+		}
 	}
 	finalPath := filepath.Join(targetDir, name)
 
@@ -104,10 +114,7 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 	// makes checksums failures cheap, keeps reuse honest, and avoids deleting a
 	// fully verified 500 MiB asset after the fact.
 	if err := d.verifyChecksumsFile(ctx, release); err != nil {
-		// This call has not written anything yet. targetDir is keyed by sha[:16]
-		// and shared by concurrent runs of the same asset, so leave finalPath
-		// alone (it may be another run's verified file); only tidy an empty dir.
-		_ = os.Remove(targetDir)
+		cleanupDir()
 		return model.Artifact{}, err
 	}
 
@@ -117,9 +124,8 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 	} else if !matches {
 		if err := d.download(ctx, release.AssetURL, finalPath, sha); err != nil {
 			// download writes a .part temp and only commits finalPath on success,
-			// so a failure leaves no file of ours at finalPath. Do not delete a
-			// concurrent run's file; only tidy an empty shared directory.
-			_ = os.Remove(targetDir)
+			// so a failure leaves no file of ours at finalPath.
+			cleanupDir()
 			return model.Artifact{}, err
 		}
 		downloaded = true
@@ -131,7 +137,7 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 			// Only the file this call downloaded may be removed; a non-empty
 			// shared targetDir fails to remove harmlessly, keeping others' files.
 			_ = os.Remove(finalPath)
-			_ = os.Remove(targetDir)
+			cleanupDir()
 		}
 		return model.Artifact{}, err
 	}
@@ -295,7 +301,6 @@ func (d *Downloader) get(ctx context.Context, rawURL string) (*http.Response, er
 	}
 	client := d.options.HTTPClient
 	if client == nil {
-		maxRedirects := d.options.MaxRedirects
 		timeout := d.options.Timeout
 		client = &http.Client{
 			// No overall Timeout: it would also cap the body read and abort a
@@ -308,18 +313,25 @@ func (d *Downloader) get(ctx context.Context, rawURL string) (*http.Response, er
 				ResponseHeaderTimeout: timeout,
 				ExpectContinueTimeout: 1 * time.Second,
 			},
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				// Never downgrade to plain http, even if the original URL was
-				// https; loopback is the only exception (tests/mirrors).
-				if !isAllowedURL(req.URL.String()) {
-					return apperrors.New(apperrors.E4001, "redirect target must be https").WithDetails(map[string]any{"url": req.URL.String()})
-				}
-				if len(via) > maxRedirects {
-					return apperrors.New(apperrors.E4003, "redirect limit exceeded")
-				}
-				return nil
-			},
 		}
+	} else {
+		// Never mutate the caller's client. Work on a shallow copy so our
+		// redirect policy cannot leak across downloads.
+		clone := *client
+		client = &clone
+	}
+	// Enforce the policy regardless of client origin. A caller-supplied client
+	// may otherwise follow an https->http downgrade or redirect forever, since
+	// Fetch's isAllowedURL check only covers the initial URL.
+	maxRedirects := d.options.MaxRedirects
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if !isAllowedURL(req.URL.String()) {
+			return apperrors.New(apperrors.E4001, "redirect target must be https").WithDetails(map[string]any{"url": req.URL.String()})
+		}
+		if len(via) > maxRedirects {
+			return apperrors.New(apperrors.E4003, "redirect limit exceeded")
+		}
+		return nil
 	}
 	response, err := client.Do(request)
 	if err != nil {
@@ -367,24 +379,43 @@ func writeArtifact(path string, artifact model.Artifact) error {
 
 // commitFile prefers an atomic rename. Windows cannot replace an existing
 // file, so it renames the old target aside first and restores it on failure.
+// The backup name is unique per call: a shared ".bak" let a concurrent run
+// clobber another caller's already-committed file during rollback.
 func commitFile(tmpPath, target string) error {
+	// A directory at the target path is never a file we may replace: renaming
+	// it aside would silently succeed and leave a directory where callers
+	// expect a JSON file / asset.
+	if info, err := os.Lstat(target); err == nil && info.IsDir() {
+		return apperrors.New(apperrors.E4005, "target path is a directory")
+	}
 	if err := os.Rename(tmpPath, target); err == nil {
 		return nil
 	}
-	backup := target + ".bak"
-	_ = os.Remove(backup)
-	if err := os.Rename(target, backup); err != nil {
+	backup, err := os.CreateTemp(filepath.Dir(target), filepath.Base(target)+".*.bak")
+	if err != nil {
+		return err
+	}
+	backupPath := backup.Name()
+	_ = backup.Close()
+	_ = os.Remove(backupPath) // os.Rename needs a free destination on Windows
+	if err := platform.RenamePath(target, backupPath); err != nil {
 		if os.IsNotExist(err) {
-			return os.Rename(tmpPath, target)
+			return platform.RenamePath(tmpPath, target)
 		}
 		return err
 	}
-	if err := os.Rename(tmpPath, target); err != nil {
-		_ = os.Remove(target)
-		_ = os.Rename(backup, target)
+	if err := platform.RenamePath(tmpPath, target); err != nil {
+		// Do NOT remove target here: on failure with a concurrent committer it
+		// may be a valid file another run just installed. Only restore our
+		// own backup if the target is now absent.
+		if _, statErr := os.Lstat(target); os.IsNotExist(statErr) {
+			_ = platform.RenamePath(backupPath, target)
+		} else {
+			_ = os.Remove(backupPath)
+		}
 		return err
 	}
-	_ = os.Remove(backup)
+	_ = os.Remove(backupPath)
 	return nil
 }
 

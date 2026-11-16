@@ -1,6 +1,6 @@
 # FFmpeg 发现与可用性校验
 
-> 状态：Phase 2 已实现
+> 状态：Phase 2 已实现，Phase 6 契约冻结；当前版本 v0.9.0
 > 原则：先只读、显式扫描、结果可审计、不误删
 > 当前不做包管理器识别
 > 实现入口：`internal/detect/`；CLI：`detect` / `validate`
