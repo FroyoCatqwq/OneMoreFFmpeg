@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to release (e.g. v0.9.1)"
+        description: "Existing tag to release (e.g. v1.0.1)"
         required: true
         type: string
 
@@ -18,6 +18,8 @@ permissions:
 env:
   CGO_ENABLED: "0"
   GO_VERSION: "1.27.x"
+  NFPM_VERSION: "v2.43.0"
+  BUCKET_REPO: "FroyoCatqwq/OneMoreFFmpeg-bucket"
 
 jobs:
   release:
@@ -71,36 +73,46 @@ jobs:
           GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "$LDFLAGS" \
             -o "dist/one-more-ffmpeg-v${VERSION}-linux-amd64" ./cmd/one-more-ffmpeg
 
-      - name: Guard - release assets must be CLI binaries only
+      - name: Build RHEL9+ RPM package
         shell: bash
         run: |
-          # Public releases must never ship FFmpeg/nonfree binaries. Only our
-          # two CLI executables plus checksums are allowed in dist/.
-          # Only the two CLI executables may exist here. Releasing FFmpeg
-          # binaries is prevented by allow-listing filenames, not by scanning
-          # binary contents (the CLI itself contains strings like "nonfree"
-          # for its provider id, which a content grep would falsely reject).
-          allowed_re='^one-more-ffmpeg-v[0-9.]+-windows-amd64\.exe$|^one-more-ffmpeg-v[0-9.]+-linux-amd64$'
+          sudo apt-get update -qq && sudo apt-get install -y -qq rpm >/dev/null
+          VERSION="${{ steps.version.outputs.version }}"
+          cp "dist/one-more-ffmpeg-v${VERSION}-linux-amd64" dist/one-more-ffmpeg
+          sed "s/__VERSION__/${VERSION}/g" packaging/nfpm.yaml > packaging/nfpm.ci.yaml
+          go run github.com/goreleaser/nfpm/v2/cmd/nfpm@${{ env.NFPM_VERSION }} \
+            package -f packaging/nfpm.ci.yaml -p rpm \
+            -t "dist/one-more-ffmpeg-${VERSION}-1.el9.x86_64.rpm"
+          rm -f dist/one-more-ffmpeg packaging/nfpm.ci.yaml
+
+      - name: Guard - release assets must be our artifacts only
+        shell: bash
+        run: |
+          # Allow-list exact artifact shapes: two CLI binaries + one RHEL9 RPM.
+          # Never scan binary contents: the CLI itself contains strings like
+          # "nonfree" (a provider id) which would be a false positive.
+          allowed_re='^one-more-ffmpeg-v[0-9.]+-windows-amd64\.exe$|^one-more-ffmpeg-v[0-9.]+-linux-amd64$|^one-more-ffmpeg-[0-9.]+-1\.el9\.x86_64\.rpm$'
           count=0
           while IFS= read -r f; do
             count=$((count + 1))
             echo "$f" | grep -Eq "$allowed_re" || { echo "unexpected asset: $f" >&2; exit 1; }
           done < <(find dist -maxdepth 1 -type f -printf '%f\n' | sort)
-          [ "$count" -eq 2 ] || { echo "expected exactly 2 release binaries, found $count" >&2; exit 1; }
+          [ "$count" -eq 3 ] || { echo "expected exactly 3 release artifacts, found $count" >&2; exit 1; }
           file dist/*.exe | grep -q 'PE32' || { echo "missing Windows PE binary" >&2; exit 1; }
           file dist/one-more-ffmpeg-v*-linux-amd64 | grep -q 'ELF' || { echo "missing Linux ELF binary" >&2; exit 1; }
+          rpm -qpi dist/*.rpm | grep -q 'Architecture.*x86_64' || { echo "invalid RPM" >&2; exit 1; }
 
       - name: Generate checksums
         shell: bash
         run: |
           cd dist
-          sha256sum one-more-ffmpeg-v*-windows-amd64.exe one-more-ffmpeg-v*-linux-amd64 > SHA256SUMS.txt
+          sha256sum one-more-ffmpeg-v*-windows-amd64.exe one-more-ffmpeg-v*-linux-amd64 one-more-ffmpeg-*.rpm > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: dist/one-more-ffmpeg-v*-*
+          subject-path: dist/one-more-ffmpeg-v*-*,dist/one-more-ffmpeg-*.rpm
 
       - name: Publish release
         env:
@@ -115,4 +127,54 @@ jobs:
             --verify-tag \
             dist/one-more-ffmpeg-v*-windows-amd64.exe \
             dist/one-more-ffmpeg-v*-linux-amd64 \
+            dist/one-more-ffmpeg-*.rpm \
             dist/SHA256SUMS.txt
+
+      - name: Update Scoop bucket
+        env:
+          GH_TOKEN: ${{ secrets.BUCKET_TOKEN || github.token }}
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          HASH="$(sha256sum dist/one-more-ffmpeg-v${VERSION}-windows-amd64.exe | cut -d' ' -f1)"
+          URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/one-more-ffmpeg-v${VERSION}-windows-amd64.exe"
+          cat > one-more-ffmpeg.json <<EOF
+          {
+            "version": "${VERSION}",
+            "description": "Unified FFmpeg discovery, validation, install and environment management CLI",
+            "homepage": "https://github.com/${{ github.repository }}",
+            "license": "GPL-3.0-only",
+            "architecture": {
+              "64bit": {
+                "url": "${URL}",
+                "hash": "${HASH}"
+              }
+            },
+            "bin": "one-more-ffmpeg-v${VERSION}-windows-amd64.exe",
+            "checkver": {
+              "github": "https://github.com/${{ github.repository }}"
+            },
+            "autoupdate": {
+              "architecture": {
+                "64bit": {
+                  "url": "https://github.com/${{ github.repository }}/releases/download/v\$version/one-more-ffmpeg-v\$version-windows-amd64.exe"
+                }
+              }
+            }
+          }
+          EOF
+          python3 -m json.tool one-more-ffmpeg.json > /dev/null
+          git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${{ env.BUCKET_REPO }}.git" bucket-repo
+          mkdir -p bucket-repo/bucket
+          cp one-more-ffmpeg.json bucket-repo/bucket/one-more-ffmpeg.json
+          cd bucket-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add bucket/one-more-ffmpeg.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update one-more-ffmpeg to ${TAG}"
+            git push
+          else
+            echo "bucket manifest unchanged"
+          fi

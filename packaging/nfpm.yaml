@@ -1,0 +1,26 @@
+name: one-more-ffmpeg
+arch: amd64
+platform: linux
+version: __VERSION__
+section: utils
+priority: optional
+maintainer: FroyoCatqwq <FroyoCatqwq@users.noreply.github.com>
+description: |
+  Unified FFmpeg discovery, validation, capability inspection, download,
+  install and environment management CLI. Pure Go, no runtime dependencies.
+vendor: FroyoCatqwq
+homepage: https://github.com/FroyoCatqwq/OneMoreFFmpeg
+license: GPL-3.0-only
+contents:
+  - src: ./dist/one-more-ffmpeg-linux-amd64
+    dst: /usr/bin/one-more-ffmpeg
+    file_info:
+      mode: 0755
+  - src: ./LICENSE
+    dst: /usr/share/doc/one-more-ffmpeg/LICENSE
+    file_info:
+      mode: 0644
+  - src: ./docs/reference/man/one-more-ffmpeg.1
+    dst: /usr/share/man/man1/one-more-ffmpeg.1.gz
+    file_info:
+      mode: 0644

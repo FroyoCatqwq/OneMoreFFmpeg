@@ -11,6 +11,7 @@
 - tag 触发的 release 流水线：双平台二进制、SHA256SUMS、build provenance、nonfree 资产守卫；
 - 扩展 e2e：`test_cli_full_e2e.py`（全部 18 命令信封、capabilities 字段级解析、9 种 `--only`、缓存、参数互斥）；
 - Docker 全新环境 e2e 镜像（干净容器复现构建与测试）；
+- 发布产物新增 RHEL 9+ x86_64 RPM 包（纯静态、无运行时依赖）与 Scoop bucket 自动更新（独立仓库 `OneMoreFFmpeg-bucket`）；
 - fuzz 目标：`FuzzParseVersion` / `FuzzParseList` / `FuzzValidateHelpTopic` / `FuzzIsHTTPS` / `FuzzSafeAssetName` / `FuzzIsAbsoluteLike` / `FuzzNormalizeJSONInput`；
 - 文档按 `guides/`、`reference/`、`development/`、`releases/`、`archive/` 重整，新增集成与迁移指南、SECURITY.md。
 

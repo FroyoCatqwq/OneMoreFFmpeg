@@ -1,7 +1,29 @@
 # v1.0.0（2026-11-16）
 
 > 首个稳定版：Phase 1–7 全部完成，CLI 外部契约冻结；文档重整，全量审查修复锁/回滚/解压等缺陷。
-> 产物：Windows x64 / Linux x64 可执行文件（纯 Go，`CGO_ENABLED=0`），`SHA256SUMS.txt`，build provenance。
+> 产物：Windows x64 / Linux x64 可执行文件（纯 Go，`CGO_ENABLED=0`）、RHEL 9+ x86_64 RPM 包、`SHA256SUMS.txt`、build provenance；
+> Scoop bucket 自动更新至 <https://github.com/FroyoCatqwq/OneMoreFFmpeg-bucket>。
+
+## 安装
+
+```powershell
+# Windows — Scoop
+scoop bucket add omf https://github.com/FroyoCatqwq/OneMoreFFmpeg-bucket
+scoop install one-more-ffmpeg
+```
+
+```bash
+# RHEL 9 / AlmaLinux 9 / Rocky 9（x86_64）
+sudo dnf install -y https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/download/v1.0.0/one-more-ffmpeg-1.0.0-1.el9.x86_64.rpm
+```
+
+```bash
+# Linux 通用：下载二进制 + SHA256SUMS 校验
+curl -LO https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/download/v1.0.0/one-more-ffmpeg-v1.0.0-linux-amd64
+curl -LO https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/download/v1.0.0/SHA256SUMS.txt
+sha256sum -c SHA256SUMS.txt --ignore-missing
+chmod +x one-more-ffmpeg-v1.0.0-linux-amd64
+```
 
 ## 亮点
 

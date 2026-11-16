@@ -10,6 +10,7 @@
 
 | 文档 | 用途 |
 |---|---|
+| [`guides/INSTALL.md`](guides/INSTALL.md) | 安装：Scoop bucket / RHEL 9+ dnf RPM / 手动二进制与校验 |
 | [`guides/HOWTO.md`](guides/HOWTO.md) | 新手上手：下载、首次安装、开新终端、`ffmpeg` 可用、排错 |
 | [`guides/USAGE.md`](guides/USAGE.md) | 详细教程：provider、release、install、env、journal 的完整流程 |
 | [`guides/INTEGRATION.md`](guides/INTEGRATION.md) | 外部项目如何调用 CLI（Python / PowerShell 示例） |
