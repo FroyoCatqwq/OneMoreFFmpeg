@@ -78,12 +78,12 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq rpm >/dev/null
           VERSION="${{ steps.version.outputs.version }}"
-          cp "dist/one-more-ffmpeg-v${VERSION}-linux-amd64" dist/one-more-ffmpeg
+          cp "dist/one-more-ffmpeg-v${VERSION}-linux-amd64" dist/one-more-ffmpeg-linux-amd64
           sed "s/__VERSION__/${VERSION}/g" packaging/nfpm.yaml > packaging/nfpm.ci.yaml
           go run github.com/goreleaser/nfpm/v2/cmd/nfpm@${{ env.NFPM_VERSION }} \
             package -f packaging/nfpm.ci.yaml -p rpm \
             -t "dist/one-more-ffmpeg-${VERSION}-1.el9.x86_64.rpm"
-          rm -f dist/one-more-ffmpeg packaging/nfpm.ci.yaml
+          rm -f dist/one-more-ffmpeg-linux-amd64 packaging/nfpm.ci.yaml
 
       - name: Guard - release assets must be our artifacts only
         shell: bash
