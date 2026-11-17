@@ -1,6 +1,6 @@
 # CLI JSON 契约 v1
 
-> 状态：v1.0.1（唯一受支持版本），CLI 外部契约已冻结
+> 状态：v1.0.2（唯一受支持版本），CLI 外部契约已冻结
 > 适用：当前唯一外部集成方式：调用 `one-more-ffmpeg` 可执行文件
 > 配套：[`ERROR_CODES.md`](ERROR_CODES.md)、[`schemas/`](schemas/README.md)
 
@@ -313,7 +313,7 @@ provider 摘要：
 | `--apply` | false | 实际写入；不带时默认 dry-run |
 | `--dry-run` | false | 强制预览；与 `--apply` 互斥，同时出现时返回 `OMF-E1001`（退出码 1） |
 
-整个 `LoadCustomFile → AddCustom → Save` 链路持有 `providers.toml.lock`；锁超时 `OMF-E7005`。
+整个 `LoadCustomFile → AddCustom → Save` 链路持有 `providers.toml.lock`；锁竞争 `OMF-E6009`（退出 1）。
 
 存储：`<data-root>/providers.toml`，schema `onemoreffmpeg.providers/v1`；重复 id 返回 `OMF-E7005`，不覆盖旧 pin。文件写入为临时文件 + rename。
 

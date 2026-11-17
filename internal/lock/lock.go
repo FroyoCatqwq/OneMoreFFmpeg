@@ -2,9 +2,6 @@
 package lock
 
 import (
-	"crypto/rand"
-	"encoding/hex"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -29,8 +26,8 @@ const (
 // owned by the flock handle. The kernel drops it when the descriptor closes,
 // including when the process crashes -- there is no mtime "stale" heuristic and
 // therefore no reclaim-vs-acquire TOCTOU. The lock file itself is intentionally
-// never deleted: deleting and recreating it changes its identity and would let
-// two waiters hold locks on different inodes at the same time.
+// never deleted or written to: its identity is the lock, and writing its
+// contents would both be racy and follow symlinks planted by an attacker.
 func DataRoot(dataRoot string) (func(), error) {
 	return acquire(filepath.Join(dataRoot, fileName), waitTimeout)
 }
@@ -44,18 +41,20 @@ func FilePath(lockFilePath string) (func(), error) {
 
 // acquire opens (or creates) the lock file and takes the OS lock via the
 // gofrs/flock library. wait bounds how long to poll when another process holds
-// it. The nonce written into the file is informational only (diagnostics);
-// correctness comes from the kernel lock.
+// it. The lock file's contents are never read or written: correctness comes
+// entirely from the OS lock identity.
 func acquire(path string, wait time.Duration) (func(), error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, apperrors.New(apperrors.E6009, "cannot create transaction lock directory").WithCause(err.Error())
 	}
+	// Refuse a pre-existing symlink at the lock path: flock would follow it and
+	// lock (or on some platforms truncate) a file outside the intended root.
+	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		return nil, apperrors.New(apperrors.E6009, "transaction lock path is a symbolic link").WithDetails(map[string]any{"lock": path})
+	} else if err != nil && !os.IsNotExist(err) {
+		return nil, apperrors.New(apperrors.E6009, "cannot inspect transaction lock").WithCause(err.Error())
+	}
 	fl := flock.New(path, flock.SetPermissions(0o600))
-	// Write the diagnostic nonce before locking: Windows LockFileEx holds an
-	// exclusive handle that blocks other writers to the same file, so writing
-	// while locked would silently fail. The nonce is informational only;
-	// correctness comes from the OS lock, not the file contents.
-	_ = os.WriteFile(path, []byte(ownerNonce()), 0o600)
 	deadline := time.Now().Add(wait)
 	for {
 		locked, err := fl.TryLock()
@@ -81,11 +80,3 @@ func acquire(path string, wait time.Duration) (func(), error) {
 
 // defaultWait is exposed for tests that need the default bound.
 func defaultWait() time.Duration { return waitTimeout }
-
-func ownerNonce() string {
-	var raw [8]byte
-	if _, err := rand.Read(raw[:]); err != nil {
-		return fmt.Sprintf("%d-%d", os.Getpid(), time.Now().UnixNano())
-	}
-	return fmt.Sprintf("%d-%s", os.Getpid(), hex.EncodeToString(raw[:]))
-}

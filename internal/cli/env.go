@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	urfave "github.com/urfave/cli/v3"
 
@@ -80,7 +81,21 @@ func doctorCommand() *urfave.Command {
 				return err
 			}
 			if cmd.Bool("strict") && !report.Healthy {
-				return apperrors.New(apperrors.E6006, "doctor detected an unhealthy state").WithDetails(map[string]any{"report": report})
+				// In human mode writeFailure only prints code/message/cause, not
+				// details. Surface the failed checks in the message so the user
+				// can act on them; --json consumers still get the full report in
+				// details.
+				failed := []string{}
+				for _, check := range report.Checks {
+					if !check.OK {
+						failed = append(failed, check.Name+" ("+check.Detail+")")
+					}
+				}
+				msg := "doctor detected an unhealthy state"
+				if len(failed) > 0 {
+					msg += ": " + strings.Join(failed, "; ")
+				}
+				return apperrors.New(apperrors.E6006, msg).WithDetails(map[string]any{"report": report})
 			}
 			human := fmt.Sprintf("healthy: %v\n", report.Healthy)
 			for _, check := range report.Checks {

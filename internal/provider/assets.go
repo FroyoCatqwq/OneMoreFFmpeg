@@ -35,7 +35,11 @@ func normalizeVariant(variant, linkage string) (string, string) {
 	normalized := strings.ToLower(strings.TrimSpace(variant))
 	if strings.HasSuffix(normalized, "-shared") {
 		normalized = strings.TrimSuffix(normalized, "-shared")
-		linkage = "shared"
+		// Only derive linkage from the variant when the user did not state one;
+		// an explicit --linkage static must not be silently overwritten.
+		if strings.TrimSpace(linkage) == "" {
+			linkage = "shared"
+		}
 	}
 	if normalized == "" {
 		normalized = "gpl"

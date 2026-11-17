@@ -20,10 +20,19 @@ func (r *Resolver) resolveChecksums(ctx context.Context, release github.Release,
 		digest = strings.ToLower(strings.TrimSpace(value))
 	}
 	var checksumsAsset *github.Asset
-	for index := range release.Assets {
-		if release.Assets[index].Name == checksumsAssetName {
-			checksumsAsset = &release.Assets[index]
-			break
+	// Prefer checksums.sha256, then *checksums*.sha256, then any *.sha256,
+	// matching PROVIDER_RESOLVER.md §6.1. Pick the first asset at the best
+	// priority tier so selection is deterministic across release listings.
+	for tier := 0; tier < 3 && checksumsAsset == nil; tier++ {
+		for index := range release.Assets {
+			name := strings.ToLower(release.Assets[index].Name)
+			match := (tier == 0 && name == checksumsAssetName) ||
+				(tier == 1 && strings.HasSuffix(name, ".sha256") && strings.Contains(name, "checksums")) ||
+				(tier == 2 && strings.HasSuffix(name, ".sha256"))
+			if match {
+				checksumsAsset = &release.Assets[index]
+				break
+			}
 		}
 	}
 	if checksumsAsset == nil {

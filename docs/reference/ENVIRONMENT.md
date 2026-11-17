@@ -1,6 +1,6 @@
 # 环境变量与 PATH 管理
 
-> 状态：v1.0.1 现行，CLI 外部契约已冻结
+> 状态：v1.0.2 现行，CLI 外部契约已冻结
 > 原则：默认只读、显式写入、先备份后修改、可回滚
 > 当前不做包管理器识别与包管理器共存逻辑
 
@@ -18,7 +18,7 @@
 | `HTTPS_PROXY` / `HTTP_PROXY` | 网络代理 | 只读，不持久化 |
 | `ONE_MORE_FFMPEG_HOME` | data root 覆盖 | 只读，本项目不写 |
 
-不覆盖用户已有变量。
+覆盖本项目管理的三个变量（旧值写入 journal 供回滚），不触碰其它变量。
 
 Windows 环境变量名不区分大小写：`env status` 按规范名（`FFMPEG_DIR` / `ONE_MORE_FFMPEG_DIR` / `LAE_FFMPEG_DIR`）报告，进程环境中诸如 `ffmpeg_dir` 的小写写法也会被识别并归一到规范名。
 
@@ -142,7 +142,7 @@ Chocolatey
 - 在 `~/.profile` 维护一个托管块（可用 `--no-shell-rc` 跳过），没有指定任意 rc 路径的参数；
 - 不要求 root；
 - 优先在 `~/.local/bin` 创建 shim/symlink；
-- 若 `~/.local/bin` 不在 PATH，报告 warning 并给出添加命令，但默认不自动改 rc。
+- 若 `~/.local/bin` 不在 PATH，报告 warning 并给出添加命令，但默认会在 ~/.profile 写入一个托管块（可用 --no-shell-rc 跳过）。
 
 ### 4.2 shim
 
@@ -210,32 +210,31 @@ Windows 注册表、UAC、`REG_EXPAND_SZ`、`WM_SETTINGCHANGE`、junction / poin
 
 ## 6. Journal
 
-每次写入生成：
+每次写入在 `<data-root>/journal/<id>.json` 生成一条记录（`internal/journal.Record`）：
 
 ```json
 {
   "schema": "onemoreffmpeg.journal/v1",
-  "id": "...",
-  "created_at": "...",
-  "operations": [
-    {
-      "type": "user_path_append",
-      "old_value": "...",
-      "new_value": "...",
-      "status": "pending"
-    }
-  ],
-  "rollback_supported": true
+  "id": "journal-0123456789abcdef",
+  "action": "env-set",
+  "status": "committed",
+  "created_at": "2026-11-18T00:00:00Z",
+  "updated_at": "2026-11-18T00:00:00Z",
+  "target": "<data-root>",
+  "details": {
+    "scope": "user",
+    "shell_rc_backup": "<data-root>/journal/profile-xxx.bak"
+  }
 }
 ```
 
+字段：`schema` / `id` / `action` / `status`（`pending`｜`committed`｜`failed`｜`rolled-back`）/ `created_at` / `updated_at` / 可选 `target` / `temp_dir` / `previous` / `details`（字符串键值，具体键随 action 而定）。**没有** `operations[]` 或 `rollback_supported` 字段——程序化输出形状见 `docs/reference/schemas/examples/journal-*.example.json`。
+
 规则：
 
-- 先写 journal，再改系统；
-- 每步成功后更新 status；
-- 全部成功才 commit；
-- 失败自动 rollback；
-- rollback 失败也要保留记录并报错；
+- 先写 journal，再改系统；每步成功后更新记录；全部成功才标记 `committed`；
+- 失败自动 rollback 并把状态置为 `failed`（含 `error` / `undo_error`）；rollback 失败也要保留记录并报错；
+- journal 文件由 `lockedfile.Write` 原子写入（可能在同目录留下锁/sidecar 文件，勿手工删除）；
 - journal 不保存 token / 密码。
 
 ---

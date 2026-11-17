@@ -3,26 +3,42 @@ package lock
 import (
 	"os"
 	"path/filepath"
-	"strings"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestLockFileCarriesDiagnosticOwner(t *testing.T) {
+func TestLockFileIsNeverWritten(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, fileName)
 	unlock, err := acquire(path, defaultWait())
 	require.NoError(t, err)
 	unlock()
 
-	// Read after release: on Windows an exclusive LockFileEx also blocks reads
-	// by other handles, so inspecting the diagnostic nonce is only safe once
-	// the descriptor is closed.
+	// The lock file's identity is the OS lock; its contents must stay empty.
 	data, readErr := os.ReadFile(path)
 	require.NoError(t, readErr)
-	require.NotEmpty(t, strings.TrimSpace(string(data)), "owner nonce is written for diagnostics")
-	require.Contains(t, string(data), "-")
+	require.Empty(t, data)
+}
+
+func TestLockPathSymlinkIsRejected(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation requires privileges on Windows")
+	}
+	dir := t.TempDir()
+	victim := filepath.Join(dir, "victim.txt")
+	require.NoError(t, os.WriteFile(victim, []byte("keep-me"), 0o644))
+	link := filepath.Join(dir, fileName)
+	require.NoError(t, os.Symlink(victim, link))
+
+	_, err := acquire(link, defaultWait())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "symbolic link")
+	// The victim file must be untouched.
+	data, readErr := os.ReadFile(victim)
+	require.NoError(t, readErr)
+	require.Equal(t, "keep-me", string(data))
 }
 
 func TestReleaseIsIdempotent(t *testing.T) {

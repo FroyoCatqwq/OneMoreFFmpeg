@@ -1,6 +1,6 @@
 # 技术点与注意点
 
-> 状态：v1.0.1 现行，CLI 外部契约已冻结
+> 状态：v1.0.2 现行，CLI 外部契约已冻结
 > Go：`go.mod` 声明 `go 1.27`；当前`go.mod` 声明 `go 1.27`（CI 采用 1.27.x 补丁版本）
 > 平台：Windows x64 + Linux x86_64
 > 当前范围：CLI-first；不做包管理器识别；不做 Go API / 插件
@@ -16,11 +16,11 @@ go1.27.0
 go1.27.1
 go1.27.2
 go1.27.3
-go1.27.4
+go1.27.x
 ```
 
-`go.mod` 声明 `go 1.27`（不锁定补丁号），当前工具链为 `go1.27.4`。
-若后续发布 1.27.4+，需要写 ADR 后更新，不静默升级。
+`go.mod` 声明 `go 1.27`（不锁定补丁号），CI 使用 `1.27.x` 浮动补丁版本。
+补丁版本由 CI/mise 的 `1.27.x` 浮动，不需要为每个补丁写 ADR。
 
 Go 业务代码已在 Phase 1–7 全部实现并通过测试；项目状态与现行文档见根 [`README.md`](../../README.md) 与 [`docs/README.md`](../README.md)。
 
@@ -219,7 +219,7 @@ Phase 1 建议采用：
 - 默认 dry-run；
 - 写入前 journal；
 - 失败 rollback；
-- 不覆盖未知值；
+- 覆盖本项目管理的变量并保存旧值供回滚；
 - 不删除非本项目创建项；
 - 不静默改 PATH 顺序；
 - Windows 与 Linux 用不同策略；
@@ -313,4 +313,4 @@ Phase 1 建议采用：
 - 不静默改系统；
 - 不公开分发 nonfree；
 - 不兼容旧实验 schema；
-- 不把 floating `latest` 当安装记录；
+- 不把未 pin 的 floating `latest` 当安装记录；

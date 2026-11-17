@@ -220,6 +220,11 @@ func officialVersions(ctx context.Context, opts CatalogOptions) (map[string]stri
 	}
 	// Never follow an https -> http downgrade, even to loopback.
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		// Bound redirects so a redirect loop cannot spin forever when the
+		// caller passed a client with no overall Timeout.
+		if len(via) >= 10 {
+			return apperrors.New(apperrors.E3007, "release page redirected too many times")
+		}
 		if !allowedPageScheme(req.URL.Scheme, req.URL.Hostname()) {
 			return apperrors.New(apperrors.E3007, "release page redirect must stay https")
 		}

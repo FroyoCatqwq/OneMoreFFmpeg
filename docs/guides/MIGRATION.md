@@ -44,7 +44,7 @@ ffmpeg -version
 omf doctor                       # healthy: true
 ```
 
-兜底：整个 data-root 删除不会影响系统（CLI 只在自己的目录里操作）：
+兜底：删除 data-root 前请先 `env unset --apply`（或 `env rollback`）清理 shim/profile/注册表，否则会留下失效条目；之后整个 data-root 删除只会移除本项目自己的文件：
 Linux `rm -rf ~/.local/share/onemoreffmpeg`，Windows 删除 `%LOCALAPPDATA%\OneMoreFFmpeg`，然后从 [`HOWTO.md`](HOWTO.md) §2 重走。
 
 ## 5. 版本兼容

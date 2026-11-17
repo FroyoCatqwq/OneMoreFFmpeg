@@ -145,13 +145,16 @@ func (d *Detector) Detect(ctx context.Context, opts Options) (Result, error) {
 	}
 
 	s := newSession()
+	// One scan budget for the whole detect run: --dir --recursive and --scan
+	// together must not each get a fresh MaxFiles allowance.
+	scanBudget := 0
 
 	if opts.Dir != "" {
 		if opts.Recursive {
 			scanOpts := opts
 			scanOpts.Roots = []string{opts.Dir}
 			scanOpts.Scan = true
-			scanRoots(scanCtx, scanOpts, func(dir, _ string) { s.addDir(dir, sourceExplicitDir) }, &s.errors)
+			scanRoots(scanCtx, scanOpts, func(dir, _ string) { s.addDir(dir, sourceExplicitDir) }, &s.errors, &scanBudget)
 		} else if err := s.addPath(opts.Dir, sourceExplicitDir, true, nil); err != nil {
 			return Result{}, err
 		}
@@ -185,7 +188,7 @@ func (d *Detector) Detect(ctx context.Context, opts Options) (Result, error) {
 	}
 
 	if opts.Scan {
-		scanRoots(scanCtx, opts, s.addDir, &s.errors)
+		scanRoots(scanCtx, opts, s.addDir, &s.errors, &scanBudget)
 	}
 
 	if stderrors.Is(ctx.Err(), context.Canceled) {

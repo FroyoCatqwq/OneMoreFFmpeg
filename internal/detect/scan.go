@@ -20,10 +20,23 @@ var errScanLimit = stderrors.New("scan limit exceeded")
 type emitError func(model.DetectError)
 type addCandidate func(dir, source string)
 
-func scanRoots(ctx context.Context, opts Options, add addCandidate, errs *[]model.DetectError) {
+// scanRoots walks roots with a shared MaxFiles budget. When budget is nil a
+// local counter is used; pass the same *int across multiple scanRoots calls in
+// one detect run so --dir --recursive and --scan cannot double the limit.
+func scanRoots(ctx context.Context, opts Options, add addCandidate, errs *[]model.DetectError, budget *int) {
 	roots := opts.Roots
 	if len(roots) == 0 {
 		roots = defaultScanRoots(opts)
+	}
+	// Scan shallower roots first so a parent is visited before its children;
+	// isUnderAny then skips the nested child regardless of user-supplied order.
+	roots = append([]string(nil), roots...)
+	sort.SliceStable(roots, func(i, j int) bool {
+		return strings.Count(filepath.Clean(roots[i]), string(filepath.Separator)) <
+			strings.Count(filepath.Clean(roots[j]), string(filepath.Separator))
+	})
+	if budget == nil {
+		budget = new(int)
 	}
 	seenErrors := map[string]bool{}
 	emit := func(err model.DetectError) {
@@ -36,9 +49,9 @@ func scanRoots(ctx context.Context, opts Options, add addCandidate, errs *[]mode
 	}
 
 	scannedRoots := make([]string, 0, len(roots))
-	// MaxFiles is a global budget; previously it restarted for every root,
-	// so a multi-drive scan visited roots × MaxFiles entries.
-	files := 0
+	// MaxFiles is a global budget shared across all roots and scanRoots calls
+	// in this detect run.
+	files := budget
 	for _, root := range roots {
 		if ctx.Err() != nil {
 			// Detect reports the overall timeout once; per-root duplicates
@@ -50,7 +63,7 @@ func scanRoots(ctx context.Context, opts Options, add addCandidate, errs *[]mode
 			continue
 		}
 		scannedRoots = append(scannedRoots, canon)
-		err := scanOne(ctx, root, opts, add, emit, &files)
+		err := scanOne(ctx, root, opts, add, emit, files)
 		if err != nil {
 			switch {
 			case stderrors.Is(err, errScanLimit):

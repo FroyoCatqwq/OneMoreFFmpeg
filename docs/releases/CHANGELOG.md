@@ -1,7 +1,29 @@
 # 更新日志
 
 本项目遵循 [Semantic Versioning 2.0.0](../reference/VERSIONING.md)。格式基于 [Keep a Changelog](https://keepachangelog.com/)。
-仅保留当前受支持版本 v1.0.1 的记录；更早的 Release 与历史快照已撤回。
+仅保留当前及上一版本的记录；更早的 Release 与历史快照已撤回。
+
+## [1.0.2] — 2026-11-18
+
+Bugfix 版本。全量审查每个包与每份文档后修复确认的缺陷。
+
+### Security
+- `--json provider|env|journal|release help`（嵌套内置 help 子命令）不再绕过 stdout JSON-only 契约，统一返回 E1001 错误信封。
+- 事务锁文件不再在加锁前被写入（避免符号链接锁路径把 data-root 外的文件截断）；锁路径为符号链接时显式拒绝；锁文件内容保持为空，正确性完全来自 OS 锁身份。
+- `env rollback` 的 shim 目录白名单增加 scope/提权一致性校验的说明；`--system` scope 回滚强制提权。
+
+### Fixed
+- `--max-bytes` CLI flag 加上与 config 一致的 8 GiB 上限，防止 flag 绕过配置硬限制。
+- `release list/install --days/--count` 非法（非正）值改为显式错误，不再静默改默认值。
+- `doctor --strict` 在 human 模式的错误里输出失败检查项，不再丢失诊断信息。
+- checksums 资产按文档优先 `checksums.sha256` → `*checksums*.sha256` → `*.sha256` 查找，不再只认精确文件名。
+- GitHub `ListReleases(nil, ...)` 在满页时不再 panic；`Retry-After` 超大整数不再溢出绕过 60s 上限；officialVersions 重定向限制 10 次。
+- `provider add` 的 `gpl-shared`/`nonfree-shared` 不再覆盖用户显式 `--linkage static`。
+- 一次 detect 中 `--dir --recursive` 与 `--scan` 共享 `MaxFiles` 预算；重叠 roots 按父目录优先扫描避免重复遍历。
+- 文档修正：journal schema 字段、shell rc 托管块标记、删除 data-root 的影响、变量覆盖语义、锁错误码 E6009、latest pin 表述、Go 工具链 1.27.x 等。
+
+### Added
+- 新增 `test_real_network_e2e.py`（marker `OMF_E2E_NETWORK=1`）：真实 ffmpeg.org releases 页与 BtbN GitHub API 的 release list/resolve 测试，本地实测 3/3 通过。
 
 ## [1.0.1] — 2026-11-17
 

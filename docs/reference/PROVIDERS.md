@@ -1,6 +1,6 @@
 # Provider、来源与 Release Pin
 
-> 状态：v1.0.1 现行，CLI 外部契约已冻结
+> 状态：v1.0.2 现行，CLI 外部契约已冻结
 > 目标：支持内置来源、自定义 URL、daily / stable，同时保证可复现
 > 当前外部集成：其他项目只通过调用 CLI 可执行文件读取产物文件；不通过 Go API / 插件
 > 解析细则：[`PROVIDER_RESOLVER.md`](PROVIDER_RESOLVER.md)；CLI 输出见 [`CLI_SCHEMA.md`](CLI_SCHEMA.md)；错误码见 [`ERROR_CODES.md`](ERROR_CODES.md)
@@ -51,7 +51,7 @@ GitHub API、限流、重试、资产匹配、checksums 与 pin 细则见 [`PROV
 
 禁止：
 
-- 把 `latest` 写进安装记录；
+- 把未 pin 的 `latest`（无 release_id/published_at/asset_sha256）写进安装记录；
 - 把 URL 当作版本；
 - 每次启动重新解析同一安装；
 - 静默从 stable 切到 daily；

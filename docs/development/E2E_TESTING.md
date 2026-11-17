@@ -14,7 +14,7 @@ pwsh -NoProfile -Command '
   go build -trimpath -o dist/one-more-ffmpeg-windows-amd64.exe ./cmd/one-more-ffmpeg
   $env:OMF_BINARY = (Resolve-Path "dist/one-more-ffmpeg-windows-amd64.exe").Path
   uv run --python 3.14 --with-requirements tests/e2e/requirements.txt `
-    pytest -c tests/e2e/pytest.ini -n 2 -q tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py tests/e2e/test_env_real_e2e.py
+    pytest -c tests/e2e/pytest.ini -n 2 -q tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py tests/e2e/test_env_real_e2e.py tests/e2e/test_real_network_e2e.py
   uv run --python 3.14 --with-requirements tests/e2e/requirements.txt `
     robot --outputdir tests/e2e/results/robot tests/e2e/robot
 '
@@ -35,7 +35,7 @@ uv run --python 3.14 --with-requirements tests/e2e/requirements.txt `
   python tests/e2e/remote_linux.py all
 ```
 
-远程流程：SFTP 部署源码与 Linux 二进制到 `/tmp/omf-e2e` → `mise trust` → `go test ./...` → pytest e2e → Robot → Bats。远程使用 mise 提供的 Python 3.14、uv、Go 1.27（工具链实际为 go1.27.4）。
+远程流程：SFTP 部署源码与 Linux 二进制到 `/tmp/omf-e2e` → `mise trust` → `go test ./...` → pytest e2e → Robot → Bats。远程使用 mise 提供的 Python 3.14、uv、Go 1.27.x。
 
 ## 3. CI
 

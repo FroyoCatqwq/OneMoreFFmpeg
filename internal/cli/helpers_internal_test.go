@@ -47,6 +47,12 @@ func TestHasHelpSubcommand(t *testing.T) {
 	require.False(t, hasHelpSubcommand([]string{"one-more-ffmpeg", "--dir", "help", "detect"}), "flag value must not count")
 	require.False(t, hasHelpSubcommand([]string{"one-more-ffmpeg", "--", "help"}), "after -- is not a command")
 	require.False(t, hasHelpSubcommand([]string{"one-more-ffmpeg", "version"}))
+	// Nested built-in help commands on parent commands must be detected too.
+	for _, parent := range []string{"provider", "env", "journal", "release"} {
+		require.True(t, hasHelpSubcommand([]string{"one-more-ffmpeg", "--json", parent, "help"}), parent)
+	}
+	require.True(t, hasHelpSubcommand([]string{"one-more-ffmpeg", "--json", "env", "set", "help"}))
+	require.False(t, hasHelpSubcommand([]string{"one-more-ffmpeg", "--dir", "help", "detect"}), "flag value is not a command")
 }
 
 func TestHasInDetailUsageStopsAtSeparator(t *testing.T) {

@@ -1,18 +1,21 @@
 # THIRD_PARTY_NOTICES
 
-> Status: maintained; reviewed alongside v1.0.1 (2026-11-17)
+> Status: maintained; reviewed alongside v1.0.2 (2026-11-18)
 > Date: 2026-11-10
 > Project license: GPL-3.0-only (see root LICENSE)
 
-This file lists Go modules recorded by `go list -m all`. License texts are copied under `third_party/licenses/` where available. v1.0.1 is the current supported release; keep this list in sync whenever `go.mod` changes. Automated license checking via CI is not implemented yet (tracked separately, not a release blocker for v1.0.1).
+This file lists Go modules recorded by `go list -m all`. License texts are copied under `third_party/licenses/` where available. v1.0.2 is the current supported release; keep this list in sync whenever `go.mod` changes. Automated license checking via CI is not implemented yet (tracked separately, not a release blocker for v1.0.2).
 
 | Module | Version | Detected license | License text |
 |---|---|---|---|
 | `github.com/dustin/go-humanize` | `v1.1.0` | MIT | `third_party/licenses/github.com_dustin_go-humanize.txt` |
+| `github.com/gofrs/flock` | `v0.13.2` | BSD-3-Clause | `third_party/licenses/github.com_gofrs_flock.txt` |
 | `github.com/klauspost/compress` | `v1.20.4` | BSD-3-Clause | `third_party/licenses/github.com_klauspost_compress.txt` |
 | `github.com/lmittmann/tint` | `v1.2.1` | MIT | `third_party/licenses/github.com_lmittmann_tint.txt` |
 | `github.com/mattn/go-isatty` | `v0.0.24` | MIT | `third_party/licenses/github.com_mattn_go-isatty.txt` |
 | `github.com/pelletier/go-toml/v2` | `v2.4.3` | MIT | `third_party/licenses/github.com_pelletier_go-toml_v2.txt` |
+| `github.com/rogpeppe/go-internal` | `v1.16.0` | BSD-3-Clause | `third_party/licenses/github.com_rogpeppe_go-internal.txt` |
+| `github.com/santhosh-tekuri/jsonschema/v6` | `v6.0.3` | Apache-2.0 | `third_party/licenses/github.com_santhosh-tekuri_jsonschema_v6.txt` |
 | `github.com/sethvargo/go-retry` | `v0.5.0` | Apache-2.0 | `third_party/licenses/github.com_sethvargo_go-retry.txt` |
 | `github.com/stretchr/testify` | `v1.12.1` | MIT | `third_party/licenses/github.com_stretchr_testify.txt` |
 | `github.com/ulikunitz/xz` | `v0.5.17` | BSD-3-Clause | `third_party/licenses/github.com_ulikunitz_xz.txt` |

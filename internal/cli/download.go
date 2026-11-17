@@ -54,8 +54,10 @@ func downloadCommand() *urfave.Command {
 			maxBytes := cfg.Download.MaxBytes
 			if cmd.IsSet("max-bytes") {
 				maxBytes = cmd.Int64("max-bytes")
-				if maxBytes <= 0 {
-					return apperrors.New(apperrors.E7005, "--max-bytes must be positive")
+				// Mirror config.Load's hard cap so a CLI flag cannot bypass the
+				// 8 GiB download ceiling.
+				if maxBytes <= 0 || maxBytes > 8<<30 {
+					return apperrors.New(apperrors.E7005, "--max-bytes must be between 1 and 8589934592 (8 GiB)")
 				}
 			}
 

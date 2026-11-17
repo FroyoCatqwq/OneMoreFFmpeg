@@ -1,6 +1,6 @@
 # 平台环境变量与 current 指针细则
 
-> 状态：v1.0.1 现行，CLI 外部契约已冻结
+> 状态：v1.0.2 现行，CLI 外部契约已冻结
 > 日期：2026-11-10
 > 配套：[`ENVIRONMENT.md`](ENVIRONMENT.md)、[`ERROR_CODES.md`](ERROR_CODES.md)、[`CLI_SCHEMA.md`](CLI_SCHEMA.md)
 
@@ -157,7 +157,7 @@ LAE_FFMPEG_DIR
 
 - 默认写用户作用域；
 - `--system` 规则同 PATH；
-- 不覆盖已有值；
+- 覆盖本项目管理的变量（旧值保存在 journal 供回滚），不触碰其它变量；
 - 旧值写入 journal；
 - 变量值指向 `<data-root>/current` 或 `<data-root>/current/bin`；
 - 不写 token / 密码；
@@ -197,15 +197,15 @@ LAE_FFMPEG_DIR
 
 限制：
 
-- 必须是用户拥有的普通文件；
-- 默认拒绝 `/etc/*`；
-- 写入前备份到 journal；
-- 使用受控块：
+- 只接受两个固定路径：用户级 `~/.profile` 与系统级 `/etc/profile.d/onemoreffmpeg.sh`
+  （系统级需要真实提权；不校验 owner，而是通过临时文件 + 原子 rename 替换）；
+- 写入前备份到 `<data-root>/journal/profile-*.bak`；
+- 使用受控块（标记来自 `internal/env` 的 `shellRCMarkerStart/End`）：
 
 ```text
-# BEGIN OneMoreFFmpeg managed block
+# >>> OneMoreFFmpeg >>>
 export PATH="..."
-# END OneMoreFFmpeg managed block
+# <<< OneMoreFFmpeg <<<
 ```
 
 - 已存在旧块则替换旧块，不追加第二份；
@@ -217,36 +217,30 @@ export PATH="..."
 
 ## 7. journal
 
-每次 env / install 写入必须生成 journal：
+每次 env / install 写入必须在 `<data-root>/journal/<id>.json` 生成 `internal/journal.Record`：
 
 ```json
 {
   "schema": "onemoreffmpeg.journal/v1",
-  "id": "...",
-  "created_at": "...",
-  "operations": [
-    {
-      "type": "user_path_append",
-      "scope": "user",
-      "old_value": "...",
-      "new_value": "...",
-      "old_registry_type": "REG_EXPAND_SZ",
-      "status": "pending"
-    }
-  ],
-  "rollback_supported": true
+  "id": "journal-0123456789abcdef",
+  "action": "env-set",
+  "status": "committed",
+  "created_at": "2026-11-18T00:00:00Z",
+  "updated_at": "2026-11-18T00:00:00Z",
+  "target": "<data-root>",
+  "details": { "scope": "user", "shell_rc_backup": "<data-root>/journal/profile-xxx.bak" }
 }
 ```
 
+字段：`schema` / `id` / `action` / `status`（`pending`｜`committed`｜`failed`｜`rolled-back`）/ `created_at` / `updated_at` / 可选 `target` / `temp_dir` / `previous` / `details`（字符串键值，含 `scope`、`*_previous`、`shell_rc_backup`、`shim_*` 等）。没有 `operations[]` / `rollback_supported`；程序化输出形状见 `schemas/examples/journal-*.example.json`。
+
 规则：
 
-- 先写 journal，再改系统；
-- 每步成功后更新 status；
-- 全部成功才 commit；
-- 失败自动 rollback；
-- rollback 失败返回 `OMF-E5005` 并保留现场；
-- journal 不保存 token / 密码；
-- `doctor` 必须报告 pending journal。
+- 先写 journal，再改系统；每步成功后更新记录；全部成功才标记 `committed`；
+- 失败自动 rollback 并置 `failed`（含 `error` / `undo_error`），保留现场；
+- journal 用 `lockedfile.Write` 原子写入，不保存 token / 密码；
+- `doctor` 必须报告 pending journal；
+- 回滚时 `env` 记录强制校验 system scope 的提权状态与路径白名单。
 
 ---
 

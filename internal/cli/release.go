@@ -157,8 +157,15 @@ func catalogOptions(ctx context.Context, cmd *urfave.Command) (*appgithub.Client
 		Variant: cmd.String("variant"), Linkage: cmd.String("linkage"),
 		Days: cmd.Int("days"), Count: cmd.Int("count"), ReleasesURL: cmd.String("releases-url"),
 	}
-	if values.Days <= 0 {
+	if cmd.IsSet("days") {
+		if values.Days <= 0 {
+			return nil, catalogFlagsValues{}, apperrors.New(apperrors.E7005, "--days must be positive")
+		}
+	} else {
 		values.Days = provider.DefaultSnapshotDays
+	}
+	if cmd.IsSet("count") && values.Count <= 0 {
+		return nil, catalogFlagsValues{}, apperrors.New(apperrors.E7005, "--count must be positive")
 	}
 	if !cmd.IsSet("variant") && strings.EqualFold(strings.TrimSpace(values.Provider), provider.IDBnqdzjNonfree) {
 		values.Variant = "nonfree"

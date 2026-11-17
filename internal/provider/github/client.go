@@ -144,6 +144,11 @@ const listReleasesMaxPages = 5
 // first. Earlier versions only fetched page 1, which silently hid older
 // releases from the stable/daily catalogs once a repo exceeded one page.
 func (c *Client) ListReleases(ctx context.Context, owner, repo string, perPage int) ([]Release, error) {
+	// getJSON replaces a nil ctx with Background; do the same here so the
+	// inter-page ctx.Err() check below cannot panic on a nil context.
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	if perPage <= 0 || perPage > 100 {
 		perPage = 30
 	}
@@ -353,6 +358,12 @@ func retryAfter(header http.Header) (time.Duration, bool) {
 	if seconds, err := strconv.Atoi(raw); err == nil {
 		if seconds < 0 {
 			return 0, false
+		}
+		// Guard against int64 overflow before multiplying: a huge Retry-After
+		// would wrap into a negative/short delay and bypass the maxRetryAfter
+		// fail-fast check in getJSON.
+		if int64(seconds) > int64(1<<62)/int64(time.Second) {
+			return time.Duration(1 << 62), true // definitely above maxRetryAfter
 		}
 		return time.Duration(seconds) * time.Second, true
 	}

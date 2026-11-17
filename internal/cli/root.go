@@ -254,8 +254,12 @@ func hasHelpFlag(args []string) bool {
 	return false
 }
 
-// hasHelpSubcommand detects urfave's built-in `help` command. It only counts
-// a bare `help` token outside flag values and after any `--` separator.
+// hasHelpSubcommand detects urfave's built-in `help` command at any command
+// level. urfave registers a `help` subcommand on EVERY command that has
+// children, so `--json provider help`, `--json env help`, etc. all dump plain
+// text to stdout. Scan the whole argv (skipping flag values and anything after
+// `--`) for a bare `help` token; the parent command's Action never runs for
+// the built-in help command, so this check must be global.
 func hasHelpSubcommand(args []string) bool {
 	for index := 1; index < len(args); index++ { // skip argv[0] (program name)
 		arg := args[index]
@@ -270,11 +274,9 @@ func hasHelpSubcommand(args []string) bool {
 			if takesValue[name] && !hasEquals {
 				index++ // this flag consumes the next token as its value
 			}
-			continue
 		}
-		// Another subcommand precedes any `help`, so `help` would be its
-		// argument (e.g. `version help`) rather than the built-in command.
-		return false
+		// Keep scanning: `help` may follow a parent command (provider help,
+		// env set help, ...). Returning early here used to miss those.
 	}
 	return false
 }

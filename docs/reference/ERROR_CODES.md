@@ -1,6 +1,6 @@
 # 错误码注册表 v1
 
-> 状态：v1.0.1 现行，CLI 外部契约已冻结
+> 状态：v1.0.2 现行，CLI 外部契约已冻结
 > 日期：2026-11-10
 > 适用：CLI stdout JSON、日志 `code` 字段、未来 JSON-RPC `error.code`
 > 原则：稳定、不可复用、不可静默改语义
@@ -44,7 +44,7 @@
 | CLI 退出码 | 含义 | 典型 code |
 |---:|---|---|
 | 0 | 成功 | 无 |
-| 1 | 运行期错误 | 除下表列出的用法/取消码之外的 E1xxx–E6xxx、`E7006`、E9xxx |
+| 1 | 运行期错误 | 除下表列出的用法/取消码之外的 E1xxx–E6xxx、`E7006`、除 `E9004` 外的 E9xxx |
 | 2 | 用法/配置/契约错误 | `E7001–E7005`、`E7007`、`E2005`、`E3001`、`E3004`、`E3008`、`E3009`、`E6003`、`E6004` |
 | 130 | 用户取消 | `OMF-E1011`、`OMF-E4006`、`OMF-E9004` |
 
@@ -179,7 +179,7 @@ OMF-Wxxxx  警告码（不导致命令失败）
 |---|---|---|---:|
 | `OMF-E6001` | `ENV_READ_FAILED` | 读取环境变量/注册表失败 | 1 |
 | `OMF-E6002` | `ENV_WRITE_FAILED` | 写入环境变量/注册表失败 | 1 |
-| `OMF-E6003` | `SYSTEM_SCOPE_DENIED` | 系统级作用域未授权：未提权且未传 `--authorize-system` | 2 |
+| `OMF-E6003` | `SYSTEM_SCOPE_DENIED` | 系统级作用域需要真实提权；未提权的 `--apply --system` 即使传了 `--authorize-system` 也被拒绝 | 2 |
 | `OMF-E6004` | `SHELL_RC_DENIED` | shell rc 不在允许范围（**保留编号**：备份/读写这类 IO 失败改用 `E5009`） | 2 |
 | `OMF-E6005` | `JOURNAL_FAILED` | journal 写入/读取/提交失败 | 1 |
 | `OMF-E6006` | `DOCTOR_UNHEALTHY` | `doctor --strict` 检测到不健康状态 | 1 |
