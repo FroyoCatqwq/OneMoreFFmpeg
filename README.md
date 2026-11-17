@@ -7,6 +7,8 @@
 **状态：v1.0.1** — Phase 1–7 全部完成，CLI 外部契约冻结；全项目审计后 bugfix；Windows + Linux + Docker 全新环境 `go test` / e2e 全绿，
 GitHub Actions 提供质量门禁与 tag 发布流水线。产物见 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases)。
 
+> **仅 v1.0.1 受支持**：v1.0.1 之前的 Release 与 tag 已撤回，请始终使用当前版本；仓库内 `docs/releases/` 的旧版说明仅作历史记录。
+
 🟢 **第一次用？先看 [`安装指南`](docs/guides/INSTALL.md)（Scoop / dnf / 手动二进制）与 [`新手上手指南`](docs/guides/HOWTO.md)。黄金顺序：`install --apply` → `env set --apply` → 开新终端 → `ffmpeg` 可用。**
 
 Windows：`scoop bucket add omf https://github.com/FroyoCatqwq/OneMoreFFmpeg-bucket` → `scoop install one-more-ffmpeg`。

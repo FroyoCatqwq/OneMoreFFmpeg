@@ -3,6 +3,8 @@
 当前稳定版：**v1.0.1**。所有产物由 GitHub Actions 从源码构建，带 SHA-256 校验和与 build provenance。
 发布页：<https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/tag/v1.0.1>
 
+> 仅 v1.0.1 受支持；更早的 Release/tag 已撤回，请勿使用旧版本下载链接。
+
 ## Windows（推荐 Scoop）
 
 ```powershell
