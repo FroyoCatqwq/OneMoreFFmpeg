@@ -400,7 +400,7 @@ github.com/sethvargo/go-retry
 - `go test ./...`；
 - `go vet ./...`；
 - `govulncheck` 评估；
-- 许可证清单生成；项目许可证已确定为 GPL-3.0-only，见 [`LICENSE_DECISION.md`](0003-license.md)；
+- 许可证清单生成；项目许可证已确定为 GPL-3.0-only，见 [`0003-license.md`](0003-license.md)；
 - Windows/Linux 双平台编译；
 - 对 `urfave/cli/v3` / `go-toml/v2` / `tint` 做 API smoke test；
 - 若未来重新开放 API/插件，再重新评估 RPC / 插件框架，不直接引入当前依赖。

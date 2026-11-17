@@ -1,9 +1,8 @@
 # CLI JSON 契约 v1
 
-> 状态：Phase 1–7 已完成（v1.0.0），CLI 外部契约已冻结
-> 日期：2026-11-10
+> 状态：v1.0.1（唯一受支持版本），CLI 外部契约已冻结
 > 适用：当前唯一外部集成方式：调用 `one-more-ffmpeg` 可执行文件
-> 配套：[`ERROR_CODES.md`].ERROR_CODES.md)、[`schemas/`].schemas/)
+> 配套：[`ERROR_CODES.md`](ERROR_CODES.md)、[`schemas/`](schemas/README.md)
 
 ---
 
@@ -18,7 +17,7 @@
 - stdout 只写机器结果；
 - stderr 只写日志、进度、人类错误；
 - `--json` 成功/失败都必须返回 JSON；
-- 例外：`--help` 是交互帮助，始终写人类可读文本；机器消费者不要同时使用 `--json` 与 `--help`；
+- `--help` 与 `--json` 互斥：`--json help [cmd]` 或 `--json --help` 会以 `OMF-E1001` 错误信封拒绝（退出码 1），因为帮助文本是纯文本，无法放进 stdout JSON；需要帮助请用不带 `--json` 的调用；
 - 无 `--json` 时输出人类可读文本，但不能混入 stdout JSON；
 - JSON 顶层必须有 `schema`；
 - 错误对象必须使用 `ERROR_CODES.md` 的 `code`；
@@ -51,7 +50,7 @@
 
 ## 3. 通用错误对象
 
-见 [`ERROR_CODES.md`].ERROR_CODES.md)。
+见 [`ERROR_CODES.md`](ERROR_CODES.md)。
 
 ```json
 {
@@ -63,7 +62,7 @@
 }
 ```
 
-示例：[`schemas/examples/error.example.json`].schemas/examples/error.example.json)
+示例：[`schemas/examples/error.example.json`](schemas/examples/error.example.json)
 
 ---
 
@@ -73,7 +72,7 @@
 |---|---|---|
 | `--json` | false | stdout 输出 v1 JSON；错误也输出错误对象 |
 | `--config <PATH>` / `-c` | `<data-root>/config.toml`（存在时） | 显式指定 TOML；显式路径不存在、或 `ONE_MORE_FFMPEG_HOME` 非绝对路径 → `OMF-E7007` |
-| `--log-level <LEVEL>` | 配置值或 `info` | 覆盖 `[log] level`；当前 `trace` 与 `debug` 输出相同（保留级别，写入类命令实现后再区分） |
+| `--log-level <LEVEL>` | 配置值或 `info` | 覆盖 `[log] level`；`trace` 比 `debug` 更详细（分别对应 `slog` Debug-4 与 Debug） |
 | `--quiet` | false | 强制 `error` 级；与 `--log-level` 同时出现时 `--quiet` 优先 |
 | `--in-detail-usage` | false | 打印内置完整使用指南并退出 0；与 `--json` 互斥（stdout 只留 JSON，冲突返回 `OMF-E1001`）。程序启动不再打印任何提示 |
 
@@ -107,8 +106,7 @@
 | `release list` / `release install` | 已实现（动态官方版本 + 近 7 天快照） |
 | `capabilities --only <kind>` | 已实现（单命令、单列表输出） |
 
-18 个命令的 data 表与示例**均已实现**，并由 `internal/contracts` 做字段级校验；`data.schema` 冻结为
-`/v1`，未注册的 schema 或主版本升级会得到 `OMF-E7001`（见 [`PHASE6_STATUS.md`].../archive/PHASE6_STATUS.md)）。
+18 个命令的 data 表与示例**均已实现**，并由 `internal/contracts` 做字段级校验；`data.schema` 冻结为 `/v1`，未注册的 schema、主版本升级或命令/data.schema 不匹配会得到 `OMF-E7003`（契约校验由 `internal/contracts` 守护）。
 
 ### 4.1 `version`
 
@@ -127,7 +125,7 @@
 
 > 开发构建允许 `git_commit` / `build_time` 为 `"unknown"`；发布构建应通过 `-ldflags` 注入真实提交与 RFC 3339 构建时间。
 
-示例：[`schemas/examples/version.example.json`].schemas/examples/version.example.json)
+示例：[`schemas/examples/version.example.json`](schemas/examples/version.example.json)
 
 ---
 
@@ -178,7 +176,7 @@
 }
 ```
 
-示例：[`schemas/examples/detect.example.json`].schemas/examples/detect.example.json)
+示例：[`schemas/examples/detect.example.json`](schemas/examples/detect.example.json)
 
 ---
 
@@ -206,7 +204,7 @@ one-more-ffmpeg validate --installation-id <ID>
 | `checks` | array | 每项含 `name` / `ok` / `detail` |
 | `warnings` | array | `OMF-W*` 列表 |
 
-示例：[`schemas/examples/validate.example.json`].schemas/examples/validate.example.json)
+示例：[`schemas/examples/validate.example.json`](schemas/examples/validate.example.json)
 
 ---
 
@@ -233,7 +231,7 @@ one-more-ffmpeg capabilities --installation-id <ID>
 
 `capabilities` 不提供 `--no-validate`（help 中也不显示），因为能力采集必须先完成校验。`--dir` 只使用该目录，与 `--scan` / `--recursive` / `--roots` 同时出现时返回 `OMF-E7001`。`--timeout` 只约束 detect 的发现预算；能力命令超时由 `--probe-timeout` 显式覆盖，可以大于 `--timeout`。未显式传入时使用 `CAPABILITIES.md` §7 的默认值。生效的单命令超时与输出上限参与缓存键。输出前会校验 13 个命令键与必需字段，缓存命中同样受此约束。
 
-`data` 遵循 [`CAPABILITIES.md`].CAPABILITIES.md) 中的 `onemoreffmpeg.capabilities/v1`，必须包含：
+`data` 遵循 [`CAPABILITIES.md`](CAPABILITIES.md) 中的 `onemoreffmpeg.capabilities/v1`，必须包含：
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
@@ -263,7 +261,7 @@ one-more-ffmpeg capabilities --installation-id <ID>
 }
 ```
 
-示例：[`schemas/examples/capabilities.example.json`].schemas/examples/capabilities.example.json)
+示例：[`schemas/examples/capabilities.example.json`](schemas/examples/capabilities.example.json)
 
 ---
 
@@ -288,7 +286,7 @@ provider 摘要：
 }
 ```
 
-示例：[`schemas/examples/provider-list.example.json`].schemas/examples/provider-list.example.json)
+示例：[`schemas/examples/provider-list.example.json`](schemas/examples/provider-list.example.json)
 
 ---
 
@@ -313,13 +311,13 @@ provider 摘要：
 | `--checksums-url` | 无 | 可选；仅 https |
 | `--license-hint` | `custom` | `gpl` / `lgpl` / `nonfree` / `custom` |
 | `--apply` | false | 实际写入；不带时默认 dry-run |
-| `--dry-run` | false | 强制预览；与 `--apply` 同时出现时以 dry-run 为准 |
+| `--dry-run` | false | 强制预览；与 `--apply` 互斥，同时出现时返回 `OMF-E1001`（退出码 1） |
 
 整个 `LoadCustomFile → AddCustom → Save` 链路持有 `providers.toml.lock`；锁超时 `OMF-E7005`。
 
 存储：`<data-root>/providers.toml`，schema `onemoreffmpeg.providers/v1`；重复 id 返回 `OMF-E7005`，不覆盖旧 pin。文件写入为临时文件 + rename。
 
-示例：[`schemas/examples/provider-add.example.json`].schemas/examples/provider-add.example.json)
+示例：[`schemas/examples/provider-add.example.json`](schemas/examples/provider-add.example.json)
 
 ---
 
@@ -376,9 +374,9 @@ provider 摘要：
 - 输出前按 `onemoreffmpeg.release/v1` 做运行时字段级校验，不满足契约返回 `OMF-E7003` 而不是输出非法 pin；
 - nonfree-only provider 只提供 `nonfree*` variant；`--variant gpl` 返回 `E7001`，且无论 variant 为何都要求 `--allow-nonfree`。
 
-示例：[`schemas/examples/provider-resolve.example.json`].schemas/examples/provider-resolve.example.json)
+示例：[`schemas/examples/provider-resolve.example.json`](schemas/examples/provider-resolve.example.json)
 
-详见 [`PROVIDER_RESOLVER.md`].PROVIDER_RESOLVER.md)。
+详见 [`PROVIDER_RESOLVER.md`](PROVIDER_RESOLVER.md)。
 
 ---
 
@@ -422,7 +420,7 @@ provider 摘要：
 - `license_hint=nonfree` 或 `variant=nonfree*` 仍需 `--allow-nonfree`，离线 release 文件同样适用；
 - `--release` 文件按完整 `onemoreffmpeg.release/v1` 契约校验；不存在的路径 `E7007`，字段非法 `E7003`，未 pin 的 latest `E3010`。
 
-示例：[`schemas/examples/artifact.example.json`].schemas/examples/artifact.example.json)
+示例：[`schemas/examples/artifact.example.json`](schemas/examples/artifact.example.json)
 
 ---
 
@@ -478,7 +476,7 @@ provider 摘要：
 - 同一 asset 重复安装幂等；不同 asset 需 `--force`（`E5003`）；
 - `current` 是真实目录时拒绝覆盖（`E5004`）；旧目录隔离失败 `E5007`。
 
-示例：[`schemas/examples/install.example.json`].schemas/examples/install.example.json)
+示例：[`schemas/examples/install.example.json`](schemas/examples/install.example.json)
 
 ---
 
@@ -503,7 +501,7 @@ provider 摘要：
 - `current.pointer` 模式会带 `OMF-W1005`（PATH 无法跟随 pointer）；
 - `variables` 中未设置的变量输出 `null`。
 
-示例：[`schemas/examples/env-status.example.json`].schemas/examples/env-status.example.json)
+示例：[`schemas/examples/env-status.example.json`](schemas/examples/env-status.example.json)
 
 ---
 
@@ -521,11 +519,11 @@ provider 摘要：
 
 参数：`--apply`（默认 dry-run）、`--no-path`、`--no-variables`、`--lae-compat`、`--no-shell-rc`、`--system`、`--authorize-system`；`env rollback --journal <id> --apply` 恢复备份，默认 dry-run。Windows 写入后广播 `WM_SETTINGCHANGE`；Linux 维护 `~/.profile` 托管块与 `~/.local/bin` shim，并支持 `--no-path` / `--no-variables` / `--lae-compat` 控制托管块内容。
 
-`--system` 切换到系统级作用域（Windows `HKLM` 系统环境；Linux `/usr/local/bin` shim + `/etc/profile.d/onemoreffmpeg.sh`）。授权规则：进程已提权（root / Administrator）直接放行；未提权时 dry-run 可用 `--authorize-system` 预览，但 **`--apply` 必须真正提权**——`--authorize-system` 只记录同意、不能替代提权，未提权的 `--apply` 返回 `OMF-E6003`（退出 2）。工具绝不自动提权。详见 [`SYSTEM_REQUIREMENTS.md`].SYSTEM_REQUIREMENTS.md)。
+`--system` 切换到系统级作用域（Windows `HKLM` 系统环境；Linux `/usr/local/bin` shim + `/etc/profile.d/onemoreffmpeg.sh`）。授权规则：进程已提权（root / Administrator）直接放行；未提权时 dry-run 可用 `--authorize-system` 预览，但 **`--apply` 必须真正提权**——`--authorize-system` 只记录同意、不能替代提权，未提权的 `--apply` 返回 `OMF-E6003`（退出 2）。工具绝不自动提权。详见 [`SYSTEM_REQUIREMENTS.md`](SYSTEM_REQUIREMENTS.md)。
 
 `env set|unset|rollback` 的 `--apply` 路径持有全局 data root 事务锁 `<data-root>/.transaction.lock`；被其他事务占用且等待超时返回 `OMF-E6009`（退出 1）。
 
-示例：[`schemas/examples/env-set.example.json`].schemas/examples/env-set.example.json)
+示例：[`schemas/examples/env-set.example.json`](schemas/examples/env-set.example.json)
 
 ---
 
@@ -543,7 +541,7 @@ provider 摘要：
 检查项：`data_root`、`current_exists`、`trio_valid`、`path_contains_current`、`no_pending_journal`；
 当 journal 目录中有损坏/不可读记录时额外出现 `journals_readable`（v0.9.0 起，值为 false）。默认报告整体仍退出 0，脚本必须读取 `healthy`；`journal_pending` 为未完成 journal 的 ID 列表。`--strict` 在 `healthy=false` 时改为返回 `OMF-E6006`（退出 1），完整报告置于错误对象 `details.report`；健康时仍输出正常结果并退出 0。
 
-示例：[`schemas/examples/doctor.example.json`].schemas/examples/doctor.example.json)
+示例：[`schemas/examples/doctor.example.json`](schemas/examples/doctor.example.json)
 
 ---
 
@@ -583,8 +581,8 @@ provider 摘要：
 ## 5. 版本与兼容性
 
 > **Phase 6 契约冻结（2026-11-14）**：命令集（18 个 result.command）、`data.schema` 集（17 个，全 `/v1`）与退出码映射已冻结，
-> 由 `internal/contracts/freeze_test.go` 在 CI 中守护——任何静默改动都会使测试失败。契约变更必须走主版本升级与 [`VERSIONING.md`].VERSIONING.md)。
-> 外部消费者见 [`../examples/external-caller/`].../examples/external-caller/README.md)。
+> 由 `internal/contracts/freeze_test.go` 在 CI 中守护——任何静默改动都会使测试失败。契约变更必须走主版本升级与 [`VERSIONING.md`](VERSIONING.md)。
+> 外部消费者见 [`../../examples/external-caller/`](../../examples/external-caller/README.md)。
 
 - 每个命令的 `data` 对象必须包含 `schema` 字段并带版本；顶层 `onemoreffmpeg.result/v1` 只表示信封；
 - 新增可选字段允许；
@@ -600,7 +598,7 @@ provider 摘要：
 示例位于：
 
 ```text
-docs/schemas/examples/
+docs/reference/schemas/examples/
 ```
 
 它们是 v1 形状基准，不是完整 JSON Schema Draft 文件。

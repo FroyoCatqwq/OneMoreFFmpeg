@@ -1,6 +1,6 @@
 # 错误码注册表 v1
 
-> 状态：Phase 1–7 已完成（v1.0.0），CLI 外部契约已冻结
+> 状态：v1.0.1 现行，CLI 外部契约已冻结
 > 日期：2026-11-10
 > 适用：CLI stdout JSON、日志 `code` 字段、未来 JSON-RPC `error.code`
 > 原则：稳定、不可复用、不可静默改语义
@@ -193,7 +193,7 @@ OMF-Wxxxx  警告码（不导致命令失败）
 - 记录已回滚（`rolled-back`）、action 不在支持列表，或 `env rollback` 指向非 env 记录，属于用法错误 `OMF-E7001`（退出 2），不复用 `E6005`。
 - 系统级授权模型：进程已提权（Linux root / Windows Administrator）直接放行；未提权时 dry-run 需 `--authorize-system` 才预览，而 **`--apply` 必须真正提权**（`--authorize-system` 只记录同意、不能替代提权），否则 `OMF-E6003`。工具绝不自动 `sudo`/提权；非管理员被拒绝并告知用 sudo/管理员运行。
 - `doctor` 默认退出 0；`--strict` 在 `healthy=false` 时返回 `OMF-E6006`（退出 1），报告置于 `details.report`。
-- `OMF-E6009` 为 data root 事务锁竞争（install/env/uninstall/rollback 的 `--apply`）；锁超过 30 秒视为陈旧自动回收，活跃锁等待超过 5 秒返回该码。
+- `OMF-E6009` 为 data root 事务锁竞争（install/env/uninstall/rollback 的 `--apply`）；锁是 OS 级 advisory lock（绑定文件描述符、崩溃由内核释放），活跃锁等待超过 5 秒返回该码。
 
 ---
 

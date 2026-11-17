@@ -1,6 +1,6 @@
 # 版本与发布规范
 
-> 本项目遵循 [Semantic Versioning 2.0.0](https://semver.org/)；发布 tag 使用 `v` 前缀，例如 `v1.0.0`。
+> 本项目遵循 [Semantic Versioning 2.0.0](https://semver.org/)；发布 tag 使用 `v` 前缀，例如 `v1.0.1`。
 
 ## 1. 版本号含义（v1.0 起适用标准 SemVer）
 
@@ -46,6 +46,6 @@ SHA256SUMS.txt
 | v0.6.0 | 2026-11-13 | 首个公开 release：Phase 1–5、审查修复、e2e |
 | v0.7.0 | 2026-11-14 | 全局事务锁、系统级作用域与显式提权授权、doctor --strict、Windows symlink 回退 |
 | v0.8.0 | 2026-11-14 | Phase 6 契约冻结 + 外部调用示例、解压加固、shim 回滚/下载清理修复 |
-| v0.9.0 | 2026-11-14 | Phase 1–6 收口：修完 P1-4a / P2-2 / P2-3 / P2-4 / P2-5，详见 [`release-v0.9.0.md`](../releases/release-v0.9.0.md) |
-| v1.0.0 | 2026-11-16 | 首个稳定版：Phase 1–7 完成；文档按 guides/reference/development/archive 重整；修复锁 TOCTOU、回滚路径越界、uninstall 提交失败恢复、压缩比炸弹、provider 锁竞态等缺陷；完整 CI 门禁与 release 自动化，详见 [`release-v1.0.0.md`](../releases/release-v1.0.0.md) |
+| v0.9.0 | 2026-11-14 | Phase 1–6 收口：修完 P1-4a / P2-2 / P2-3 / P2-4 / P2-5（历史版本，Release 与文档已撤回） |
+| v1.0.0 | 2026-11-16 | 首个稳定版：Phase 1–7 完成、完整 CI 门禁与 release 自动化（历史版本，Release 与文档已撤回） |
 | v1.0.1 | 2026-11-17 | Bugfix：全项目源码审计后修复 CLI 契约绕过、token 泄露、重定向降级、GitHub 分页、doctor 假二进制、flag 互斥等缺陷，详见 [`release-v1.0.1.md`](../releases/release-v1.0.1.md) |

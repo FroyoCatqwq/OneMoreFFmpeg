@@ -1,6 +1,6 @@
 # 架构设计
 
-> 状态：Phase 1–7 已完成（v1.0.0），CLI 外部契约已冻结
+> 状态：v1.0.1 现行，CLI 外部契约已冻结
 > 原则：Go 单语言、CLI-first、纯 Go 优先、进程边界清晰、先只读后写入
 
 ---
@@ -124,7 +124,7 @@ stderr：日志 / 进度 / 错误
 | human size | `dustin/go-humanize` |
 | test | `stretchr/testify` |
 
-详见 [`GO_LIBRARY_EVALUATION.md`](adr/0002-dependencies.md)。
+详见 [`0002-dependencies.md`](adr/0002-dependencies.md)。
 
 ---
 

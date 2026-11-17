@@ -53,7 +53,7 @@ OneMoreFFmpeg **绝不自动提权**（不会静默调用 `sudo` / `runas`）。
 
 ## 3. 事务并发
 
-`install` / `uninstall` / `env set|unset|rollback` / `journal rollback` 的 `--apply` 路径持有全局 data root 事务锁 `<data-root>/.transaction.lock`，避免并发写互相交错。锁文件写入持有者 nonce（`<pid>-<8字节hex>`），持有期间每 5 秒心跳续期，因此**活锁不会**被误判过期；只有崩溃进程停止续期、超过 30 秒才被视为陈旧并回收。释放时校验 nonce，绝不删除别人的锁。活跃锁等待超过 5 秒返回 `OMF-E6009`（退出 1）。dry-run 预览不加锁。
+`install` / `uninstall` / `env set|unset|rollback` / `journal rollback` 的 `--apply` 路径持有全局 data root 事务锁 `<data-root>/.transaction.lock`，避免并发写互相交错。锁是 **OS 级 advisory lock**（Linux `flock` / Windows `LockFileEx`），绑定在打开的文件描述符上：持有进程崩溃时由内核自动释放，不存在"陈旧锁回收"的竞态，锁文件也不会被删除。活跃锁等待超过 5 秒返回 `OMF-E6009`（退出 1）。dry-run 预览不加锁。
 
 ## 4. 回滚路径白名单与只读不写盘
 

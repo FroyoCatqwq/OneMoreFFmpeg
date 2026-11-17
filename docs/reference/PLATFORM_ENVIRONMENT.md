@@ -1,6 +1,6 @@
 # 平台环境变量与 current 指针细则
 
-> 状态：Phase 1–7 已完成（v1.0.0），CLI 外部契约已冻结
+> 状态：v1.0.1 现行，CLI 外部契约已冻结
 > 日期：2026-11-10
 > 配套：[`ENVIRONMENT.md`](ENVIRONMENT.md)、[`ERROR_CODES.md`](ERROR_CODES.md)、[`CLI_SCHEMA.md`](CLI_SCHEMA.md)
 
@@ -267,18 +267,16 @@ export PATH="..."
 
 ## 9. `doctor` 检查
 
-至少检查：
+`doctor --json` 的检查项（`data.checks`，每项 `{name, ok, detail}`）为：
 
-- data root 可写；
-- current 存在且有效；
-- current 三件套可启动；
-- PATH 包含 current/bin 或 `ONE_MORE_FFMPEG_DIR` 正确；
-- 无 pending journal；
-- 无重复 managed block；
-- 无非本项目文件被标记为可删除；
-- Windows `REG_EXPAND_SZ` 未被破坏；
-- Linux shim 指向当前版本；
-- 若使用 nonfree，显示 `OMF-W1006` 合规提示。
+- `data_root`：data root 目录是否存在；
+- `current_exists`：`current` 指针是否存在且不是 `missing`；
+- `trio_valid`：`current` 下 ffmpeg/ffprobe/ffplay 三件套是否可解析、带版本 banner、可启动；
+- `path_contains_current`：PATH 是否包含 current/bin 或相关变量；
+- `no_pending_journal`：无未完成 journal；
+- `journals_readable`：仅当 journal 目录读取/解析失败时出现（值为 false）。
+
+报告顶层 `healthy` 为上述检查的整体结论；`warnings` 与 `journal_pending` 为附加信息。默认退出 0，`--strict` 在 `healthy=false` 时返回 `OMF-E6006`。
 
 ---
 

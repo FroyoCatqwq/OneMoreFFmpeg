@@ -1,10 +1,10 @@
 # THIRD_PARTY_NOTICES
 
-> Status: maintained; reviewed alongside v1.0.0 (2026-11-16)
+> Status: maintained; reviewed alongside v1.0.1 (2026-11-17)
 > Date: 2026-11-10
 > Project license: GPL-3.0-only (see root LICENSE)
 
-This file lists Go modules recorded by `go list -m all`. License texts are copied under `third_party/licenses/` where available. Public releases v0.6.0–v1.0.0 have shipped; keep this list in sync whenever `go.mod` changes. Automated license checking via CI is not implemented yet (tracked separately, not a release blocker for v1.0.0).
+This file lists Go modules recorded by `go list -m all`. License texts are copied under `third_party/licenses/` where available. v1.0.1 is the current supported release; keep this list in sync whenever `go.mod` changes. Automated license checking via CI is not implemented yet (tracked separately, not a release blocker for v1.0.1).
 
 | Module | Version | Detected license | License text |
 |---|---|---|---|
@@ -25,4 +25,4 @@ This file lists Go modules recorded by `go list -m all`. License texts are copie
 
 Detection is based on the first 20 lines of each upstream license file. It is an engineering aid, not legal advice.
 
-The project itself is licensed under GPL-3.0-only; see `LICENSE` and `docs/LICENSE_DECISION.md`.
+The project itself is licensed under GPL-3.0-only; see `LICENSE` and `docs/development/adr/0003-license.md`.

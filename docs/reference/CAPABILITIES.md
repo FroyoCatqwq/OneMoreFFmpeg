@@ -1,6 +1,6 @@
 # FFmpeg 能力检查契约
 
-> 状态：Phase 3 已实现，Phase 6 契约冻结；Phase 1–7 完成；当前版本 v1.0.0
+> 状态：Phase 3 已实现，Phase 6 契约冻结；v1.0.1 现行
 > 范围：v1 只支持用户列出的 13 个 FFmpeg 参数 / 能力入口
 > 原则：原样调用 FFmpeg、结构化解析、保留原文哈希
 > 实现入口：`internal/capabilities/`；CLI：`capabilities`

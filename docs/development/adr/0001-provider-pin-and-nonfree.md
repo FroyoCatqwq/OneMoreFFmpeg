@@ -2,7 +2,7 @@
 
 > 历史快照（截至对应阶段日期），不代表当前状态；当前规则见 docs/README.md §1、§3 与代码。
 > 日期：2026-11-11
-> 前置：[`PHASE3_CODE_REVIEW.md`](../../README.md)（Phase 3 已冻结）
+> 前置：Phase 3 设计决策（历史阶段文档已归档清理）
 > 目标：进入 Phase 4（Provider / Resolve / Download）前，把契约冲突、代码缺口、真实上游事实与决策项一次列清
 > 原则：先 pin 后下载；只读上游 API；不自动安装；不写 PATH；nonfree 二进制不进公开产物
 
@@ -30,7 +30,7 @@ resolve / download CLI    端到端可用                                       
 
 结论：
 
-> **Phase 4 已实现完毕：路径、checksum、模型、配置、契约校验、HTTP 客户端、provider 注册表、`provider list` / `provider add` / `resolve` / `download`，D1–D7 全部落文并有测试。收尾状态见 [`PHASE4_STATUS.md`](../../README.md)。**
+> **Phase 4 已实现完毕：路径、checksum、模型、配置、契约校验、HTTP 客户端、provider 注册表、`provider list` / `provider add` / `resolve` / `download`，D1–D7 全部落文并有测试。该阶段已实现完毕并通过测试。**
 
 ### 1.1 已落地的基础件（2026-11-11）
 
@@ -108,7 +108,7 @@ ffmpeg-N-128790-g9bee1e603c-linux64-gpl-shared.tar.xz
 3. 因此 `stable` 无法既“使用 n9.0 资产”又“pin 到具体 autobuild tag”——这是 D1 的根因；
 4. `checksums.sha256` 在 `latest` 与每个 `autobuild-*` 中都存在，BtbN 的 `OMF-E3005` 只在异常时出现；
 5. 文档中的 `ffmpeg-n9.0-latest-win64-gpl-9.0.zip` 示例与真实资产一致，未被证伪；
-6. `docs/schemas/examples/provider-resolve.example.json` 已按 D1 替换为真实可达组合：`channel=stable`、`release_tag=latest`、`release_id=441698707`、`published_at=2026-11-11T13:00:32Z`、`ffmpeg-n9.0-latest-win64-gpl-9.0.zip`（2026-11-11 实测）。
+6. `docs/reference/schemas/examples/provider-resolve.example.json` 已按 D1 替换为真实可达组合：`channel=stable`、`release_tag=latest`、`release_id=441698707`、`published_at=2026-11-11T13:00:32Z`、`ffmpeg-n9.0-latest-win64-gpl-9.0.zip`（2026-11-11 实测）。
 
 ### 3.2 BnqDzj nonfree（`BnqDzj/FFmpeg-Builds-nonfree`）
 
@@ -142,12 +142,12 @@ f1b10f0edd0f2e52b084a721ab644c064d3e618bdfce9198299073cd23b678e9  ffmpeg-master-
 | 编号 | 问题 | 决定 | 状态 |
 |---|---|---|---|
 | D1 | `stable` 如何 pin | 允许 `release_tag=latest` **仅当**同时记录 `release_id` + `published_at` + `asset_sha256`；Release schema 增加可选 `release_id` / `pinned_at`；`E3010` 仅在缺 pin 字段时触发；具体 tag 不需要 `release_id` | **已定（A）并落文**：`PROVIDERS.md` §2/§3、`PROVIDER_RESOLVER.md` §7、`CLI_SCHEMA.md` §4.7、`ERROR_CODES.md` §6、`contracts` 校验与示例 |
-| D2 | target / variant / linkage 默认值 | target 由 `GOOS/GOARCH` 推导（win64/linux64，其他 `E3003`）；默认 `variant=gpl`、`linkage=static`；显式 flag 覆盖 | 已写入 `CLI_SCHEMA.md` §4.7，待实现 |
-| D3 | stable 线选择 | `--release-line master|n8.1|n9.0`；默认在 `latest` 资产中取数值最大的 `nX.Y`，master 只在 daily 默认 | 已写入 `CLI_SCHEMA.md` §4.7，待实现 |
+| D2 | target / variant / linkage 默认值 | target 由 `GOOS/GOARCH` 推导（win64/linux64，其他 `E3003`）；默认 `variant=gpl`、`linkage=static`；显式 flag 覆盖 | 已实现，见 `internal/cli/resolve.go` |
+| D3 | stable 线选择 | `--release-line master|n8.1|n9.0`；默认在 `latest` 资产中取数值最大的 `nX.Y`，master 只在 daily 默认 | 已实现，见 `internal/cli/resolve.go` |
 | D4 | data root / downloads 目录 | `ONE_MORE_FFMPEG_HOME`（必须绝对路径）> Windows `%LOCALAPPDATA%\OneMoreFFmpeg` > Linux `$XDG_DATA_HOME/onemoreffmpeg` > `~/.local/share/onemoreffmpeg`；下载到 `<data-root>/downloads/<asset-sha256:16>/<asset-name>` | **已定并落地**：`internal/paths`，见 `ENVIRONMENT.md` §1.1 |
 | D5 | nonfree 显式同意 | `bnqdzj-nonfree` 必须显式 `--allow-nonfree`；缺失返回 `OMF-E7001`（退出 2，不新增错误码）；成功时始终 `redistributable=false` + `OMF-W1006` | **已定（A）并落地**：`provider.CheckNonfreeConsent` + 测试；文档见 `PROVIDERS.md` §5、`CLI_SCHEMA.md` §4.7 |
-| D6 | `download` 是否需要先 `resolve` | `download` 支持 `--release <artifact-input.json>`（离线）或自带 `resolve` 参数（在线）；两条路径产出同一 `artifact.json` | 已写入方案，待实现 |
-| D7 | Windows 进程树 Job Object | 推迟到 Phase 5（写入类命令前）；Phase 4 继续使用 `taskkill` 3s 超时 + `Process.Kill` 兜底；FFmpeg 本身不派生子进程 | **已定（A）并记录**：`ARCHITECTURE.md` §6、`FULL_AUDIT_2026-11-11.md` §5 |
+| D6 | `download` 是否需要先 `resolve` | `download` 支持 `--release <artifact-input.json>`（离线）或自带 `resolve` 参数（在线）；两条路径产出同一 `artifact.json` | 已实现，见 `internal/cli/download.go` |
+| D7 | Windows 进程树 Job Object | **永久不实现**：`taskkill` 3s 超时 + `Process.Kill` 兜底已足够；FFmpeg 不派生子进程 | **已定案**：见 `ARCHITECTURE.md` §6 |
 
 > 契约冻结：D1/D4/D5 已落文并有代码/校验支撑；D2/D3/D6 的 CLI 形态已冻结在 `CLI_SCHEMA.md` §4.7，实现时不得改语义。
 
@@ -483,7 +483,7 @@ resolve（或读取 --release）
 | 6 | ~~`provider list` + registry~~；~~`provider add`~~ | **已完成（默认 dry-run，全链路锁）** |
 | 7 | ~~`btbn`、`bnqdzj-nonfree`、`custom`~~ | **已完成**（stable/daily/nonfree/custom 均有真实解析验证） |
 | 8 | ~~`internal/download` + `artifact.json`~~ | **已完成** |
-| 9 | 文档、示例、`PHASE4_STATUS.md`、DoD 对照 | Phase 4 收尾 |
+| 9 | 文档、示例、DoD 对照 | Phase 4 收尾 |
 
 ### DoD 对照
 
@@ -509,7 +509,7 @@ resolve（或读取 --release）
 - nonfree 二进制再分发；
 - 自动更新服务；
 - 下载内容的签名验证（仅 SHA-256 pin）；
-- Windows Job Object（D7：推迟到 Phase 5 写入类命令前）。
+- Windows Job Object（D7：已定案永久不实现，用 taskkill 兜底）。
 
 ---
 
@@ -518,7 +518,7 @@ resolve（或读取 --release）
 - [x] D1（stable pin）已定 A 并落文：`release_id` / `pinned_at` / `E3010` 规则；
 - [x] D4（data root）写入 `ENVIRONMENT.md` §1.1；
 - [x] D5（nonfree 显式同意）已定 A：`--allow-nonfree` + `E7001` + `W1006`，并有 `provider.CheckNonfreeConsent` 测试；
-- [x] D7（Job Object）已决定推迟到 Phase 5，并记录理由；
+- [x] D7（Job Object）已定案永久不实现，并记录理由；
 - [x] `internal/paths` 合入，`capabilities` 缓存目录复用；
 - [x] `internal/checksum` 合入并有真实 checksums 测试；
 - [x] `model` 的 Release / Artifact / ProviderSummary 有 nil-safe JSON；
@@ -526,4 +526,4 @@ resolve（或读取 --release）
 - [x] `provider list` 可离线运行（不触发网络）；
 - [x] GitHub 客户端具备注入点、重试、限流、重定向上限、大小上限与 token 脱敏测试；
 - [x] Phase 3 的 `OMF-E2001`、`help.found`、缓存写入语义未被破坏（全量测试通过）；
-- [x] `provider add` / `resolve` / `download` 已实现并通过真实 GitHub 与真实下载验证（见 `PHASE4_STATUS.md`）。
+- [x] `provider add` / `resolve` / `download` 已实现并通过真实 GitHub 与真实下载验证（见 docs/reference/schemas/examples/ 与 CHANGELOG）。

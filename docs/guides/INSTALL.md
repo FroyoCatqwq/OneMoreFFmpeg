@@ -20,7 +20,7 @@ scoop update
 scoop update one-more-ffmpeg
 ```
 
-Scoop bucket 的 manifest（`one-more-ffmpeg.json`）由 release 流水线在每次发布时自动更新，
+Scoop bucket 的 manifest（`one-more-ffmpeg.json`）在配置 `BUCKET_TOKEN` secret 后由 release 流水线自动更新（否则维护者手动更新），
 包含 Windows x64 二进制的 SHA-256，并配置 `autoupdate` 以跟随新版本。
 
 ## Windows（手动）

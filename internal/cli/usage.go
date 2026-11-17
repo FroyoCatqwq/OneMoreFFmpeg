@@ -66,8 +66,9 @@ SAFETY
     or ~/.local/share/onemoreffmpeg (Linux).
 
 FULL DOCUMENTATION
-  docs/HOWTO.md                           beginner guide (start here)
-  docs/USAGE.md                           tutorial
-  docs/man/one-more-ffmpeg.1              man page: man ./docs/man/one-more-ffmpeg.1
-  docs/E2E_TESTING.md                     Windows/Linux e2e and CI
+  docs/guides/INSTALL.md                  installation (Scoop / dnf / binary)
+  docs/guides/HOWTO.md                    beginner guide (start here)
+  docs/guides/USAGE.md                    tutorial
+  docs/reference/man/one-more-ffmpeg.1    man page: man ./docs/reference/man/one-more-ffmpeg.1
+  docs/development/E2E_TESTING.md         Windows/Linux e2e and CI
 `

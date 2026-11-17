@@ -1,6 +1,6 @@
 # 环境变量与 PATH 管理
 
-> 状态：Phase 1–7 已完成（v1.0.0），CLI 外部契约已冻结
+> 状态：v1.0.1 现行，CLI 外部契约已冻结
 > 原则：默认只读、显式写入、先备份后修改、可回滚
 > 当前不做包管理器识别与包管理器共存逻辑
 
@@ -139,7 +139,7 @@ Chocolatey
 
 - 不改 `/etc/profile`；
 - 不改 `/etc/environment`；
-- 不改 shell rc，除非 `--shell-rc` 显式指定；
+- 在 `~/.profile` 维护一个托管块（可用 `--no-shell-rc` 跳过），没有指定任意 rc 路径的参数；
 - 不要求 root；
 - 优先在 `~/.local/bin` 创建 shim/symlink；
 - 若 `~/.local/bin` 不在 PATH，报告 warning 并给出添加命令，但默认不自动改 rc。
@@ -204,14 +204,7 @@ one-more-ffmpeg doctor --json
 
 Windows 注册表、UAC、`REG_EXPAND_SZ`、`WM_SETTINGCHANGE`、junction / pointer_file、Linux shim / shell rc 与 journal 细则见 [`PLATFORM_ENVIRONMENT.md`](PLATFORM_ENVIRONMENT.md)。错误码见 [`ERROR_CODES.md`](ERROR_CODES.md)，`env status` / `doctor` 输出形状见 [`CLI_SCHEMA.md`](CLI_SCHEMA.md)。
 
-`doctor` 检查：
-
-- `current` 是否存在；
-- PATH 是否包含 `current/bin`；
-- `command -v ffmpeg` / `where.exe ffmpeg` 是否解析到本项目；
-- `ONE_MORE_FFMPEG_DIR` 是否一致；
-- 三件套是否仍通过校验；
-- 是否存在旧 journal 未提交/未回滚。
+`doctor` 的检查项（`data_root` / `current_exists` / `trio_valid` / `path_contains_current` / `no_pending_journal`，及条件性的 `journals_readable`）以 [`PLATFORM_ENVIRONMENT.md`](PLATFORM_ENVIRONMENT.md) §9 为准。
 
 ---
 

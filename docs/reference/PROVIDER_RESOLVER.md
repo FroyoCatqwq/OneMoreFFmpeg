@@ -1,6 +1,6 @@
 # Provider Resolver 细则
 
-> 状态：Phase 1–7 已完成（v1.0.0），CLI 外部契约已冻结
+> 状态：v1.0.1 现行，CLI 外部契约已冻结
 > 日期：2026-11-10
 > 配套：[`PROVIDERS.md`](PROVIDERS.md)、[`ERROR_CODES.md`](ERROR_CODES.md)、[`CLI_SCHEMA.md`](CLI_SCHEMA.md)
 
@@ -245,7 +245,7 @@ release_tag == "latest"  -> 需要 release_id + published_at + asset_sha256
 - 不记录 asset SHA-256；
 - 让 `pinned_at` 参与完整性判定（它只是审计时间）。
 
-`RELEASE_NOT_PINNED` 对应 `OMF-E3010`；示例见 `docs/schemas/examples/provider-resolve.example.json`（真实 release id 与发布时间）。
+`RELEASE_NOT_PINNED` 对应 `OMF-E3010`；示例见 `docs/reference/schemas/examples/provider-resolve.example.json`（真实 release id 与发布时间）。
 
 ---
 
@@ -289,7 +289,7 @@ owner/repo
 建议字段：
 
 ```toml
-schema = "onemoreffmpeg.provider/v1"
+schema = "onemoreffmpeg.providers/v1"
 id = "my-ffmpeg"
 repository = "owner/repo"       # 或 url
 url = "https://example.com/ffmpeg.zip"

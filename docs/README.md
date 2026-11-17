@@ -1,10 +1,10 @@
 # 文档索引
 
 > OneMoreFFmpeg — 统一管理 FFmpeg 的发现、下载、安装、环境与能力检查的 CLI。
-> 当前版本 **v1.0.0**；Phase 1–7 全部完成，CLI 外部契约冻结。
+> 当前版本 **v1.0.1**（唯一受支持版本）；Phase 1–7 全部完成，CLI 外部契约冻结。
 > 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg>
 
-本目录按用途分为五类；`archive/` 中的历史快照不代表当前状态。
+本目录按用途分为四类（guides / reference / development / releases）；仅描述当前 v1.0.1 的事实。
 
 ## 1. 上手与使用（guides/）
 
@@ -30,7 +30,7 @@
 | [`reference/ENVIRONMENT.md`](reference/ENVIRONMENT.md) / [`PLATFORM_ENVIRONMENT.md`](reference/PLATFORM_ENVIRONMENT.md) | PATH / 环境变量 / current / journal 的跨平台细则 |
 | [`reference/SYSTEM_REQUIREMENTS.md`](reference/SYSTEM_REQUIREMENTS.md) | 系统要求、权限与提权、事务锁 |
 | [`reference/VERSIONING.md`](reference/VERSIONING.md) | SemVer 版本与发布规范 |
-| [`reference/schemas/`](reference/schemas/README.md) | 18 个 data schema 的 golden 示例 |
+| [`reference/schemas/`](reference/schemas/README.md) | 17 个 `/v1` data schema 的 golden 示例 |
 | [`reference/man/one-more-ffmpeg.1`](reference/man/one-more-ffmpeg.1) | Linux man 页 |
 
 ## 3. 开发与决策（development/）
@@ -42,10 +42,10 @@
 | [`development/E2E_TESTING.md`](development/E2E_TESTING.md) | 本机 / 远程 / Docker / CI 测试方式 |
 | [`development/adr/`](development/adr/) | 架构决策记录（依赖、许可证、provider pin 与 nonfree） |
 
-## 4. 发布与历史
+## 4. 发布记录
 
-- [`releases/`](releases/) — 各版本 release notes 与 [`CHANGELOG.md`](releases/CHANGELOG.md)；
-- [`archive/`](archive/README.md) — 阶段状态、审计与历史计划快照，**不维护**，仅作历史证据。
+- [`releases/CHANGELOG.md`](releases/CHANGELOG.md) — 变更记录；
+- [`releases/release-v1.0.1.md`](releases/release-v1.0.1.md) — 当前版本发布说明（更早的 Release 与 tag 已撤回）。
 
 ## 5. 决策快照
 

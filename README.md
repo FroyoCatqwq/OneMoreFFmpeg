@@ -42,7 +42,7 @@ BtbN + BnqDzj + 自定义 URL（`--url` / `provider add`）、稳定版 / 每日
 
 | 项 | 决策 |
 |---|---|
-| 语言 / 工具链 | Go only；`go.mod` 声明 `go 1.27`，工具链 `go1.27.4`，`CGO_ENABLED=0` 交叉编译 |
+| 语言 / 工具链 | Go only；`go.mod` 声明 `go 1.27`，`go.mod` 声明 `go 1.27`（CI 采用 1.27.x 补丁版本），`CGO_ENABLED=0` 交叉编译 |
 | 平台 | Windows x64 + Linux x86_64 |
 | CLI | `one-more-ffmpeg`（不提供 `omf` 内置别名；HOWTO 中 `omf` 是用户自定义 alias） |
 | 组件 | `urfave/cli/v3`、`pelletier/go-toml/v2`（TOML 1.1）、`log/slog` + `lmittmann/tint` |
@@ -57,7 +57,7 @@ BtbN + BnqDzj + 自定义 URL（`--url` / `provider add`）、稳定版 / 每日
 - 上手：[`HOWTO.md`](docs/guides/HOWTO.md) · [`USAGE.md`](docs/guides/USAGE.md) · [`MIGRATION.md`](docs/guides/MIGRATION.md)
 - 契约：[`CLI_SCHEMA.md`](docs/reference/CLI_SCHEMA.md) · [`ERROR_CODES.md`](docs/reference/ERROR_CODES.md) · [`CAPABILITIES.md`](docs/reference/CAPABILITIES.md)
 - 开发：[`ARCHITECTURE.md`](docs/development/ARCHITECTURE.md) · [`E2E_TESTING.md`](docs/development/E2E_TESTING.md) · [`development/adr/`](docs/development/adr/)
-- 发布：[`CHANGELOG.md`](docs/releases/CHANGELOG.md) · [`releases/`](docs/releases/)；历史快照见 [`archive/`](docs/archive/README.md)
+- 发布：[`CHANGELOG.md`](docs/releases/CHANGELOG.md) · [`release-v1.0.1.md`](docs/releases/release-v1.0.1.md)（旧版本 Release 与历史快照已撤回）
 
 ## 5. 开发命令
 

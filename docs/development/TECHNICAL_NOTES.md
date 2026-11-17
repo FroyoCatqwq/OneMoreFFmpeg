@@ -1,7 +1,7 @@
 # 技术点与注意点
 
-> 状态：Phase 1–7 已完成（v1.0.0），CLI 外部契约已冻结
-> Go：`go.mod` 声明 `go 1.27`；当前工具链 `go1.27.4`
+> 状态：v1.0.1 现行，CLI 外部契约已冻结
+> Go：`go.mod` 声明 `go 1.27`；当前`go.mod` 声明 `go 1.27`（CI 采用 1.27.x 补丁版本）
 > 平台：Windows x64 + Linux x86_64
 > 当前范围：CLI-first；不做包管理器识别；不做 Go API / 插件
 
@@ -109,7 +109,7 @@ Phase 1 建议采用：
 - stdout/stderr 分别 capture；
 - `io.LimitReader`；
 - 超时取消；
-- Windows 预留 Job Object 杀进程树；
+- Windows 用 `taskkill /T /F` + `Process.Kill` 终止进程树（D7：Job Object 永久不实现）；
 - Linux 设置 process group，`kill(-pgid)`；
 - 记录 exit code、duration、stdout hash、stderr hash；
 - 不把 stderr 全部写入日志，防止噪声。
@@ -288,7 +288,7 @@ Phase 1 建议采用：
 
 ## 15. 性能注意点
 
-- 能力命令默认串行，避免启动风暴；
+- 能力命令默认并发上限 4，避免启动风暴；
 - 探测源并发有上限；
 - 全盘扫描用 `errgroup` + 有界 channel；
 - 大文件 hash 用流式 SHA-256；
@@ -314,4 +314,3 @@ Phase 1 建议采用：
 - 不公开分发 nonfree；
 - 不兼容旧实验 schema；
 - 不把 floating `latest` 当安装记录；
-- 不在 Phase 0 写业务代码。
