@@ -88,12 +88,24 @@ func doctorCommand() *urfave.Command {
 				failed := []string{}
 				for _, check := range report.Checks {
 					if !check.OK {
-						failed = append(failed, check.Name+" ("+check.Detail+")")
+						// Error-object messages must stay single-line and bounded;
+						// check details can contain newlines, so collapse them.
+						detail := strings.Join(strings.Fields(check.Detail), " ")
+						if len(detail) > 80 {
+							detail = detail[:80] + "..."
+						}
+						failed = append(failed, check.Name+" ("+detail+")")
 					}
 				}
 				msg := "doctor detected an unhealthy state"
 				if len(failed) > 0 {
-					msg += ": " + strings.Join(failed, "; ")
+					joined := strings.Join(failed, "; ")
+					// Error-object messages are capped at 200 runes by the
+					// contract validator; "doctor detected...: " is 31.
+					if len(joined) > 160 {
+						joined = joined[:160] + "..."
+					}
+					msg += ": " + joined
 				}
 				return apperrors.New(apperrors.E6006, msg).WithDetails(map[string]any{"report": report})
 			}
