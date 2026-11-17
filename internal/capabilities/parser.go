@@ -71,12 +71,17 @@ func helpTopicMissing(stdout, stderr string) bool {
 }
 
 func firstContentLineMatches(raw string) bool {
+	// Scan every non-empty line, not just the first: a version banner printed
+	// before "Unknown filter ..." must not hide the diagnostic (some FFmpeg
+	// builds emit both, and exit 0).
 	for _, line := range strings.Split(raw, "\n") {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" {
 			continue
 		}
-		return helpMissPattern.MatchString(trimmed)
+		if helpMissPattern.MatchString(trimmed) {
+			return true
+		}
 	}
 	return false
 }

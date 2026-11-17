@@ -312,4 +312,10 @@ def test_install_releases_transaction_lock(cli, fake_trio: Path, tmp_path: Path)
     second = cli.run("install", "--release", str(release_path),
                      "--artifact", str(archive), "--apply", "--json")
     assert second.returncode != 0
-    assert second.json()["code"] != "OMF-E6009", "lock must be released after install"
+    # A leaked lock is reported as E6009 (data-root lock contention). Any other
+    # failure means the second command acquired the lock and reached its own
+    # validation/business logic (e.g. E7003 schema, E5003 dir-exists), which is
+    # what proves the first install released the lock. E6009 is strictly
+    # reserved for contention, so excluding it is a meaningful assertion.
+    assert second.json()["code"] != "OMF-E6009", \
+        f"lock must be released after install; got {second.stdout}"

@@ -195,11 +195,16 @@ func (r Runner) Run(ctx context.Context, executable string, args ...string) (Res
 	duration := time.Since(start)
 
 	result := r.result(executable, args, stdout, stderr, duration, maxOutput)
-	if stderrors.Is(ctx.Err(), context.Canceled) {
+	// Only reinterpret a raw ctx/runCtx signal as cancellation/timeout when the
+	// command itself did not complete successfully. If cmd.Run() returned nil,
+	// the process finished (exit 0) before the context was cancelled; a cancel
+	// arriving between Run() and here must not turn a successful run into a
+	// spurious failure.
+	if err != nil && stderrors.Is(ctx.Err(), context.Canceled) {
 		result.ExitCode = ExitCodeNotStarted
 		return result, apperrors.New(apperrors.E9004, "context canceled")
 	}
-	if stderrors.Is(runCtx.Err(), context.DeadlineExceeded) {
+	if err != nil && stderrors.Is(runCtx.Err(), context.DeadlineExceeded) {
 		result.ExitCode = ExitCodeNotStarted
 		return result, apperrors.New(apperrors.E1006, "process timeout").WithCause(runCtx.Err().Error())
 	}

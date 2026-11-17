@@ -36,7 +36,7 @@ go test ./internal/cli -run='^$' -fuzz=FuzzNormalizeJSONInput -fuzztime=20s
 """
 
 [tasks.quality]
-description = "go vet + go test + fuzz smoke (gofmt gate is enforced in CI)"
+description = "go vet + go test + fuzz smoke (run 'gofmt -w .' first; gofmt gate is enforced in CI)"
 depends = ["fuzz"]
 run = """
 go vet ./...

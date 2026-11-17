@@ -91,8 +91,12 @@ func providerAddCommand() *urfave.Command {
 			if err != nil {
 				return err
 			}
+			if cmd.Bool("apply") && cmd.Bool("dry-run") {
+				return apperrors.New(apperrors.E7001,
+					"--apply and --dry-run are mutually exclusive")
+			}
 			status := "dry-run"
-			if cmd.Bool("apply") && !cmd.Bool("dry-run") {
+			if cmd.Bool("apply") {
 				if _, err := provider.AddAndSaveCustomFile(path, entry); err != nil {
 					return err
 				}

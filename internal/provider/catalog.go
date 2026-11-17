@@ -3,7 +3,9 @@ package provider
 import (
 	"context"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
@@ -181,16 +183,42 @@ func dailyCatalog(ctx context.Context, opts CatalogOptions, owner, repo string) 
 	return entries, nil
 }
 
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
 func officialVersions(ctx context.Context, opts CatalogOptions) (map[string]string, error) {
-	url := opts.ReleasesURL
-	if url == "" {
-		url = OfficialReleasesURL
+	pageURL := opts.ReleasesURL
+	if pageURL == "" {
+		pageURL = OfficialReleasesURL
+	}
+	parsed, parseErr := url.Parse(pageURL)
+	if parseErr != nil || parsed.Host == "" || parsed.User != nil ||
+		!(parsed.Scheme == "https" || (parsed.Scheme == "http" && isLoopbackHost(parsed.Hostname()))) {
+		return nil, apperrors.New(apperrors.E3007, "ffmpeg release page url must be https (or loopback http for tests)")
 	}
 	client := opts.HTTPClient
 	if client == nil {
 		client = &http.Client{Timeout: 15 * time.Second}
+	} else {
+		clone := *client
+		client = &clone
 	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	// Never follow an https -> http downgrade, even to loopback.
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if req.URL.Scheme != "https" && !(req.URL.Scheme == "http" && isLoopbackHost(req.URL.Hostname())) {
+			return apperrors.New(apperrors.E3007, "release page redirect must stay https")
+		}
+		if parsed.Scheme == "https" && req.URL.Scheme != "https" {
+			return apperrors.New(apperrors.E3007, "release page redirect must not downgrade https")
+		}
+		return nil
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, pageURL, nil)
 	if err != nil {
 		return nil, apperrors.New(apperrors.E3007, "ffmpeg release page request is invalid").WithCause(err.Error())
 	}
@@ -202,9 +230,13 @@ func officialVersions(ctx context.Context, opts CatalogOptions) (map[string]stri
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return nil, apperrors.New(apperrors.E3007, "ffmpeg release page returned an error").WithDetails(map[string]any{"status": response.StatusCode})
 	}
-	body, err := io.ReadAll(io.LimitReader(response.Body, 4<<20))
+	const pageLimit = 4 << 20
+	body, err := io.ReadAll(io.LimitReader(response.Body, pageLimit+1))
 	if err != nil {
 		return nil, apperrors.New(apperrors.E3007, "ffmpeg release page cannot be read").WithCause(err.Error())
+	}
+	if len(body) > pageLimit {
+		return nil, apperrors.New(apperrors.E3007, "ffmpeg release page is too large")
 	}
 	result := map[string]string{}
 	for _, match := range officialVersionPattern.FindAllStringSubmatch(string(body), -1) {

@@ -12,6 +12,7 @@ import os
 import posixpath
 import stat
 import sys
+import time
 from pathlib import Path
 
 import paramiko
@@ -48,7 +49,18 @@ def connection_info(path: Path) -> tuple[str, str, str]:
 def connect(info: Path):
     host, user, password = connection_info(info)
     client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    # Prefer strict known_hosts verification when a host key file is available
+    # next to the info file. Fall back to trusting-on-first-use only for the
+    # bootstrap case, with a loud warning (the old code always trusted blindly).
+    known_hosts = info.parent / "known_hosts"
+    client.load_system_host_keys()
+    if known_hosts.exists():
+        client.load_host_keys(str(known_hosts))
+        client.set_missing_host_key_policy(paramiko.RejectPolicy())
+    else:
+        print(f"warning: {known_hosts} not found; accepting host key on first use",
+              file=sys.stderr)
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(host, username=user, password=password, timeout=30)
     return client
 
@@ -58,7 +70,23 @@ def run(client, command: str, check: bool = True) -> tuple[int, str, str]:
     # Combine stderr into stdout; reading stdout then stderr can deadlock when
     # either channel fills its SSH window.
     stdout.channel.set_combine_stderr(True)
-    out = stdout.read().decode("utf-8", "replace")
+    # Watchdog: exec_command's timeout only covers channel setup, so a remote
+    # process that stays silent could block stdout.read() forever. Read in
+    # bounded chunks with an idle timeout and a hard cap.
+    stdout.channel.settimeout(120)
+    deadline = time.monotonic() + 900
+    chunks: list[bytes] = []
+    while True:
+        if time.monotonic() > deadline:
+            raise SystemExit(f"remote command watchdog timed out: {command}")
+        try:
+            chunk = stdout.read(65536)
+        except Exception as exc:  # socket.timeout on idle channel
+            raise SystemExit(f"remote command idle timeout: {command}: {exc}")
+        if not chunk:
+            break
+        chunks.append(chunk)
+    out = b"".join(chunks).decode("utf-8", "replace")
     code = stdout.channel.recv_exit_status()
     print(f"$ {command}\n{out}", end="")
     if check and code != 0:

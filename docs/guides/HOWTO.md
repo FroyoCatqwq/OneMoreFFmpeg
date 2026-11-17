@@ -32,16 +32,16 @@ OneMoreFFmpeg **不是 FFmpeg 本身**，而是一个「FFmpeg 安装管理器�
 
 ## 2. 最短正确流程（Linux）
 
-假设你已经从 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases) 下载了 `one-more-ffmpeg-v1.0.0-linux-amd64`。下面用 `omf` 代指这个文件。
+假设你已经从 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases) 下载了 `one-more-ffmpeg-v1.0.1-linux-amd64`。下面用 `omf` 代指这个文件。
 
 ```bash
 # 0) 赋予执行权限，改个短名字（可选）
-chmod +x one-more-ffmpeg-v1.0.0-linux-amd64
-alias omf=./one-more-ffmpeg-v1.0.0-linux-amd64
+chmod +x one-more-ffmpeg-v1.0.1-linux-amd64
+alias omf=./one-more-ffmpeg-v1.0.1-linux-amd64
 
 # 1) 确认能跑
 omf version
-# 期望：OneMoreFFmpeg v1.0.0 (...) linux/amd64 ...
+# 期望：OneMoreFFmpeg v1.0.1 (...) linux/amd64 ...
 
 # 2) 安装（默认 btbn 的 daily GPL 版）。会联网下载，几十 MB，请耐心等待，不要 Ctrl+C！
 omf install --apply
@@ -80,11 +80,11 @@ omf install --channel stable --apply
 
 ## 3. 最短正确流程（Windows）
 
-下载 `one-more-ffmpeg-v1.0.0-windows-amd64.exe`，在 PowerShell 里：
+下载 `one-more-ffmpeg-v1.0.1-windows-amd64.exe`，在 PowerShell 里：
 
 ```powershell
 # 改个短名字（可选）
-Rename-Item .\one-more-ffmpeg-v1.0.0-windows-amd64.exe omf.exe
+Rename-Item .\one-more-ffmpeg-v1.0.1-windows-amd64.exe omf.exe
 
 .\omf.exe version
 .\omf.exe install --channel stable --apply   # 下载并安装，建立 current（junction）

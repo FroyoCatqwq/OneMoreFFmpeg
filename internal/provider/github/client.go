@@ -70,8 +70,16 @@ func NewClient(baseURL, token string) (*Client, error) {
 	if err != nil || parsed.Host == "" {
 		return nil, apperrors.New(apperrors.E7005, "github api base url is invalid")
 	}
+	// userinfo makes the URL ambiguous ("https://api.github.com@evil.example")
+	// and would send the Bearer token to the real host. Credentials belong in
+	// the token field, never in the base URL; also avoid echoing the raw URL in
+	// errors so embedded secrets cannot leak.
+	if parsed.User != nil {
+		return nil, apperrors.New(apperrors.E7005, "github api base url must not contain credentials")
+	}
 	if parsed.Scheme != "https" && !(parsed.Scheme == "http" && isLoopback(parsed.Hostname())) {
-		return nil, apperrors.New(apperrors.E7005, "github api base url must be https").WithDetails(map[string]any{"value": baseURL})
+		return nil, apperrors.New(apperrors.E7005, "github api base url must be https").
+			WithDetails(map[string]any{"host": parsed.Hostname()})
 	}
 	client := &Client{
 		BaseURL:          strings.TrimRight(parsed.String(), "/"),
@@ -127,18 +135,35 @@ func (c *Client) LatestRelease(ctx context.Context, owner, repo string) (Release
 	return release, nil
 }
 
-// ListReleases returns up to perPage releases, newest first.
+// listReleasesMaxPages bounds pagination so a repository with thousands of
+// releases cannot turn one catalog call into an unbounded request storm.
+const listReleasesMaxPages = 5
+
+// ListReleases returns up to perPage*listReleasesMaxPages releases, newest
+// first. Earlier versions only fetched page 1, which silently hid older
+// releases from the stable/daily catalogs once a repo exceeded one page.
 func (c *Client) ListReleases(ctx context.Context, owner, repo string, perPage int) ([]Release, error) {
 	if perPage <= 0 || perPage > 100 {
 		perPage = 30
 	}
-	var releases []Release
-	path := "/repos/" + url.PathEscape(owner) + "/" + url.PathEscape(repo) +
-		"/releases?per_page=" + strconv.Itoa(perPage)
-	if err := c.getJSON(ctx, path, &releases); err != nil {
-		return nil, err
+	base := "/repos/" + url.PathEscape(owner) + "/" + url.PathEscape(repo) + "/releases"
+	all := make([]Release, 0, perPage*2)
+	for page := 1; page <= listReleasesMaxPages; page++ {
+		path := base + "?per_page=" + strconv.Itoa(perPage) + "&page=" + strconv.Itoa(page)
+		var batch []Release
+		if err := c.getJSON(ctx, path, &batch); err != nil {
+			return nil, err
+		}
+		all = append(all, batch...)
+		// A short page means there are no more releases.
+		if len(batch) < perPage {
+			break
+		}
+		if err := ctx.Err(); err != nil {
+			return nil, ctx.Err()
+		}
 	}
-	return releases, nil
+	return all, nil
 }
 
 // ReleaseByTag returns one release by tag name.

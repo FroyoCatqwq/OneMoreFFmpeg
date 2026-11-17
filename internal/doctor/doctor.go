@@ -103,7 +103,10 @@ func checkTrio(ctx context.Context, opts Options, status model.EnvStatusData) (b
 			continue
 		}
 		result, err := runner.Run(ctx, path, "-version")
-		if err != nil || result.ExitCode != 0 {
+		if err != nil || result.ExitCode != 0 || !hasVersionBanner(result.Stdout, name) {
+			// A truly healthy FFmpeg prints "<name> version ..." on -version.
+			// Checking the banner prevents an exit-0 stub (e.g. /bin/true or a
+			// symlink to it) from making the trio appear healthy.
 			missing = append(missing, name+"(unrunnable)")
 		}
 	}
@@ -115,12 +118,26 @@ func checkTrio(ctx context.Context, opts Options, status model.EnvStatusData) (b
 	ffplayPath := findBinary(binDir, "ffplay")
 	if ffplayPath == "" {
 		warnings = append(warnings, model.Warning{Code: string(apperrors.W1001), Message: "ffplay is missing"})
-	} else if result, err := runner.Run(ctx, ffplayPath, "-version"); err != nil || result.ExitCode != 0 {
+	} else if result, err := runner.Run(ctx, ffplayPath, "-version"); err != nil || result.ExitCode != 0 || !hasVersionBanner(result.Stdout, "ffplay") {
 		warnings = append(warnings, model.Warning{Code: string(apperrors.W1001), Message: "ffplay is present but not runnable"})
 	} else {
 		healthy = append(healthy, "ffplay")
 	}
 	return true, strings.Join(healthy, ", ") + " healthy", warnings
+}
+
+// hasVersionBanner checks the first few lines of -version output for the
+// "<name> version" banner that real FFmpeg tools always print.
+func hasVersionBanner(stdout, name string) bool {
+	for _, line := range strings.Split(stdout, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		// Only inspect the leading lines; FFmpeg prints the banner first.
+		return strings.HasPrefix(strings.ToLower(line), name+" version")
+	}
+	return false
 }
 
 func pathDetail(status model.EnvStatusData) string {

@@ -16,9 +16,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /src
 COPY . /src
 
-# Trust mise config if present, then build the CLI for this (linux) platform.
-RUN mise trust mise.toml 2>/dev/null || true; \
-    mkdir -p dist && go build -trimpath -o dist/one-more-ffmpeg-linux-amd64 ./cmd/one-more-ffmpeg
+# Build the CLI for this (linux) platform. The image has no mise and the tests
+# do not use it, so no `mise trust` step is needed here.
+RUN mkdir -p dist && go build -trimpath -o dist/one-more-ffmpeg-linux-amd64 ./cmd/one-more-ffmpeg
 
 ENV OMF_BINARY=/src/dist/one-more-ffmpeg-linux-amd64
 

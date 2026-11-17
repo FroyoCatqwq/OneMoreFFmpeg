@@ -80,7 +80,9 @@ func resolveDirs(raw string) ([]string, error) {
 
 func binaryNames(base string) []string {
 	if runtime.GOOS == "windows" {
-		return []string{base + ".exe", base}
+		// .com is a valid executable extension on Windows and the scanner
+		// accepts ffmpeg.com as a binary name, so lookup must find it too.
+		return []string{base + ".exe", base + ".com", base}
 	}
 	return []string{base}
 }

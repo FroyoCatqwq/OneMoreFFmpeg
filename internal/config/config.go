@@ -96,10 +96,17 @@ func LoadOptional(path string) (Config, error) {
 	return Load(path)
 }
 
+// maxConfigBytes bounds configuration files: a TOML config is a few hundred
+// bytes by design, so anything larger is malformed or abusive.
+const maxConfigBytes = 1 << 20
+
 func Parse(r io.Reader) (Config, error) {
-	raw, err := io.ReadAll(r)
+	raw, err := io.ReadAll(io.LimitReader(r, maxConfigBytes+1))
 	if err != nil {
 		return Config{}, apperrors.New(apperrors.E7002, "config cannot be read").WithCause(err.Error())
+	}
+	if len(raw) > maxConfigBytes {
+		return Config{}, apperrors.New(apperrors.E7005, "config file is too large")
 	}
 
 	var presence struct {
@@ -144,7 +151,7 @@ func (c Config) validate() error {
 	default:
 		return apperrors.New(apperrors.E7005, "invalid color mode")
 	}
-	if timeout, err := time.ParseDuration(c.Network.Timeout); err != nil || timeout <= 0 {
+	if timeout, err := time.ParseDuration(c.Network.Timeout); err != nil || timeout <= 0 || timeout > 5*time.Minute {
 		return apperrors.New(apperrors.E7005, "invalid network timeout")
 	}
 	if c.Network.MaxAttempts < 1 || c.Network.MaxAttempts > 10 {
@@ -153,8 +160,8 @@ func (c Config) validate() error {
 	if !isHTTPSURL(c.Network.GitHubAPI) {
 		return apperrors.New(apperrors.E7005, "network github_api must be an https URL")
 	}
-	if c.Download.MaxBytes <= 0 {
-		return apperrors.New(apperrors.E7005, "download max_bytes must be positive")
+	if c.Download.MaxBytes <= 0 || c.Download.MaxBytes > 8<<30 {
+		return apperrors.New(apperrors.E7005, "download max_bytes must be within 1..8589934592")
 	}
 	if c.Download.MaxRedirects < 0 || c.Download.MaxRedirects > 20 {
 		return apperrors.New(apperrors.E7005, "download max_redirects must be 0..20")
@@ -168,6 +175,12 @@ func (c Config) validate() error {
 func isHTTPSURL(value string) bool {
 	parsed, err := url.Parse(value)
 	if err != nil || parsed.Host == "" {
+		return false
+	}
+	// Reject userinfo: "https://api.github.com@evil.example" has Host
+	// "evil.example" but reads like GitHub, and would carry a Bearer token
+	// (or embedded credentials) to the wrong server.
+	if parsed.User != nil {
 		return false
 	}
 	if parsed.Scheme == "https" {

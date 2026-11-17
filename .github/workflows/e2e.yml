@@ -106,6 +106,16 @@ jobs:
           --junitxml=tests/e2e/results/pytest-junit.xml
           tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py tests/e2e/test_env_real_e2e.py
 
+      - name: Windows real HKCU env e2e
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          OMF_BINARY: ${{ github.workspace }}/${{ matrix.binary }}
+          OMF_E2E_REAL_ENV: "1"
+        run: >-
+          uv run --python ${{ env.PYTHON_VERSION }} --with-requirements tests/e2e/requirements.txt
+          pytest --timeout=180 -v tests/e2e/test_env_real_e2e.py::test_env_apply_writes_and_rolls_back_registry
+
       - name: Robot Framework e2e
         shell: bash
         env:

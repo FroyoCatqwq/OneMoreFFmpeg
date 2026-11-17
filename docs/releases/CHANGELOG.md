@@ -2,22 +2,37 @@
 
 本项目遵循 [Semantic Versioning 2.0.0](../reference/VERSIONING.md)。格式基于 [Keep a Changelog](https://keepachangelog.com/)。
 
-## [Unreleased]
+## [1.0.1] — 2026-11-17
+
+Bugfix 版本。对全项目做源码级审计（CLI/契约、网络/provider、检测/进程、CI/测试基础设施），修复全部确认缺陷。
 
 ### Security
-- 对 `internal/ffexec`、`archive`、`install`、`env`、`journal` 做源码级安全审计并修复：
-  - install/jenv 回滚对 journal 路径增加**解析符号链接后的包含性校验**与逐级 symlink 拒绝，杜绝借 `apps/` 下符号链接的任意目录删除/移动（H1）；
-  - env 回滚写 shim 前校验内容严格符合受控模板，伪造 journal 无法把任意脚本写入 `/usr/local/bin`（H2）；
-  - `env rollback` 对 `scope=system` 强制提权检查，堵住授权门绕过（M1）；
-  - archive 解压在写入前拒绝目标路径中的预置符号链接组件（M2）；
-  - `shortSHA` 过滤路径分隔符、close 失败删除残留文件、Windows `taskkill` 用 System32 绝对路径并隔离 Env。
-- 新增针对上述修复的回归测试，并在 Linux 完成 `go test -race` 核心包验证。
+- `--json help [cmd]` 不再绕过 stdout JSON-only 契约：内置 `help` 子命令纳入纯文本请求拦截，返回 E1001 错误信封。
+- `network.github_api` 与 GitHub 客户端拒绝 URL userinfo（如 `https://api.github.com@evil.example`），防止 Bearer token 发往错误主机；错误信息不再回显含凭据的原始 URL。
+- 下载/GitHub API/catalog 重定向禁止 HTTPS→HTTP 降级；下载 URL 拒绝 userinfo。
+- 回滚路径符号链接防护（上一轮）：journal 路径解析后包含性校验、逐级 symlink 拒绝；shim body 模板校验；system scope 提权检查；archive 预置 symlink 拒绝。
+- 远程 e2e 优先使用 known_hosts 严格校验 SSH 主机密钥（缺失时告警回退）；远程命令加空闲/总体看门狗。
+- `officialVersions` 校验 releases 页 URL scheme、禁止降级跳转、限制响应体 4 MiB。
+
+### Fixed
+- `uninstall` 多个定位 flag（`--root`/`--release`/`--provider`）同时给出时改为显式报错，不再静默选优先级。
+- `provider add` 的 `--apply` 与 `--dry-run` 同时给出时显式报错。
+- GitHub Releases 列表支持最多 5 页抓取（此前只取第一页，静默漏掉旧版本）。
+- `doctor` 的 `trio_valid` 现在校验 `-version` 的 banner，exit-0 假二进制（如 `/bin/true`）不再被判为健康。
+- ffexec 中进程已成功退出后才到达的 context 取消不再把成功结果改写成取消错误。
+- 全盘扫描把目录也计入 `MaxFiles` 预算，防止大量空目录绕过资源上限。
+- `-h <topic>` 缺失检测扫描全部输出行，版本 banner 不再掩盖 `Unknown ...` 诊断。
+- Windows 下 `binaryNames` 增加 `.com`，与扫描器的可执行名识别一致。
+- `commitProvidersFile` 回滚失败时报告备份路径，不再静默丢失 providers.toml。
+- config：`timeout` 上限 5 分钟、`max_bytes` 上限 8 GiB、配置文件读取上限 1 MiB。
+- release：commit 元数据改用实际 checkout 的 ref；quality gate 补齐 gofmt/vet/fuzz；严格 SemVer tag 校验；provenance 覆盖 SHA256SUMS.txt。
 
 ### Added
-- 环境变量真实修改（`--apply`）的完整 e2e：Linux 通过临时 HOME 隔离验证 shim/profile 写入与回滚、非托管 shim 保护；Windows 通过 marker 控制的 HKCU 注册表写入与恢复测试。
+- 环境变量真实修改（`--apply`）的完整 e2e：Linux 临时 HOME 隔离、Windows marker 控制的 HKCU 注册表；CI 的 Windows job 现在执行注册表 e2e。
+- 针对本轮全部修复的回归测试；新增 `.dockerignore` 避免测试产物进入镜像。
 
 ### Changed
-- 源码拆分提升可维护性：`contracts` 的 URL/asset 校验拆至 `validation.go`；`env` 的 PATH/shim/shell-RC 文件操作拆至 `shell.go`；`capabilities` 的缓存与 warning 逻辑拆至 `cache.go`。行为与 CLI 契约不变。
+- 源码拆分提升可维护性：`contracts`→`validation.go`、`env`→`shell.go`、`capabilities`→`cache.go`（上一轮）；本轮行为与 CLI 契约不变。
 
 ## [1.0.0] — 2026-11-16
 

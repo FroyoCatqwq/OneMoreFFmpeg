@@ -38,6 +38,23 @@ func uninstallCommand() *urfave.Command {
 			if err != nil {
 				return err
 			}
+			// The three locator styles are mutually exclusive. Silently
+			// preferring one could uninstall a different installation than the
+			// caller intended.
+			locators := 0
+			if strings.TrimSpace(cmd.String("root")) != "" {
+				locators++
+			}
+			if strings.TrimSpace(cmd.String("release")) != "" {
+				locators++
+			}
+			if cmd.String("provider") != "" || cmd.String("release-tag") != "" {
+				locators++
+			}
+			if locators > 1 {
+				return apperrors.New(apperrors.E7001,
+					"use exactly one of --root, --release, or --provider with --release-tag")
+			}
 			root := strings.TrimSpace(cmd.String("root"))
 			if root == "" {
 				switch {

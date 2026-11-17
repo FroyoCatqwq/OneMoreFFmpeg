@@ -129,8 +129,13 @@ def fake_trio(tmp_path_factory, worker_id: str) -> Path:
     source.write_text(FAKE_GO, encoding="utf-8")
     extension = ".exe" if os.name == "nt" else ""
     executable = directory / ("ffmpeg" + extension)
+    # Build for the *host* platform/architecture, not a hardcoded amd64: on
+    # macOS or ARM runners an amd64 Linux binary cannot be executed by the
+    # detect/capabilities tests that invoke it directly.
+    host_arch = {"x86_64": "amd64", "aarch64": "arm64", "arm64": "arm64"}.get(
+        os.uname().machine if hasattr(os, "uname") else "", "amd64")
     env = dict(os.environ, GO111MODULE="off", CGO_ENABLED="0",
-               GOOS="windows" if os.name == "nt" else "linux", GOARCH="amd64")
+               GOOS="windows" if os.name == "nt" else "linux", GOARCH=host_arch)
     subprocess.run(["go", "build", "-o", str(executable), str(source)], check=True, env=env, timeout=180)
     for name in ("ffprobe", "ffplay"):
         shutil.copy2(executable, directory / (name + extension))

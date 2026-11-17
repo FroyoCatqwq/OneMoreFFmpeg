@@ -350,7 +350,14 @@ func (d *Downloader) get(ctx context.Context, rawURL string) (*http.Response, er
 	maxRedirects := d.options.MaxRedirects
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		if !isAllowedURL(req.URL.String()) {
-			return apperrors.New(apperrors.E4001, "redirect target must be https").WithDetails(map[string]any{"url": req.URL.String()})
+			return apperrors.New(apperrors.E4001, "redirect target must be https").WithDetails(map[string]any{"url": req.URL.Redacted()})
+		}
+		// Never downgrade scheme. An https asset redirecting to http (even a
+		// loopback one) would expose the transfer and enable local-service
+		// probing; loopback http is only acceptable as the *initial* test URL.
+		originScheme := request.URL.Scheme
+		if originScheme == "https" && req.URL.Scheme != "https" {
+			return apperrors.New(apperrors.E4001, "redirect must not downgrade https").WithDetails(map[string]any{"url": req.URL.Redacted()})
 		}
 		if len(via) > maxRedirects {
 			return apperrors.New(apperrors.E4003, "redirect limit exceeded")
@@ -468,7 +475,7 @@ func contextError(err error) error {
 
 func isAllowedURL(raw string) bool {
 	parsed, err := url.Parse(strings.TrimSpace(raw))
-	if err != nil || parsed.Host == "" {
+	if err != nil || parsed.Host == "" || parsed.User != nil {
 		return false
 	}
 	if parsed.Scheme == "https" {

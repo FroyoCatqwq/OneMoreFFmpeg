@@ -60,7 +60,12 @@ func Run(ctx context.Context, opts RunOptions) (code int) {
 	if len(opts.Args) == 0 {
 		opts.Args = []string{"one-more-ffmpeg"}
 	}
-	plainTextRequest := hasInDetailUsage(opts.Args) || hasHelpFlag(opts.Args)
+	// urfave registers a built-in `help` subcommand that writes plain text to
+	// root.Writer (stdout), bypassing the flag-based help checks and the
+	// per-command rejectPlainTextUnderJSON guard. Treat it as a plain-text
+	// request too, so `--json help [cmd]` cannot emit an envelope-less text
+	// dump on stdout.
+	plainTextRequest := hasInDetailUsage(opts.Args) || hasHelpFlag(opts.Args) || hasHelpSubcommand(opts.Args)
 	if plainTextRequest {
 		if wantsJSON(opts.Args) {
 			// stdout is JSON-only by contract. Help/usage text has no JSON
@@ -245,6 +250,31 @@ func hasHelpFlag(args []string) bool {
 		if takesValue[name] && !hasEquals {
 			index++
 		}
+	}
+	return false
+}
+
+// hasHelpSubcommand detects urfave's built-in `help` command. It only counts
+// a bare `help` token outside flag values and after any `--` separator.
+func hasHelpSubcommand(args []string) bool {
+	for index := 1; index < len(args); index++ { // skip argv[0] (program name)
+		arg := args[index]
+		if arg == "--" {
+			return false // everything after is a positional arg, not a command
+		}
+		if arg == "help" {
+			return true
+		}
+		if strings.HasPrefix(arg, "-") {
+			name, _, hasEquals := strings.Cut(arg, "=")
+			if takesValue[name] && !hasEquals {
+				index++ // this flag consumes the next token as its value
+			}
+			continue
+		}
+		// Another subcommand precedes any `help`, so `help` would be its
+		// argument (e.g. `version help`) rather than the built-in command.
+		return false
 	}
 	return false
 }

@@ -166,9 +166,19 @@ func commitProvidersFile(tmpPath, path string) error {
 		return err
 	}
 	if err := os.Rename(tmpPath, path); err != nil {
-		_ = os.Remove(path)
-		_ = os.Rename(backup, path)
-		return err
+		// The new file failed to land; restore the previous registry from the
+		// backup. If either step fails, report the backup location so the user
+		// can recover manually rather than silently losing the registry.
+		removeErr := os.Remove(path)
+		if removeErr != nil && !os.IsNotExist(removeErr) {
+			return apperrors.New(apperrors.E7007, "providers file commit failed and could not be rolled back").
+				WithDetails(map[string]any{"backup": backup}).WithCause(removeErr.Error())
+		}
+		if restoreErr := os.Rename(backup, path); restoreErr != nil {
+			return apperrors.New(apperrors.E7007, "providers file commit failed and could not be restored").
+				WithDetails(map[string]any{"backup": backup}).WithCause(restoreErr.Error())
+		}
+		return apperrors.New(apperrors.E7007, "providers file commit failed; previous registry restored").WithCause(err.Error())
 	}
 	_ = os.Remove(backup)
 	return nil

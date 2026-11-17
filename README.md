@@ -4,13 +4,13 @@
 
 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg> · 许可证：GPL-3.0-only
 
-**状态：v1.0.0** — Phase 1–7 全部完成，CLI 外部契约冻结；Windows + Linux + Docker 全新环境 `go test` / e2e 全绿，
+**状态：v1.0.1** — Phase 1–7 全部完成，CLI 外部契约冻结；全项目审计后 bugfix；Windows + Linux + Docker 全新环境 `go test` / e2e 全绿，
 GitHub Actions 提供质量门禁与 tag 发布流水线。产物见 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases)。
 
 🟢 **第一次用？先看 [`安装指南`](docs/guides/INSTALL.md)（Scoop / dnf / 手动二进制）与 [`新手上手指南`](docs/guides/HOWTO.md)。黄金顺序：`install --apply` → `env set --apply` → 开新终端 → `ffmpeg` 可用。**
 
 Windows：`scoop bucket add omf https://github.com/FroyoCatqwq/OneMoreFFmpeg-bucket` → `scoop install one-more-ffmpeg`。
-RHEL 9+：`sudo dnf install -y https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/download/v1.0.0/one-more-ffmpeg-1.0.0-1.el9.x86_64.rpm`。
+RHEL 9+：`sudo dnf install -y https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/download/v1.0.1/one-more-ffmpeg-1.0.1-1.el9.x86_64.rpm`。
 
 ---
 

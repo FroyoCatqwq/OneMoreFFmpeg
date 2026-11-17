@@ -95,6 +95,13 @@ func scanOne(ctx context.Context, root string, opts Options, add addCandidate, e
 			if opts.MaxDepth >= 0 && relativeDepth(abs, path) > opts.MaxDepth {
 				return filepath.SkipDir
 			}
+			// Count directories against MaxFiles too: a huge tree of empty
+			// directories could otherwise be traversed while the file-only
+			// counter never trips.
+			*files++
+			if opts.MaxFiles > 0 && *files > opts.MaxFiles {
+				return errScanLimit
+			}
 			// WalkDir never follows symlinks, so a cheap lexical key is enough;
 			// EvalSymlinks per directory dominated full-disk scan time.
 			key := cheapKey(path)

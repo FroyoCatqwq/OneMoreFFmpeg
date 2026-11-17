@@ -41,6 +41,14 @@ func TestHasHelpFlag(t *testing.T) {
 	require.False(t, hasHelpFlag([]string{"--", "--help"}), "args after -- are not flags")
 }
 
+func TestHasHelpSubcommand(t *testing.T) {
+	require.True(t, hasHelpSubcommand([]string{"one-more-ffmpeg", "--json", "help"}))
+	require.True(t, hasHelpSubcommand([]string{"one-more-ffmpeg", "--json", "help", "version"}))
+	require.False(t, hasHelpSubcommand([]string{"one-more-ffmpeg", "--dir", "help", "detect"}), "flag value must not count")
+	require.False(t, hasHelpSubcommand([]string{"one-more-ffmpeg", "--", "help"}), "after -- is not a command")
+	require.False(t, hasHelpSubcommand([]string{"one-more-ffmpeg", "version"}))
+}
+
 func TestHasInDetailUsageStopsAtSeparator(t *testing.T) {
 	require.False(t, hasInDetailUsage([]string{"--", "--in-detail-usage"}))
 	require.True(t, hasInDetailUsage([]string{"version", "--in-detail-usage"}))
