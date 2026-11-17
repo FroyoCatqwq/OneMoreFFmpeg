@@ -11,5 +11,7 @@ func AvailableBytes(path string) (uint64, error) {
 	if err := syscall.Statfs(path, &stat); err != nil {
 		return 0, err
 	}
-	return uint64(stat.Bavail) * uint64(stat.Bsize), nil
+	// Conversions are required on some Unix/arch combinations where Statfs_t
+	// fields are signed (e.g. linux/arm64); redundant on linux/amd64.
+	return uint64(stat.Bavail) * uint64(stat.Bsize), nil //nolint:unconvert
 }

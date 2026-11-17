@@ -27,7 +27,7 @@ func processSignal(exitErr *exec.ExitError) string {
 	if exitErr == nil || exitErr.ProcessState == nil {
 		return ""
 	}
-	status, ok := exitErr.ProcessState.Sys().(syscall.WaitStatus)
+	status, ok := exitErr.Sys().(syscall.WaitStatus)
 	if !ok || !status.Signaled() {
 		return ""
 	}
