@@ -4,7 +4,9 @@ package ffexec
 
 import (
 	"context"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -17,10 +19,20 @@ func configureProcess(cmd *exec.Cmd) {
 		if cmd.Process == nil {
 			return nil
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-		if err := exec.CommandContext(ctx, "taskkill", "/F", "/T", "/PID", strconv.Itoa(cmd.Process.Pid)).Run(); err == nil {
-			return nil
+		// Resolve taskkill from System32, never from a caller-controlled PATH:
+		// a hijacked PATH could otherwise execute an arbitrary program during
+		// the cancellation phase. If SystemRoot is unavailable, skip taskkill
+		// entirely and fall back to Process.Kill.
+		root := os.Getenv("SystemRoot")
+		if root != "" {
+			taskkill := filepath.Join(root, "System32", "taskkill.exe")
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			kill := exec.CommandContext(ctx, taskkill, "/F", "/T", "/PID", strconv.Itoa(cmd.Process.Pid))
+			kill.Env = []string{"SystemRoot=" + root, "PATH=" + filepath.Join(root, "System32")}
+			if err := kill.Run(); err == nil {
+				return nil
+			}
 		}
 		return cmd.Process.Kill()
 	}

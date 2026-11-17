@@ -185,6 +185,9 @@ func extractZip(ctx context.Context, archivePath, destDir string, compressed int
 		if err != nil {
 			return err
 		}
+		if !platform.NoSymlinkComponents(destDir, target) {
+			return apperrors.New(apperrors.E5002, "archive path contains a symbolic link").WithDetails(map[string]any{"entry": entry.Name})
+		}
 		if entry.UncompressedSize64 > maxFileSize || total+int64(entry.UncompressedSize64) > maxTotal {
 			return apperrors.New(apperrors.E5002, "archive exceeds extraction size limit").WithDetails(map[string]any{"entry": entry.Name})
 		}
@@ -275,6 +278,9 @@ func extractTar(ctx context.Context, archivePath, destDir, format string, compre
 		if pathErr != nil {
 			return pathErr
 		}
+		if !platform.NoSymlinkComponents(destDir, target) {
+			return apperrors.New(apperrors.E5002, "archive path contains a symbolic link").WithDetails(map[string]any{"entry": header.Name})
+		}
 		switch header.Typeflag {
 		case tar.TypeDir:
 			if err := os.MkdirAll(target, 0o755); err != nil {
@@ -336,6 +342,7 @@ func writeFile(target string, source io.Reader, mode os.FileMode, limit int64) (
 		return written, apperrors.New(apperrors.E5009, "archive file cannot be written").WithCause(copyErr.Error())
 	}
 	if closeErr != nil {
+		_ = os.Remove(target)
 		return written, apperrors.New(apperrors.E5009, "archive file cannot be closed").WithCause(closeErr.Error())
 	}
 	if written > limit {

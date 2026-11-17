@@ -104,7 +104,7 @@ jobs:
           uv run --python ${{ env.PYTHON_VERSION }} --with-requirements tests/e2e/requirements.txt
           pytest -n auto --timeout=180 -v
           --junitxml=tests/e2e/results/pytest-junit.xml
-          tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py
+          tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py tests/e2e/test_env_real_e2e.py
 
       - name: Robot Framework e2e
         shell: bash

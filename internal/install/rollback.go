@@ -45,7 +45,7 @@ func Rollback(dataRoot string, record journal.Record) (string, error) {
 		return "", apperrors.New(apperrors.E6005, "journal has no target")
 	}
 	appsRoot := filepath.Join(dataRoot, "apps")
-	if !containedIn(appsRoot, target) {
+	if !containedIn(appsRoot, target) || !platform.ResolvedInside(appsRoot, target) {
 		return "", apperrors.New(apperrors.E6007, "journal target is outside apps").WithDetails(map[string]any{"target": target})
 	}
 	quarantine := record.Details["quarantine"]
@@ -54,16 +54,32 @@ func Rollback(dataRoot string, record journal.Record) (string, error) {
 
 	// Every path that comes from a journal must be confined to the data root.
 	// Journals are ordinary files; trusting their strings let a tampered record
-	// move arbitrary directories into apps/ or point `current` anywhere.
+	// move arbitrary directories into apps/ or point `current` anywhere. A
+	// purely lexical check is not enough: a symlink under apps/ can redirect an
+	// otherwise inside-looking path. Resolve symlinks before any mutation.
 	quarantineRoot := filepath.Join(dataRoot, "quarantine")
-	if quarantine != "" && !containedIn(quarantineRoot, quarantine) {
+	if quarantine != "" && (!containedIn(quarantineRoot, quarantine) || !platform.ResolvedInside(quarantineRoot, quarantine)) {
 		return "", apperrors.New(apperrors.E6007, "journal quarantine path is outside the data root").WithDetails(map[string]any{"quarantine": quarantine})
 	}
-	if original != "" && !containedIn(appsRoot, original) {
+	if original != "" && (!containedIn(appsRoot, original) || !platform.ResolvedInside(appsRoot, original)) {
 		return "", apperrors.New(apperrors.E6007, "journal quarantine_original is outside apps").WithDetails(map[string]any{"original": original})
 	}
-	if currentTarget != "" && !containedIn(dataRoot, currentTarget) {
+	if currentTarget != "" && (!containedIn(dataRoot, currentTarget) || !platform.ResolvedInside(dataRoot, currentTarget)) {
 		return "", apperrors.New(apperrors.E6007, "journal current_target is outside the data root").WithDetails(map[string]any{"current_target": currentTarget})
+	}
+	// No symlink may exist along any path we are about to create or move into.
+	restoreTarget := target
+	if original != "" {
+		restoreTarget = original
+	}
+	for _, guard := range []struct{ root, candidate string }{
+		{appsRoot, target}, {appsRoot, restoreTarget},
+		{quarantineRoot, quarantine}, {dataRoot, currentTarget},
+	} {
+		if guard.candidate != "" && !platform.NoSymlinkComponents(guard.root, guard.candidate) {
+			return "", apperrors.New(apperrors.E6007, "journal path contains a symbolic link").
+				WithDetails(map[string]any{"path": guard.candidate})
+		}
 	}
 
 	switch record.Action {

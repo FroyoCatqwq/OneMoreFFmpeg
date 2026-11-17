@@ -357,8 +357,19 @@ func RollbackWithStore(ctx context.Context, dataRoot, journalID string, store pl
 	if record.Status == journal.StatusRolledBack {
 		return model.EnvSetData{}, apperrors.New(apperrors.E7001, "journal was already rolled back")
 	}
+	systemScope := record.Details["scope"] == "system"
+	if systemScope {
+		// A forged journal must not silently turn an ordinary rollback into a
+		// privileged system-scope write. Mirror the set/unset gate: system
+		// rollback requires an elevated process.
+		if !platform.IsElevated() {
+			return model.EnvSetData{}, apperrors.New(apperrors.E6003,
+				"system-scope rollback requires elevation; run as Administrator/root").
+				WithDetails(map[string]any{"elevated": false})
+		}
+	}
 	if store == nil {
-		if record.Details["scope"] == "system" {
+		if systemScope {
 			store = platform.NewSystemEnvStore()
 		} else {
 			store = platform.NewEnvStore()
@@ -401,7 +412,13 @@ func RollbackWithStore(ctx context.Context, dataRoot, journalID string, store pl
 			}
 			shim := filepath.Join(shimDir, name)
 			if present == "1" {
-				if err := writeFileAtomic(shim, []byte(record.Details["shim_"+name+"_body"]), 0o755); err != nil {
+				body := record.Details["shim_"+name+"_body"]
+				if !validManagedShimBody(body) {
+					return model.EnvSetData{}, apperrors.New(apperrors.E7001,
+						"journal shim body is not a managed shim").
+						WithDetails(map[string]any{"shim": name})
+				}
+				if err := writeFileAtomic(shim, []byte(body), 0o755); err != nil {
 					return model.EnvSetData{}, err
 				}
 				operations = append(operations, "restore "+shim)
@@ -454,65 +471,6 @@ func managedVariables(lae bool) []string {
 	return names
 }
 
-// pathEntryEqual compares PATH entries with case folding only on Windows:
-// Unix filesystems are case-sensitive, so EqualFold there would treat
-// /home/u/.LOCAL/bin and /home/u/.local/bin as the same entry.
-func pathEntryEqual(left, right string) bool {
-	left, right = filepath.Clean(left), filepath.Clean(right)
-	if runtime.GOOS == "windows" {
-		return strings.EqualFold(left, right)
-	}
-	return left == right
-}
-
-func appendPath(previous, entry string) string {
-	for _, part := range filepath.SplitList(previous) {
-		if pathEntryEqual(part, entry) {
-			return previous
-		}
-	}
-	if previous == "" {
-		return entry
-	}
-	return previous + string(os.PathListSeparator) + entry
-}
-
-func removePath(previous, entry string) (string, bool) {
-	parts := filepath.SplitList(previous)
-	kept := make([]string, 0, len(parts))
-	removed := false
-	for _, part := range parts {
-		if pathEntryEqual(part, entry) {
-			removed = true
-			continue
-		}
-		kept = append(kept, part)
-	}
-	return strings.Join(kept, string(os.PathListSeparator)), removed
-}
-
-func shimDirectory(system bool) (string, error) {
-	if system {
-		return "/usr/local/bin", nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", apperrors.New(apperrors.E9003, "home directory cannot be determined").WithCause(err.Error())
-	}
-	return filepath.Join(home, ".local", "bin"), nil
-}
-
-func shellProfile(system bool) (string, error) {
-	if system {
-		return "/etc/profile.d/onemoreffmpeg.sh", nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", apperrors.New(apperrors.E9003, "home directory cannot be determined").WithCause(err.Error())
-	}
-	return filepath.Join(home, ".profile"), nil
-}
-
 func journalDirFor(opts ApplyOptions) string { return filepath.Join(opts.DataRoot, "journal") }
 
 func shellRCBlock(opts ApplyOptions) string {
@@ -537,119 +495,4 @@ func shellRCBlock(opts ApplyOptions) string {
 	}
 	lines = append(lines, shellRCMarkerEnd)
 	return "\n" + strings.Join(lines, "\n") + "\n"
-}
-
-func shellQuote(value string) string { return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'" }
-
-func readShellRC(profile string) (bool, string, error) {
-	body, err := os.ReadFile(profile)
-	if err != nil && !os.IsNotExist(err) {
-		return false, "", apperrors.New(apperrors.E5009, "shell rc cannot be read").WithCause(err.Error())
-	}
-	return strings.Contains(string(body), shellRCMarkerStart), string(body), nil
-}
-
-func currentShellRCBlock(body string) string {
-	start := strings.Index(body, shellRCMarkerStart)
-	end := strings.Index(body, shellRCMarkerEnd)
-	if start < 0 || end < start {
-		return ""
-	}
-	return strings.Trim(body[start:end+len(shellRCMarkerEnd)], "\n")
-}
-
-func stripShellRCBlock(body string) string {
-	start := strings.Index(body, shellRCMarkerStart)
-	end := strings.Index(body, shellRCMarkerEnd)
-	if start < 0 || end < start {
-		return body
-	}
-	return body[:start] + body[end+len(shellRCMarkerEnd):]
-}
-
-func updateShellRC(profile, body, desired, journalDir string, details map[string]string) error {
-	if err := os.MkdirAll(journalDir, 0o755); err != nil {
-		return apperrors.New(apperrors.E5009, "shell rc backup directory cannot be created").WithCause(err.Error())
-	}
-	backup, err := os.CreateTemp(journalDir, "profile-*.bak")
-	if err != nil {
-		return apperrors.New(apperrors.E5009, "shell rc backup cannot be created").WithCause(err.Error())
-	}
-	backupPath := backup.Name()
-	_, writeErr := backup.WriteString(body)
-	closeErr := backup.Close()
-	if writeErr != nil || closeErr != nil {
-		return apperrors.New(apperrors.E5009, "shell rc backup cannot be written").WithCause(fmt.Sprint(writeErr, closeErr))
-	}
-	details["shell_rc_backup"] = backupPath
-	updated := body
-	if desired == "" {
-		updated = stripShellRCBlock(body)
-	} else {
-		updated = strings.TrimRight(stripShellRCBlock(body), "\n") + desired
-	}
-	if err := writeFileAtomic(profile, []byte(updated), 0o644); err != nil {
-		return apperrors.New(apperrors.E5009, "shell rc cannot be written").WithCause(err.Error())
-	}
-	return nil
-}
-
-func restoreShellRC(backup, profile string) error {
-	content, err := os.ReadFile(backup)
-	if err != nil {
-		return apperrors.New(apperrors.E5009, "shell rc backup cannot be read").WithCause(err.Error())
-	}
-	return writeFileAtomic(profile, content, 0o644)
-}
-
-func writeShim(path, target string) error {
-	body := "#!/bin/sh\n" + shimMarker + "\nexec " + shellQuote(target) + " \"$@\"\n"
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return apperrors.New(apperrors.E6002, "shim directory cannot be created").WithCause(err.Error())
-	}
-	return writeFileAtomic(path, []byte(body), 0o755)
-}
-
-func writeFileAtomic(path string, payload []byte, mode os.FileMode) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*.tmp")
-	if err != nil {
-		return err
-	}
-	tmpPath := tmp.Name()
-	_, writeErr := tmp.Write(payload)
-	closeErr := tmp.Close()
-	if writeErr != nil || closeErr != nil {
-		_ = os.Remove(tmpPath)
-		return fmt.Errorf("write temp file: %v %v", writeErr, closeErr)
-	}
-	if err := os.Chmod(tmpPath, mode); err != nil {
-		_ = os.Remove(tmpPath)
-		return err
-	}
-	// platform.RenamePath retries the Windows sharing violation a shell or
-	// antivirus can cause while the target is open; a bare os.Rename would turn
-	// that into a lost shim.
-	if err := platform.RenamePath(tmpPath, path); err != nil {
-		_ = os.Remove(tmpPath)
-		return err
-	}
-	return nil
-}
-
-func copyDetails(source map[string]string) map[string]string {
-	out := make(map[string]string, len(source))
-	for key, value := range source {
-		out[key] = value
-	}
-	return out
-}
-
-func boolString(value bool) string {
-	if value {
-		return "1"
-	}
-	return "0"
 }

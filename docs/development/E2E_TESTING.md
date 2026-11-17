@@ -14,7 +14,7 @@ pwsh -NoProfile -Command '
   go build -trimpath -o dist/one-more-ffmpeg-windows-amd64.exe ./cmd/one-more-ffmpeg
   $env:OMF_BINARY = (Resolve-Path "dist/one-more-ffmpeg-windows-amd64.exe").Path
   uv run --python 3.14 --with-requirements tests/e2e/requirements.txt `
-    pytest -c tests/e2e/pytest.ini -n 2 -q tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py
+    pytest -c tests/e2e/pytest.ini -n 2 -q tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py tests/e2e/test_env_real_e2e.py
   uv run --python 3.14 --with-requirements tests/e2e/requirements.txt `
     robot --outputdir tests/e2e/results/robot tests/e2e/robot
 '

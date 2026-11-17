@@ -3,8 +3,6 @@ package contracts
 
 import (
 	"encoding/json"
-	"net"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -721,45 +719,6 @@ func looksLikeCredential(value string) bool {
 		}
 	}
 	return false
-}
-
-func isHTTPS(value string) bool {
-	parsed, err := url.Parse(value)
-	if err != nil || parsed.Host == "" || parsed.User != nil {
-		return false
-	}
-	if parsed.Scheme == "https" {
-		return true
-	}
-	// Loopback http is permitted for tests and self-hosted mirrors, matching
-	// the download layer's URL policy.
-	return parsed.Scheme == "http" && isLoopback(parsed.Hostname())
-}
-
-func isLoopback(host string) bool {
-	if strings.EqualFold(host, "localhost") {
-		return true
-	}
-	ip := net.ParseIP(host)
-	return ip != nil && ip.IsLoopback()
-}
-
-func safeAssetName(name string) bool {
-	if name == "" || name == "." || name == ".." {
-		return false
-	}
-	if filepath.Base(name) != name || strings.ContainsAny(name, "/\\") {
-		return false
-	}
-	return true
-}
-
-func isAbsoluteLike(value string) bool {
-	if strings.HasPrefix(value, "\\\\") || strings.HasPrefix(value, "//") {
-		return true // UNC / Windows extended-length path
-	}
-	return strings.HasPrefix(value, "/") ||
-		(len(value) >= 3 && value[1] == ':' && (value[2] == '/' || value[2] == '\\'))
 }
 
 func validateWarnings(warnings []model.Warning) error {

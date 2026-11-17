@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -75,6 +76,34 @@ func TestExtractionCapSafety(t *testing.T) {
 	require.Equal(t, int64(1000), expansionCap(1))
 	require.Equal(t, int64(maxFileSize), expansionCap(maxFileSize))
 	require.Equal(t, int64(maxFileSize), expansionCap(0), "unknown size is conservative")
+}
+
+func TestExtractRejectsPreexistingSymlinkDir(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation needs privileges on Windows")
+	}
+	dir := t.TempDir()
+	archivePath := filepath.Join(dir, "data.zip")
+	f, err := os.Create(archivePath)
+	require.NoError(t, err)
+	zw := zip.NewWriter(f)
+	w, err := zw.Create("lib/evil.txt")
+	require.NoError(t, err)
+	_, err = w.Write([]byte("pwned"))
+	require.NoError(t, err)
+	require.NoError(t, zw.Close())
+	require.NoError(t, f.Close())
+
+	dest := filepath.Join(dir, "out")
+	require.NoError(t, os.MkdirAll(dest, 0o755))
+	outside := filepath.Join(dir, "outside")
+	require.NoError(t, os.MkdirAll(outside, 0o755))
+	require.NoError(t, os.Symlink(outside, filepath.Join(dest, "lib")))
+
+	err = Extract(context.Background(), archivePath, dest)
+	require.Error(t, err, "must refuse to write through a pre-existing symlink")
+	_, statErr := os.Stat(filepath.Join(outside, "evil.txt"))
+	require.True(t, os.IsNotExist(statErr), "nothing may be written outside dest")
 }
 
 func TestGlobalExpansionCap(t *testing.T) {

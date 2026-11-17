@@ -2,6 +2,23 @@
 
 本项目遵循 [Semantic Versioning 2.0.0](../reference/VERSIONING.md)。格式基于 [Keep a Changelog](https://keepachangelog.com/)。
 
+## [Unreleased]
+
+### Security
+- 对 `internal/ffexec`、`archive`、`install`、`env`、`journal` 做源码级安全审计并修复：
+  - install/jenv 回滚对 journal 路径增加**解析符号链接后的包含性校验**与逐级 symlink 拒绝，杜绝借 `apps/` 下符号链接的任意目录删除/移动（H1）；
+  - env 回滚写 shim 前校验内容严格符合受控模板，伪造 journal 无法把任意脚本写入 `/usr/local/bin`（H2）；
+  - `env rollback` 对 `scope=system` 强制提权检查，堵住授权门绕过（M1）；
+  - archive 解压在写入前拒绝目标路径中的预置符号链接组件（M2）；
+  - `shortSHA` 过滤路径分隔符、close 失败删除残留文件、Windows `taskkill` 用 System32 绝对路径并隔离 Env。
+- 新增针对上述修复的回归测试，并在 Linux 完成 `go test -race` 核心包验证。
+
+### Added
+- 环境变量真实修改（`--apply`）的完整 e2e：Linux 通过临时 HOME 隔离验证 shim/profile 写入与回滚、非托管 shim 保护；Windows 通过 marker 控制的 HKCU 注册表写入与恢复测试。
+
+### Changed
+- 源码拆分提升可维护性：`contracts` 的 URL/asset 校验拆至 `validation.go`；`env` 的 PATH/shim/shell-RC 文件操作拆至 `shell.go`；`capabilities` 的缓存与 warning 逻辑拆至 `cache.go`。行为与 CLI 契约不变。
+
 ## [1.0.0] — 2026-11-16
 
 首个稳定版。Phase 1–7 全部完成，CLI 外部契约冻结。

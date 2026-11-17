@@ -29,7 +29,9 @@ func shortSHA(sum string) string {
 	if len(sum) < 16 {
 		return safeComponent(sum)
 	}
-	return strings.ToLower(sum[:16])
+	// The asset sha256 comes from an untrusted release file; never let path
+	// separators or ".." leak into the versioned directory name.
+	return safeComponent(strings.ToLower(sum[:16]))
 }
 
 func safeComponent(value string) string {
