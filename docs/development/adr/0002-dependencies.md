@@ -1,9 +1,9 @@
 # Go 依赖库评估
 
-> 日期：2026-11-10
-> 状态：历史决策记录（2026-11-10）；现行依赖以 go.mod 与 THIRD_PARTY_NOTICES.md 为准
-> 适用：OneMoreFFmpeg 当前 CLI-first 范围
-> 数据来源：Go module proxy `@latest`、GitHub API、项目官方 README
+> 决策日期：2026-11-10；最近更新：2026-11-18（v1.0.2）
+> 状态：已接受。§1–§7 是 2026-11-10 的**历史评估快照**（版本表为当时数据，不再更新）；
+> **当前实际依赖以 §8 与 `go.mod` / `THIRD_PARTY_NOTICES.md` 为准**。
+> 适用：OneMoreFFmpeg CLI-first 范围
 
 ---
 
@@ -64,7 +64,7 @@ https://proxy.golang.org/github.com/!burnt!sushi/toml/@latest
 | 其他项目如何调用 | **只调用本项目产物可执行文件，即 CLI** |
 | CLI 对外输出 | JSON / 文件 / 退出码 |
 | 配置文件 | TOML 1.1 |
-| 语言 | Go 1.27.4 |
+| 语言 | Go 1.27（`go.mod` 声明，CI 用 1.27.x） |
 
 因此当前依赖目标是：
 
@@ -95,7 +95,7 @@ Go SDK + 进程插件框架 + gRPC 服务 + 包管理器集成 + GUI/TUI
 | 终端检测 | `github.com/mattn/go-isatty` | v0.0.24 | 2026-07-23 | 采用 |
 | 压缩/解压 | `archive/zip` + `github.com/klauspost/compress` | v1.20.4 | 2026-11-09 | 采用 |
 | xz 解压 | `github.com/ulikunitz/xz` | v0.5.17 | 2026-09-19 | 采用 |
-| HTTP 重试 | `net/http` + `github.com/sethvargo/go-retry` | v0.5.0 | 2026-10-05 | 采用 |
+| HTTP 重试 | `net/http`（自带退避；`sethvargo/go-retry` 保留在 go.mod 但运行时未使用） | v0.5.0 | 2026-10-05 | 见 §8 |
 | 测试 | `github.com/stretchr/testify` | v1.12.1 | 2026-08-17 | 采用 |
 | 可读大小 | `github.com/dustin/go-humanize` | v1.1.0 | 2026-09-17 | 采用 |
 
@@ -369,9 +369,9 @@ License: MIT
 
 ---
 
-## 5. 建议的最小依赖集
+## 5. 当时建议的最小依赖集（历史）
 
-Phase 1 可先写入 `go.mod` / `go.sum`：
+Phase 1 时据此写入 `go.mod` / `go.sum`；**当前实际依赖已增加，见 §8**：
 
 ```text
 github.com/urfave/cli/v3
@@ -389,21 +389,19 @@ github.com/ulikunitz/xz
 github.com/sethvargo/go-retry
 ```
 
-历史记录：Phase 0 时仓库只有 `go.mod`；v1.0.2 的 `go.mod`/`go.sum` 已包含全部 17 个依赖 并锁定版本。
+历史说明：Phase 0 时仓库只有 `go.mod`；上表是 Phase 1 计划的最小集（13 项）。**v1.0.2 的实际依赖（16 个直接 + 2 个间接）见 §8。**
 
 ---
 
-## 6. 待办
+## 6. 原待办（均已完成）
 
-- Phase 1 用 `go get` 固定上述版本；
-- `go mod tidy`；
-- `go test ./...`；
-- `go vet ./...`；
-- `govulncheck` 评估；
-- 许可证清单生成；项目许可证已确定为 GPL-3.0-only，见 [`0003-license.md`](0003-license.md)；
-- Windows/Linux 双平台编译；
-- 对 `urfave/cli/v3` / `go-toml/v2` / `tint` 做 API smoke test；
-- 若未来重新开放 API/插件，再重新评估 RPC / 插件框架，不直接引入当前依赖。
+- [x] Phase 1 用 `go get` 固定版本；
+- [x] `go mod tidy`；
+- [x] `go test ./...` / `go vet ./...`；
+- [x] `govulncheck` 评估（已接入 CI quality gate）；
+- [x] 许可证清单生成；项目许可证已确定为 GPL-3.0-only，见 [`0003-license.md`](0003-license.md)；
+- [x] Windows/Linux（及 darwin）交叉编译；
+- [x] 若未来重新开放 API/插件，再重新评估 RPC / 插件框架，不直接引入当前依赖。
 
 ---
 
@@ -414,3 +412,49 @@ github.com/sethvargo/go-retry
 > 核心第三方库：CLI 用 `urfave/cli/v3`，TOML 1.1 用 `go-toml/v2`，日志用 `slog+tint`，并发用 `x/sync`，压缩包用 `klauspost/compress` + `ulikunitz/xz`，测试用 `testify`。
 >
 > 包管理器识别、Go API、JSON-RPC、gRPC、C ABI 插件都明确推迟，不进入当前依赖范围。
+>
+> **注意**：以上是 Phase 1 时的核心库决策；v1.0.2 追加了 3 个运行时库（flock / go-internal / jsonschema），见 §8。
+
+---
+
+## 8. 当前实际依赖（v1.0.2，权威）
+
+以 `go.mod` 为准；许可证全文见 `THIRD_PARTY_NOTICES.md` 与 `third_party/licenses/`。
+
+### 8.1 直接依赖（16 个）
+
+| 库 | 版本 | 用途 |
+|---|---|---|
+| `github.com/urfave/cli/v3` | v3.14.0 | CLI 框架 |
+| `github.com/pelletier/go-toml/v2` | v2.4.3 | 配置（TOML 1.1） |
+| `github.com/lmittmann/tint` | v1.2.1 | 开发日志 handler |
+| `github.com/mattn/go-isatty` | v0.0.24 | TTY 检测 |
+| `github.com/dustin/go-humanize` | v1.1.0 | 人类可读大小 |
+| `github.com/klauspost/compress` | v1.20.4 | zstd/gzip/deflate |
+| `github.com/ulikunitz/xz` | v0.5.17 | xz 解压 |
+| `golang.org/x/sync` | v0.25.0 | `errgroup` 并发 |
+| `golang.org/x/sys` | v0.50.0 | Windows 注册表/ syscall |
+| `golang.org/x/term` | v0.48.0 | 终端宽度 |
+| `golang.org/x/time` | v0.16.0 | 限流 |
+| `github.com/stretchr/testify` | v1.12.1 | 测试断言 |
+| `github.com/sethvargo/go-retry` | v0.5.0 | 保留未使用（退避由 `net/http` 实现） |
+| `github.com/gofrs/flock` | v0.13.2 | **v1.0.1 引入**：跨进程 OS 文件锁（替代手写 flock/LockFileEx） |
+| `github.com/rogpeppe/go-internal` | v1.16.0 | **v1.0.1 引入**：`lockedfile` 原子写 journal |
+| `github.com/santhosh-tekuri/jsonschema/v6` | v6.0.3 | **v1.0.1 引入**：校验 golden examples 与 `contract.schema.json` |
+
+### 8.2 间接依赖（2 个）
+
+- `go.yaml.in/yaml/v3` v3.0.5（CI YAML 校验用）
+- `golang.org/x/text` v0.14.0
+
+### 8.3 开发工具链（不在 go.mod）
+
+- `golangci-lint` v2.15.0（含 `gosec` linter）—— CI 与 `mise run lint` 使用，见 `.golangci.yml`；
+- Bats-core v1.14.0、Python 3.14、Go 1.27.x —— 见 `mise.toml` 与 CI。
+
+### 8.4 变更记录
+
+| 版本 | 变更 |
+|---|---|
+| Phase 1（v0.6.0） | 落地 §5 的 13 项最小集 |
+| v1.0.1 | 新增 `gofrs/flock`、`rogpeppe/go-internal/lockedfile`、`santhosh-tekuri/jsonschema/v6`；引入 golangci-lint v2 + gosec 门禁 |
