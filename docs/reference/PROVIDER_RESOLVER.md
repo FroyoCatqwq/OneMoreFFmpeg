@@ -31,7 +31,7 @@ Resolver 的输出必须是：
 provider: btbn | bnqdzj-nonfree | custom
 channel: stable | daily
 target: win64 | linux64
-variant: gpl | lgpl | nonfree | nonfree-shared | ...
+variant: gpl | lgpl | nonfree   # 输入另接受 gpl-shared/lgpl-shared/nonfree-shared 别名
 linkage: static | shared | unknown
 ```
 

@@ -35,6 +35,8 @@
 - [`examples/install.example.json`](examples/install.example.json)
 - [`examples/env-status.example.json`](examples/env-status.example.json)
 - [`examples/env-set.example.json`](examples/env-set.example.json)
+- [`examples/env-unset.example.json`](examples/env-unset.example.json)
+- [`examples/env-rollback.example.json`](examples/env-rollback.example.json)
 - [`examples/doctor.example.json`](examples/doctor.example.json)
 - [`examples/error.example.json`](examples/error.example.json)
 - [`examples/uninstall.example.json`](examples/uninstall.example.json)

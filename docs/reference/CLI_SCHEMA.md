@@ -97,7 +97,7 @@
 | 命令 | 状态 |
 |---|---|
 | `version` / `detect` / `validate` / `capabilities` | 已实现 |
-| `provider list` / `provider add` / `resolve` / `download` | 已实现（Phase 4） |
+| `provider list` / `provider add` / `resolve` / `download` | 已实现（v1.0.2 冻结） |
 | `install` | 已实现（Phase 5，默认 dry-run） |
 | `env status` / `doctor` | 已实现（只读） |
 | `env set` / `env unset` / `env rollback` | 已实现（默认 dry-run） |
@@ -311,7 +311,7 @@ provider 摘要：
 | `--checksums-url` | 无 | 可选；仅 https |
 | `--license-hint` | `custom` | `gpl` / `lgpl` / `nonfree` / `custom` |
 | `--apply` | false | 实际写入；不带时默认 dry-run |
-| `--dry-run` | false | 强制预览；与 `--apply` 互斥，同时出现时返回 `OMF-E1001`（退出码 1） |
+| `--dry-run` | false | 强制预览；与 `--apply` 互斥，同时出现时返回 `OMF-E7001`（退出码 2） |
 
 整个 `LoadCustomFile → AddCustom → Save` 链路持有 `providers.toml.lock`；锁竞争 `OMF-E6009`（退出 1）。
 
@@ -353,7 +353,7 @@ provider 摘要：
 | `--provider <ID>` | `btbn` | 内置或已登记 provider |
 | `--channel <CH>` | `daily` | `stable` / `daily` |
 | `--target <T>` | 当前平台 | `win64` / `linux64`；其他平台 `OMF-E3003` |
-| `--variant <V>` | `gpl` | `gpl` / `lgpl` / `nonfree` / `nonfree-shared` |
+| `--variant <V>` | `gpl` | `gpl` / `lgpl` / `nonfree`（另接受 `*-shared` 输入别名，输出归一化为三值之一 + `linkage=shared`） |
 | `--linkage <L>` | `static` | `static` / `shared` |
 | `--release-line <X>` | 最高 `nX.Y` | 仅 btbn stable；`master` 只用于 daily |
 | `--release-tag <TAG>` | 无 | 显式 pin；与 `--release-line` 互斥；daily 不接受 `latest` |

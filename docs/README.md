@@ -61,5 +61,5 @@
 | 外部集成 | 只调用 CLI 可执行文件；不提供 Go API / 插件 / JSON-RPC / C ABI |
 | 明确不做 | 包管理器识别、GUI/TUI、FFmpeg 自构建、私有制品库、自动更新服务 |
 | 许可证 | GPL-3.0-only；nonfree FFmpeg 元数据可公开，二进制不可随公开 Release 分发 |
-| 质量门禁 | gofmt / vet / test / govulncheck / fuzz + Windows/Linux e2e + Docker 全新环境（见 CI） |
+| 质量门禁 | gofmt / vet / golangci-lint v2（含 gosec）/ test / govulncheck / fuzz + Windows/Linux e2e + Docker 全新环境（见 CI） |
 | 当前基线 | **v1.0.2**（唯一受支持版本；更早的 Release/tag 与 CI 记录已撤回） |

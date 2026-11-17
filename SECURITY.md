@@ -16,7 +16,7 @@ v1.0.2 为当前唯一受支持版本。安全问题按 SemVer 处理：修复�
 OneMoreFFmpeg 是一个本机 CLI 工具，安全模型基于以下边界（详见 [`ARCHITECTURE.md`](docs/development/ARCHITECTURE.md) 与 [`SYSTEM_REQUIREMENTS.md`](docs/reference/SYSTEM_REQUIREMENTS.md)）：
 
 - **信任 data-root**：`<data-root>` 目录视为用户私有空间。能写入它的人能影响 install/env 事务；不要放在共享可写目录。
-- **写入默认 dry-run**：`install` / `uninstall` / `env set|unset|rollback` / `provider add` 默认只演练，需 `--apply` 才落盘。
+- **写入默认 dry-run**：`install` / `uninstall` / `env set|unset|rollback` / `provider add` / `journal rollback` 默认只演练，需 `--apply` 才落盘。
 - **写入类操作串行**：通过 `<data-root>/.transaction.lock` 的 OS 级文件锁跨进程互斥，不要手工删除该锁文件。
 - **下载校验**：所有下载强制 SHA-256 校验与大小/重定向上限；自定义 URL 必须提供 pin。
 - **解压防护**：拒绝绝对路径、`..`、符号链接、保留名；限制条目数、单文件大小、总大小与整体压缩比。

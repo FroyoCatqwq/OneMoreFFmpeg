@@ -42,7 +42,7 @@ BtbN + BnqDzj + 自定义 URL（`--url` / `provider add`）、稳定版 / 每日
 
 | 项 | 决策 |
 |---|---|
-| 语言 / 工具链 | Go only；`go.mod` 声明 `go 1.27`，`go.mod` 声明 `go 1.27`（CI 采用 1.27.x 补丁版本），`CGO_ENABLED=0` 交叉编译 |
+| 语言 / 工具链 | Go only；`go.mod` 声明 `go 1.27`，CI 采用 1.27.x 补丁版本，`CGO_ENABLED=0` 交叉编译 |
 | 平台 | Windows x64 + Linux x86_64 |
 | CLI | `one-more-ffmpeg`（不提供 `omf` 内置别名；HOWTO 中 `omf` 是用户自定义 alias） |
 | 组件 | `urfave/cli/v3`、`pelletier/go-toml/v2`（TOML 1.1）、`log/slog` + `lmittmann/tint` |

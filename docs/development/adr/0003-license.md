@@ -67,7 +67,7 @@ GPL-3.0-only 只覆盖 OneMoreFFmpeg 自己的代码与文档，不自动覆盖�
 - 不把 FFmpeg 二进制提交到 Git；
 - 不把 nonfree 资产上传为公开 CI artifact；
 - `install.json` 继续记录 `redistributable` 与 `license_hint`；
-- Phase 1 已生成 `THIRD_PARTY_NOTICES` 与依赖许可证清单初稿（见 §7 当前状态）。
+- Phase 1 已生成 `THIRD_PARTY_NOTICES` 与依赖许可证清单，v1.0.2 维持更新（见 §7 当前状态）。
 
 ---
 
@@ -93,7 +93,7 @@ sethvargo/go-retry
 
 Phase 1 阶段要求的检查项及当前状态：
 
-1. 生成依赖许可证清单 —— 已完成（初稿）；
+1. 生成依赖许可证清单 —— 已完成；
 2. 复核 GPL-3.0-only 兼容性 —— 已完成；
 3. 对不兼容依赖拒绝或替换 —— 已完成；
 4. 在 `THIRD_PARTY_NOTICES` 中记录 —— 已完成；
@@ -119,7 +119,7 @@ Phase 1 阶段要求的检查项及当前状态：
 | README 许可证章节 | 已改为 GPL-3.0-only |
 | 代码许可证 | GPL-3.0-only |
 | 文档许可证 | GPL-3.0-only |
-| 第三方依赖清单 | 已生成初稿（`THIRD_PARTY_NOTICES.md`） |
+| 第三方依赖清单 | 已生成并维护（`THIRD_PARTY_NOTICES.md`） |
 | nonfree 分发 | 明确禁止 |
 | 审计 P1-9 | **已关闭** |
 
@@ -131,4 +131,4 @@ Phase 1 阶段要求的检查项及当前状态：
 >
 > 根目录 `LICENSE` 已存在。
 >
-> 第三方依赖许可证清单与 `THIRD_PARTY_NOTICES` 初稿已完成；剩余仅为 Phase 7 的许可证 CI 检查。许可证选择本身不再有阻塞项。
+> 第三方依赖许可证清单与 `THIRD_PARTY_NOTICES` 已完成并随 v1.0.2 更新；自动化许可证 CI 检查仍未接入（独立待办，非发布阻断）。许可证选择本身不再有阻塞项。

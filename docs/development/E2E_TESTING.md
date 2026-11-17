@@ -40,7 +40,7 @@ uv run --python 3.14 --with-requirements tests/e2e/requirements.txt `
 ## 3. CI
 
 - `.github/workflows/e2e.yml`（`quality-e2e`）：`quality` job 跑 gofmt / go vet / go test / govulncheck / fuzz 短跑；
-  `e2e` job 在 `windows-latest` + `ubuntu-latest` 矩阵构建 CLI 并跑 pytest（三个测试文件、`--junitxml`）与 Robot，
+  `e2e` job 在 `windows-latest` + `ubuntu-latest` 矩阵构建 CLI 并跑 pytest（四个测试文件、`--junitxml`）与 Robot，
   Windows 额外跑带 `OMF_E2E_REAL_ENV=1` 的真实 HKCU 注册表 e2e；
   Linux 额外跑 pin 到 `v1.14.0` 的 Bats；`workflow_dispatch` 可额外触发远程 Linux server job。
   远程连接信息由仓库 secret `OMF_LINUX_SERVER_INFO` 提供。
@@ -57,7 +57,7 @@ docker compose up --build --abort-on-container-exit --exit-code-from e2e-fresh
 ```
 
 `Dockerfile` 从 `mirror.gcr.io/library/golang:1.27-bookworm` 构建干净容器，安装 uv + Python 3.14，
-从零构建 CLI 并跑 go test + 三个 pytest 文件 + Robot + Bats；不挂载任何宿主数据目录，
+从零构建 CLI 并跑 go test + 四个 pytest 文件 + Robot + Bats；不挂载任何宿主数据目录，
 用于证明仓库在全新环境可独立构建与测试。注意不要在 compose 中把 `/tmp` 挂成 tmpfs（默认 noexec 会让 `go test` 失败）。
 
 ## 5. 覆盖

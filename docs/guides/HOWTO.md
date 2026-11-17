@@ -41,7 +41,7 @@ alias omf=./one-more-ffmpeg-v1.0.2-linux-amd64
 
 # 1) 确认能跑
 omf version
-# 期望：OneMoreFFmpeg v1.0.2 (...) linux/amd64 ...
+# 期望：OneMoreFFmpeg 1.0.2 (...) linux/amd64 ...
 
 # 2) 安装（默认 btbn 的 daily GPL 版）。会联网下载，几十 MB，请耐心等待，不要 Ctrl+C！
 omf install --apply

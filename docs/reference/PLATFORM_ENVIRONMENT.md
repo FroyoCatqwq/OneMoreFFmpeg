@@ -52,7 +52,7 @@ junction 限制：目标必须已存在；本机路径写入 `\??\<path>` 替换
 - 切换版本前先写 journal；
 - 只切换本项目创建的 current；
 - 遇到同名用户文件或链接，返回 `OMF-E6007`，不删除、不覆盖；
-- junction 创建失败时回退到 `pointer_file`，并记录 warning；
+- junction 创建失败先回退 symlink，再回退 `pointer_file`，并记录 warning；
 - `pointer_file` 内容只允许一个相对路径，UTF-8，单行，结尾 LF；
 - `env status` 必须报告 current 类型、目标路径、是否有效；
 - `doctor` 必须检查 current 目标是否存在且包含三件套。
@@ -179,7 +179,7 @@ LAE_FFMPEG_DIR
 
 - 写入带托管标记（`# OneMoreFFmpeg managed shim`）的 `#!/bin/sh` 脚本，`exec` 到 `<data-root>/current/bin/*`；目标路径用单引号包裹并转义其中的单引号，含空格/特殊字符的路径也安全；
 - 若 `~/.local/bin` 不存在，可创建；
-- 若 `~/.local/bin` 不在 PATH，只 warning，不改 shell rc；
+- 若 `~/.local/bin` 不在 PATH，默认在 `~/.profile` 维护托管块以持久化 PATH（可用 `--no-shell-rc` 跳过）；
 - 不写 `/etc/profile`；
 - 不写 `/etc/environment`；
 - 不调用 root；
@@ -232,7 +232,7 @@ export PATH="..."
 }
 ```
 
-字段：`schema` / `id` / `action` / `status`（`pending`｜`committed`｜`failed`｜`rolled-back`）/ `created_at` / `updated_at` / 可选 `target` / `temp_dir` / `previous` / `details`（字符串键值，含 `scope`、`*_previous`、`shell_rc_backup`、`shim_*` 等）。没有 `operations[]` / `rollback_supported`；程序化输出形状见 `schemas/examples/journal-*.example.json`。
+字段：`schema` / `id` / `action` / `status`（`pending`｜`committed`｜`failed`｜`rolled-back`）/ `created_at` / `updated_at` / 可选 `target` / `temp_dir` / `previous` / `details`（字符串键值，含 `scope`、`*_previous`、`shell_rc_backup`、`shim_*` 等）。没有 `operations[]` / `rollback_supported`；命令输出形状见 `schemas/examples/journal-list.example.json` 与 `journal-action.example.json`（命令 `data` 载荷，非 journal 文件样例）。
 
 规则：
 

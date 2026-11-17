@@ -47,7 +47,7 @@ internal/model    internal/errors  internal/errors
 | `internal/archive` | zip / tar.xz / tar.gz / tar.zst 安全解压 |
 | `internal/install` | 版本化安装、install.json、current 指针、安装后校验 |
 | `internal/journal` | 安装/切换事务 journal |
-| `internal/env` | current/PATH/变量只读检查 |
+| `internal/env` | current/PATH/变量的 dry-run 预览与 `--apply` 真实写入/回滚 |
 | `internal/doctor` | 安装健康检查 |
 | `internal/contracts` | JSON 示例与错误码注册表校验 |
 | `internal/config` | 严格 TOML 1.1 配置 |
@@ -104,7 +104,7 @@ stderr：日志 / 进度 / 错误
 
 其他项目不得直接 import 本项目 Go 包，也不得依赖内部结构体。
 
-本项目不使用 Go 标准库 `plugin` 包：Windows 不支持，跨版本 ABI 脆弱，且与“Go 1.27 锁定（工具链 1.27.4）”冲突。
+本项目不使用 Go 标准库 `plugin` 包：Windows 不支持，跨版本 ABI 脆弱，且与 Go 1.27.x 的跨补丁 ABI 稳定性要求冲突。
 
 ---
 

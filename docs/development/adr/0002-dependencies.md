@@ -389,7 +389,7 @@ github.com/ulikunitz/xz
 github.com/sethvargo/go-retry
 ```
 
-当前仓库只提交 `go.mod` 的 Go 版本，不提前写入依赖；Phase 1 搭骨架时再加 `go.sum` 并锁定版本。
+历史记录：Phase 0 时仓库只有 `go.mod`；v1.0.2 的 `go.mod`/`go.sum` 已包含全部 17 个依赖 并锁定版本。
 
 ---
 

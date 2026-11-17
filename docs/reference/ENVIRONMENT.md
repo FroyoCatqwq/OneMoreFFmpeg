@@ -228,7 +228,7 @@ Windows 注册表、UAC、`REG_EXPAND_SZ`、`WM_SETTINGCHANGE`、junction / poin
 }
 ```
 
-字段：`schema` / `id` / `action` / `status`（`pending`｜`committed`｜`failed`｜`rolled-back`）/ `created_at` / `updated_at` / 可选 `target` / `temp_dir` / `previous` / `details`（字符串键值，具体键随 action 而定）。**没有** `operations[]` 或 `rollback_supported` 字段——程序化输出形状见 `docs/reference/schemas/examples/journal-*.example.json`。
+字段：`schema` / `id` / `action` / `status`（`pending`｜`committed`｜`failed`｜`rolled-back`）/ `created_at` / `updated_at` / 可选 `target` / `temp_dir` / `previous` / `details`（字符串键值，具体键随 action 而定）。**没有** `operations[]` 或 `rollback_supported` 字段——命令输出形状见 `docs/reference/schemas/examples/journal-list.example.json` 与 `journal-action.example.json`（它们是命令的 `data` 载荷，不是 journal 文件本身的样例）。
 
 规则：
 

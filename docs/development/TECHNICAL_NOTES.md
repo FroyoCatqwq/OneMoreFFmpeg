@@ -7,7 +7,7 @@
 
 ---
 
-## 1. Go 1.27.4
+## 1. Go 1.27.x
 
 已核对 `golang/go` 标签，Go 1.27 稳定标签包含：
 
@@ -78,7 +78,7 @@ Phase 1 建议采用：
 | TTY | `github.com/mattn/go-isatty` |
 | 压缩 | `github.com/klauspost/compress` |
 | xz | `github.com/ulikunitz/xz` |
-| HTTP retry | `github.com/sethvargo/go-retry` |
+| HTTP retry | `net/http` 自带退避（`go-retry` 保留未使用） |
 | 限流 | `golang.org/x/time/rate` |
 | 可读大小 | `github.com/dustin/go-humanize` |
 | 测试 | `github.com/stretchr/testify` |
@@ -274,7 +274,7 @@ Phase 1 建议采用：
 - zip slip / tar escape 测试；
 - PATH rollback 测试；
 - 真机集成：BtbN 与 BnqDzj 各至少一次；
-- CI 双平台 + Go 1.27.4。
+- CI 双平台 + Go 1.27.x。
 
 当前不做：
 

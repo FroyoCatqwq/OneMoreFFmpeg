@@ -1,5 +1,7 @@
 # v1.0.1（2026-11-17）
 
+> **历史版本**：v1.0.1 的 Release 与下载链接已撤回，唯一受支持版本为 v1.0.2；本文件仅作历史记录。
+
 > Bugfix 版本：全项目源码级审计后修复全部确认缺陷。CLI 外部契约（18 命令 / 17 个 `/v1` schema / 退出码）不变。
 > 产物：Windows x64 / Linux x64 二进制、RHEL 9+ x86_64 RPM、`SHA256SUMS.txt`、build provenance；Scoop bucket 同步更新。
 

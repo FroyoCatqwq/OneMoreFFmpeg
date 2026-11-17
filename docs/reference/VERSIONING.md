@@ -1,6 +1,6 @@
 # 版本与发布规范
 
-> 本项目遵循 [Semantic Versioning 2.0.0](https://semver.org/)；发布 tag 使用 `v` 前缀，例如 `v1.0.1`。
+> 本项目遵循 [Semantic Versioning 2.0.0](https://semver.org/)；发布 tag 使用 `v` 前缀，例如 `v1.0.2`。
 
 ## 1. 版本号含义（v1.0 起适用标准 SemVer）
 
@@ -14,7 +14,7 @@
 ## 2. 发布流程
 
 ```text
-1. 全量测试：mise run quality（gofmt/vet/test/fuzz）、Windows+Linux e2e、Docker 全新环境
+1. 全量测试：mise run quality（vet/test/fuzz，gofmt 与 golangci-lint/gosec 由 CI 门禁执行）、Windows+Linux e2e、Docker 全新环境
 2. 更新 docs/releases/CHANGELOG.md 与 docs/releases/release-vX.Y.Z.md
 3. 提交代码与文档；确认 GitHub Actions 质量门禁全绿
 4. 创建 annotated tag：git tag -a vX.Y.Z -m "vX.Y.Z"
