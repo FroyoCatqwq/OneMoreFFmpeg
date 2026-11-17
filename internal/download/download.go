@@ -375,7 +375,7 @@ func (d *Downloader) get(ctx context.Context, rawURL string) (*http.Response, er
 		return nil, apperrors.New(apperrors.E4001, "download request failed").WithCause(err.Error())
 	}
 	if response.StatusCode != http.StatusOK {
-		response.Body.Close()
+		_ = response.Body.Close()
 		return nil, apperrors.New(apperrors.E4001, "download request failed").WithDetails(map[string]any{"status": response.StatusCode})
 	}
 	return response, nil

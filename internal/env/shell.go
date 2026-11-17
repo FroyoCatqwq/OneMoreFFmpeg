@@ -119,11 +119,10 @@ func updateShellRC(profile, body, desired, journalDir string, details map[string
 		return apperrors.New(apperrors.E5009, "shell rc backup cannot be written").WithCause(fmt.Sprint(writeErr, closeErr))
 	}
 	details["shell_rc_backup"] = backupPath
-	updated := body
-	if desired == "" {
-		updated = stripShellRCBlock(body)
-	} else {
-		updated = strings.TrimRight(stripShellRCBlock(body), "\n") + desired
+	stripped := stripShellRCBlock(body)
+	updated := stripped
+	if desired != "" {
+		updated = strings.TrimRight(stripped, "\n") + desired
 	}
 	if err := writeFileAtomic(profile, []byte(updated), 0o644); err != nil {
 		return apperrors.New(apperrors.E5009, "shell rc cannot be written").WithCause(err.Error())

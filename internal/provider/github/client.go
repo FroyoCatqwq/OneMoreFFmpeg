@@ -77,7 +77,8 @@ func NewClient(baseURL, token string) (*Client, error) {
 	if parsed.User != nil {
 		return nil, apperrors.New(apperrors.E7005, "github api base url must not contain credentials")
 	}
-	if parsed.Scheme != "https" && !(parsed.Scheme == "http" && isLoopback(parsed.Hostname())) {
+	schemeOK := parsed.Scheme == "https" || (parsed.Scheme == "http" && isLoopback(parsed.Hostname()))
+	if !schemeOK {
 		return nil, apperrors.New(apperrors.E7005, "github api base url must be https").
 			WithDetails(map[string]any{"host": parsed.Hostname()})
 	}

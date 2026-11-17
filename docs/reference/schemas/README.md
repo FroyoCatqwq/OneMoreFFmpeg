@@ -1,15 +1,15 @@
 # CLI JSON 示例
 
-> 状态：**Phase 6 契约冻结基准**（2026-11-14）。命令集、`data.schema` 集与退出码映射由
+> 状态：v1.0.1 契约冻结基准。命令集、`data.schema` 集与退出码映射由
 > `internal/contracts/freeze_test.go` 守护。
 > 配套：[`../CLI_SCHEMA.md`](../CLI_SCHEMA.md)、[`../ERROR_CODES.md`](../ERROR_CODES.md)、
-> 冻结命令集与 schema 集见 [`../CLI_SCHEMA.md`](../CLI_SCHEMA.md) 与 `internal/contracts/freeze_test.go`
+> [`contract.schema.json`](contract.schema.json)（机器可读 JSON Schema）
 
 本目录存放 CLI JSON 的 **v1 示例**，用于：
 
 - 固定 stdout 字段形状；
 - 作为 Go struct / validator 的 golden test 基准；
-- 作为未来完整 JSON Schema Draft 的输入；
+- 作为 [`contract.schema.json`](contract.schema.json)（JSON Schema Draft 2020-12）的校验对象，由 `TestGoldenExamplesValidateAgainstJSONSchema` 用 `santhosh-tekuri/jsonschema` 执行；
 - 供 LAE / VideoDamage 等外部调用方参考。
 
 注意：

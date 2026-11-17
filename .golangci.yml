@@ -1,0 +1,55 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - bodyclose
+    - misspell
+    - unconvert
+    - gosec
+  settings:
+    errcheck:
+      # Deferred/best-effort cleanup on read-only or temp descriptors is
+      # idiomatic Go. Real write/commit errors are checked explicitly.
+      exclude-functions:
+        - (*os.File).Close
+        - (io.Closer).Close
+        - os.Remove
+        - os.RemoveAll
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters: [gosec, errcheck, bodyclose]
+      - path: internal/testutil/
+        linters: [gosec]
+      # Best-effort Close of zip/registry handles and a stderr print: nothing
+      # actionable if these fail (archive already consumed, registry read-only).
+      - path: internal/archive/archive.go
+        text: "reader.Close"
+        linters: [errcheck]
+      - path: internal/platform/env_windows.go
+        text: "key.Close"
+        linters: [errcheck]
+      - path: internal/cli/download.go
+        text: "fmt.Fprintf"
+        linters: [errcheck]
+      - path: internal/platform/link_windows.go
+        text: "CloseHandle"
+        linters: [errcheck]
+      # OneMoreFFmpeg is a local CLI whose purpose is opening user paths and
+      # launching FFmpeg. These gosec rules flag that intended behavior or
+      # bounded Win32/permission patterns; all are manually reviewed.
+      - linters: [gosec]
+        text: "G103|G104|G115|G204|G301|G302|G304|G306|G702|G703"
+formatters:
+  enable:
+    - gofmt

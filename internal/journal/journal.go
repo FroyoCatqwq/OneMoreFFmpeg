@@ -3,10 +3,10 @@
 package journal
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -14,8 +14,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rogpeppe/go-internal/lockedfile"
+
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
-	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
 )
 
 const Schema = "onemoreffmpeg.journal/v1"
@@ -77,19 +78,9 @@ func Write(dir string, record Record) error {
 		return apperrors.New(apperrors.E6005, "journal cannot be encoded").WithCause(err.Error())
 	}
 	path := filepath.Join(dir, record.ID+".json")
-	tmp, err := os.CreateTemp(dir, record.ID+".*.tmp")
-	if err != nil {
-		return apperrors.New(apperrors.E6005, "journal temp file cannot be created").WithCause(err.Error())
-	}
-	tmpPath := tmp.Name()
-	_, writeErr := tmp.Write(payload)
-	closeErr := tmp.Close()
-	if writeErr != nil || closeErr != nil {
-		_ = os.Remove(tmpPath)
-		return apperrors.New(apperrors.E6005, "journal cannot be written").WithCause(fmt.Sprint(writeErr, closeErr))
-	}
-	if err := platform.RenamePath(tmpPath, path); err != nil {
-		_ = os.Remove(tmpPath)
+	// lockedfile.Write performs an atomic, cross-process-safe write (temp file
+	// plus rename under a sidecar lock), replacing the hand-rolled temp+rename.
+	if err := lockedfile.Write(path, bytes.NewReader(payload), 0o600); err != nil {
 		return apperrors.New(apperrors.E6005, "journal cannot be committed").WithCause(err.Error())
 	}
 	return nil

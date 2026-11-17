@@ -191,6 +191,16 @@ func isLoopbackHost(host string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
+// allowedPageScheme accepts https everywhere and http only on loopback (tests
+// and self-hosted mirrors). Kept as a helper so URL validation and redirect
+// validation cannot drift apart.
+func allowedPageScheme(scheme, host string) bool {
+	if scheme == "https" {
+		return true
+	}
+	return scheme == "http" && isLoopbackHost(host)
+}
+
 func officialVersions(ctx context.Context, opts CatalogOptions) (map[string]string, error) {
 	pageURL := opts.ReleasesURL
 	if pageURL == "" {
@@ -198,7 +208,7 @@ func officialVersions(ctx context.Context, opts CatalogOptions) (map[string]stri
 	}
 	parsed, parseErr := url.Parse(pageURL)
 	if parseErr != nil || parsed.Host == "" || parsed.User != nil ||
-		!(parsed.Scheme == "https" || (parsed.Scheme == "http" && isLoopbackHost(parsed.Hostname()))) {
+		!allowedPageScheme(parsed.Scheme, parsed.Hostname()) {
 		return nil, apperrors.New(apperrors.E3007, "ffmpeg release page url must be https (or loopback http for tests)")
 	}
 	client := opts.HTTPClient
@@ -210,7 +220,7 @@ func officialVersions(ctx context.Context, opts CatalogOptions) (map[string]stri
 	}
 	// Never follow an https -> http downgrade, even to loopback.
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-		if req.URL.Scheme != "https" && !(req.URL.Scheme == "http" && isLoopbackHost(req.URL.Hostname())) {
+		if !allowedPageScheme(req.URL.Scheme, req.URL.Hostname()) {
 			return apperrors.New(apperrors.E3007, "release page redirect must stay https")
 		}
 		if parsed.Scheme == "https" && req.URL.Scheme != "https" {

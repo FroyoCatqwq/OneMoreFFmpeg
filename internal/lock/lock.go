@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gofrs/flock"
+
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 )
 
@@ -22,12 +24,13 @@ const (
 // DataRoot acquires the global data-root transaction lock so install, env and
 // uninstall writers cannot interleave. The returned function releases it.
 //
-// The mutex is an OS advisory lock (flock on Unix, LockFileEx on Windows) bound
-// to an open file descriptor. The kernel drops it when the descriptor closes,
+// The mutex is an OS advisory lock implemented by github.com/gofrs/flock
+// (flock on Unix, LockFileEx on Windows) and is bound to a file descriptor
+// owned by the flock handle. The kernel drops it when the descriptor closes,
 // including when the process crashes -- there is no mtime "stale" heuristic and
 // therefore no reclaim-vs-acquire TOCTOU. The lock file itself is intentionally
-// never deleted: deleting and recreating a lock file changes its identity and
-// would let two waiters hold locks on different inodes at the same time.
+// never deleted: deleting and recreating it changes its identity and would let
+// two waiters hold locks on different inodes at the same time.
 func DataRoot(dataRoot string) (func(), error) {
 	return acquire(filepath.Join(dataRoot, fileName), waitTimeout)
 }
@@ -39,49 +42,44 @@ func FilePath(lockFilePath string) (func(), error) {
 	return acquire(lockFilePath, waitTimeout)
 }
 
-// acquire opens (or creates) the lock file and takes the OS lock. wait bounds
-// how long to poll when another process holds it. The stale parameter is kept
-// out of the signature on purpose; callers previously passed a TTL which no
-// longer applies.
+// acquire opens (or creates) the lock file and takes the OS lock via the
+// gofrs/flock library. wait bounds how long to poll when another process holds
+// it. The nonce written into the file is informational only (diagnostics);
+// correctness comes from the kernel lock.
 func acquire(path string, wait time.Duration) (func(), error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, apperrors.New(apperrors.E6009, "cannot create transaction lock directory").WithCause(err.Error())
 	}
+	fl := flock.New(path, flock.SetPermissions(0o600))
+	// Write the diagnostic nonce before locking: Windows LockFileEx holds an
+	// exclusive handle that blocks other writers to the same file, so writing
+	// while locked would silently fail. The nonce is informational only;
+	// correctness comes from the OS lock, not the file contents.
+	_ = os.WriteFile(path, []byte(ownerNonce()), 0o600)
 	deadline := time.Now().Add(wait)
 	for {
-		file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
+		locked, err := fl.TryLock()
 		if err != nil {
-			return nil, apperrors.New(apperrors.E6009, "cannot open transaction lock").WithCause(err.Error())
-		}
-		locked, lockErr := tryOSLock(file)
-		if lockErr != nil {
-			_ = file.Close()
-			return nil, apperrors.New(apperrors.E6009, "cannot acquire transaction lock").WithCause(lockErr.Error())
+			return nil, apperrors.New(apperrors.E6009, "cannot acquire transaction lock").WithCause(err.Error())
 		}
 		if locked {
-			// Nonce is informational only (diagnostics); correctness comes from
-			// the kernel lock, so a stale/foreign nonce can never drive release.
-			nonce := ownerNonce()
-			_ = file.Truncate(0)
-			_, _ = file.WriteString(nonce)
-			_ = file.Sync()
 			var once sync.Once
 			return func() {
 				once.Do(func() {
-					releaseOSLock(file)
-					_ = file.Close()
+					_ = fl.Unlock()
+					_ = fl.Close()
 				})
 			}, nil
 		}
-		_ = file.Close()
 		if time.Now().After(deadline) {
+			_ = fl.Close()
 			return nil, apperrors.New(apperrors.E6009, "data root is locked by another transaction").WithDetails(map[string]any{"lock": path})
 		}
 		time.Sleep(pollInterval)
 	}
 }
 
-// waitTimeout is exposed for tests that need the default bound.
+// defaultWait is exposed for tests that need the default bound.
 func defaultWait() time.Duration { return waitTimeout }
 
 func ownerNonce() string {

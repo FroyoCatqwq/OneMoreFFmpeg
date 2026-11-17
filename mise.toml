@@ -35,10 +35,19 @@ go test ./internal/contracts -run='^$' -fuzz=FuzzSafeAssetName -fuzztime=20s
 go test ./internal/cli -run='^$' -fuzz=FuzzNormalizeJSONInput -fuzztime=20s
 """
 
+[tasks."lint"]
+description = "golangci-lint v2 (includes gosec) + standalone gosec scan"
+run = """
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+golangci-lint run ./...
+"""
+
 [tasks.quality]
-description = "go vet + go test + fuzz smoke (run 'gofmt -w .' first; gofmt gate is enforced in CI)"
+description = "go vet + golangci-lint/gosec + go test + fuzz smoke (run 'gofmt -w .' first; gofmt gate is enforced in CI)"
 depends = ["fuzz"]
 run = """
 go vet ./...
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+golangci-lint run ./...
 go test -count=1 ./...
 """
