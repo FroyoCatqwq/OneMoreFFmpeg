@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -47,6 +48,8 @@ type Options struct {
 	ProgressWriter io.Writer
 	Now            func() time.Time
 	FileOps        FileOps // injectable file operations; nil uses realFileOps
+	GitHubAPI      string  // override API base (empty uses api.github.com)
+	MaxAttempts    int     // GitHub API retry budget (0 uses default 3)
 }
 
 // Update describes an available update.
@@ -95,23 +98,33 @@ func assetName(goos, goarch, version string) string {
 // downloading or writing files.
 func (o Options) Check(ctx context.Context) (*Update, error) {
 	o = o.normalized()
-	client := o.Client
-	if client == nil {
-		var err error
-		client, err = ggithub.NewClient(defaultGitHubAPI, "")
+	var releases []releaseInfo
+	var err error
+	if o.Client != nil {
+		// Test injection path: use the in-house client.
+		raw, e := o.Client.ListReleases(ctx, o.Owner, o.Repo, 10)
+		if e != nil {
+			return nil, apperrors.New(apperrors.E3007, "releases cannot be fetched").WithCause(e.Error())
+		}
+		for _, r := range raw {
+			info := releaseInfo{Tag: r.TagName, Draft: r.Draft, Prerelease: r.Prerelease}
+			for _, a := range r.Assets {
+				info.Assets = append(info.Assets, assetInfo{Name: a.Name, Digest: a.Digest, Download: a.BrowserDownloadURL})
+			}
+			releases = append(releases, info)
+		}
+	} else {
+		// Production path: official go-github client.
+		releases, err = o.listReleasesViaGoGitHub(ctx)
 		if err != nil {
 			return nil, err
 		}
-	}
-	releases, err := client.ListReleases(ctx, o.Owner, o.Repo, 10)
-	if err != nil {
-		return nil, apperrors.New(apperrors.E3007, "releases cannot be fetched").WithCause(err.Error())
 	}
 	for _, rel := range releases {
 		if rel.Draft || rel.Prerelease {
 			continue
 		}
-		version := strings.TrimPrefix(rel.TagName, "v")
+		version := strings.TrimPrefix(rel.Tag, "v")
 		if !validVersion(version) || !isNewer(version, o.CurrentVersion) {
 			continue
 		}
@@ -125,12 +138,12 @@ func (o Options) Check(ctx context.Context) (*Update, error) {
 				continue
 			}
 			sum := strings.TrimPrefix(asset.Digest, "sha256:")
-			if len(sum) != 64 {
-				return nil, apperrors.New(apperrors.E3007, "release asset has no sha256 digest").
+			if len(sum) != 64 || !isHex64(sum) {
+				return nil, apperrors.New(apperrors.E3007, "release asset has no valid sha256 digest").
 					WithDetails(map[string]any{"asset": name})
 			}
 			return &Update{
-				Version: version, AssetName: name, AssetURL: asset.BrowserDownloadURL,
+				Version: version, AssetName: name, AssetURL: asset.Download,
 				SHA256:     strings.ToLower(sum),
 				ReleaseURL: fmt.Sprintf("https://github.com/%s/%s/releases/tag/v%s", o.Owner, o.Repo, version),
 			}, nil
@@ -171,6 +184,25 @@ func (o Options) Apply(ctx context.Context, u *Update) error {
 	httpClient := o.HTTPClient
 	if httpClient == nil {
 		httpClient = &http.Client{Timeout: 5 * time.Minute}
+	} else {
+		clone := *httpClient
+		httpClient = &clone
+	}
+	// Enforce the same URL policy as the rest of the tool even for injected
+	// clients: no https->http downgrade, bounded redirects.
+	originScheme, _ := urlScheme(u.AssetURL)
+	httpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) > 10 {
+			return fmt.Errorf("too many redirects")
+		}
+		scheme, host := urlScheme(req.URL.String())
+		if scheme != "https" && !isLoopbackHost(host) {
+			return fmt.Errorf("redirect target must be https")
+		}
+		if originScheme == "https" && scheme != "https" {
+			return fmt.Errorf("redirect must not downgrade https")
+		}
+		return nil
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.AssetURL, nil)
 	if err != nil {
@@ -408,14 +440,43 @@ func isNewer(candidate, current string) bool {
 	return false
 }
 
-func isHTTPSURL(raw string) bool {
-	lower := strings.ToLower(raw)
-	if strings.HasPrefix(lower, "https://") {
-		return true
+func isHex64(s string) bool {
+	if len(s) != 64 {
+		return false
 	}
-	return strings.HasPrefix(lower, "http://127.0.0.1:") ||
-		strings.HasPrefix(lower, "http://localhost:") ||
-		strings.HasPrefix(lower, "http://[::1]:")
+	for _, r := range s {
+		digit := r >= '0' && r <= '9'
+		lower := r >= 'a' && r <= 'f'
+		upper := r >= 'A' && r <= 'F'
+		if !digit && !lower && !upper {
+			return false
+		}
+	}
+	return true
+}
+
+func urlScheme(raw string) (string, string) {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return "", ""
+	}
+	return strings.ToLower(parsed.Scheme), parsed.Hostname()
+}
+
+func isLoopbackHost(host string) bool {
+	h := strings.ToLower(strings.TrimSpace(host))
+	return h == "localhost" || h == "127.0.0.1" || h == "::1"
+}
+
+// isHTTPSURL accepts https, plus loopback http for local tests. Credentials in
+// the URL are always rejected (matching config/github-client/download policy).
+func isHTTPSURL(raw string) bool {
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Host == "" || parsed.User != nil {
+		return false
+	}
+	scheme := strings.ToLower(parsed.Scheme)
+	return scheme == "https" || (scheme == "http" && isLoopbackHost(parsed.Hostname()))
 }
 
 func samePath(a, b string) bool {

@@ -239,7 +239,7 @@ func TestValidateExampleRejectsInvalidRelease(t *testing.T) {
 	}{
 		{func(data map[string]any) { data["release_tag"] = "latest" }, apperrors.E3010},
 		{func(data map[string]any) { data["asset_sha256"] = "short" }, apperrors.E7003},
-		{func(data map[string]any) { data["asset_url"] = "http://example.com/asset.zip" }, apperrors.E7003},
+		{func(data map[string]any) { data["asset_url"] = "https://user@example.com/asset.zip" }, apperrors.E7003},
 		{func(data map[string]any) { data["channel"] = "beta" }, apperrors.E7003},
 		{func(data map[string]any) { data["published_at"] = "yesterday" }, apperrors.E7003},
 		{func(data map[string]any) { delete(data, "license_hint") }, apperrors.E7003},
@@ -359,7 +359,7 @@ func TestValidateExampleRejectsInvalidProviderData(t *testing.T) {
 	require.Equal(t, apperrors.E7003, typed.Code)
 
 	for _, added := range []map[string]any{
-		{"schema": model.ProviderAddSchema, "id": "x", "url": "http://example.com/a.zip", "status": "added"},
+		{"schema": model.ProviderAddSchema, "id": "x", "url": "https://user@example.com/a.zip", "status": "added"},
 		{"schema": model.ProviderAddSchema, "id": "x", "url": "https://example.com/a.zip", "status": "pending"},
 		{"schema": model.ProviderAddSchema, "id": "x", "url": "https://example.com/a.zip", "status": "added", "sha256": "abc"},
 	} {

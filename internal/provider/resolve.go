@@ -106,7 +106,7 @@ func (r *Resolver) fetch(ctx context.Context, rawURL string) ([]byte, error) {
 	if r != nil && r.Fetch != nil {
 		return r.Fetch(ctx, rawURL)
 	}
-	body, err := fetchURL(ctx, rawURL, r.maxRedirects())
+	body, err := fetchURL(ctx, rawURL, r.maxRedirects(), r.timeout())
 	if err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return nil, apperrors.New(apperrors.E9004, "context canceled").WithCause(ctxErr.Error())
@@ -120,6 +120,13 @@ func (r *Resolver) maxRedirects() int {
 		return r.MaxRedirects
 	}
 	return 5
+}
+
+func (r *Resolver) timeout() time.Duration {
+	if r != nil && r.Timeout > 0 {
+		return r.Timeout
+	}
+	return 30 * time.Second
 }
 
 // Resolve resolves one release from a registered custom provider. The

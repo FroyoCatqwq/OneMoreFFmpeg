@@ -85,9 +85,9 @@ func TestDownloadOfflineRelease(t *testing.T) {
 	downloadDir := t.TempDir()
 	release := model.Release{
 		Schema:          model.ReleaseSchema,
-		Provider:        "btbn",
-		Repository:      "FFmpeg-Builds/FFmpeg-Builds",
-		Channel:         "stable",
+		Provider:        "custom",
+		Repository:      "custom",
+		Channel:         "daily",
 		ReleaseTag:      "latest",
 		ReleaseID:       "441698707",
 		PublishedAt:     "2026-11-11T13:00:32Z",
@@ -193,7 +193,7 @@ func TestDownloadRejectsMalformedReleaseFile(t *testing.T) {
 	require.NoError(t, os.WriteFile(path, raw, 0o644))
 	code, object, _ = runJSON(t, "download", "--release", path, "--dir", "relative", "--json")
 	require.Equal(t, 2, code)
-	require.Equal(t, "OMF-E7001", object["code"])
+	require.Equal(t, "OMF-E7003", object["code"])
 }
 
 func TestDownloadRejectsUnpinnedReleaseFile(t *testing.T) {

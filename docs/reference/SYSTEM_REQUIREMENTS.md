@@ -6,7 +6,7 @@
 
 ---
 
-## 0. 全盘扫描权限（v1.1.1 起）
+## 0. 全盘扫描权限（v1.1.2-pre1 起）
 
 `detect --scan` 在未指定 `--roots` 时使用默认全盘根（Linux `/`、`/home`、`/opt`、`/usr/local`；Windows 所有固定盘符），`detect --dir <volume-root> --recursive` 从文件系统根递归遍历。这类**全盘扫描要求 elevated 进程**：
 

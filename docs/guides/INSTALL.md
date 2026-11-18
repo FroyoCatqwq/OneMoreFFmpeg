@@ -1,22 +1,22 @@
 # 安装 OneMoreFFmpeg
 
-当前稳定版：**v1.1.1**。所有产物由 GitHub Actions 从源码构建，带 SHA-256 校验和与 build provenance。
-发布页：<https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/tag/v1.1.1>
+当前稳定版：**v1.1.2-pre1**。所有产物由 GitHub Actions 从源码构建，带 SHA-256 校验和与 build provenance。
+发布页：<https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/tag/v1.1.2-pre1>
 
-> 仅 v1.1.1 受支持；更早的 Release/tag 已撤回，请勿使用旧版本下载链接。
+> 仅 v1.1.2-pre1 受支持；更早的 Release/tag 已撤回，请勿使用旧版本下载链接。
 >
 > 本工具只发布 **Windows / Linux 二进制手动下载包**（附 `SHA256SUMS.txt`），**不提供 Scoop、dnf、RPM 等包管理器安装方式**。
 
 ## Windows（手动下载）
 
-从 Release 下载 `one-more-ffmpeg-v1.1.1-windows-amd64.exe` 与 `SHA256SUMS.txt`：
+从 Release 下载 `one-more-ffmpeg-v1.1.2-pre1-windows-amd64.exe` 与 `SHA256SUMS.txt`：
 
 ```powershell
 # 校验（详见下方「校验和验证」）
-Get-FileHash .\one-more-ffmpeg-v1.1.1-windows-amd64.exe -Algorithm SHA256
+Get-FileHash .\one-more-ffmpeg-v1.1.2-pre1-windows-amd64.exe -Algorithm SHA256
 
 New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\OneMoreFFmpeg\bin" | Out-Null
-Move-Item .\one-more-ffmpeg-v1.1.1-windows-amd64.exe "$env:LOCALAPPDATA\OneMoreFFmpeg\bin\one-more-ffmpeg.exe"
+Move-Item .\one-more-ffmpeg-v1.1.2-pre1-windows-amd64.exe "$env:LOCALAPPDATA\OneMoreFFmpeg\bin\one-more-ffmpeg.exe"
 # 把该目录加入用户 PATH 后开新终端
 one-more-ffmpeg version --json
 ```
@@ -24,11 +24,11 @@ one-more-ffmpeg version --json
 ## Linux（手动下载）
 
 ```bash
-curl -LO https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/download/v1.1.1/one-more-ffmpeg-v1.1.1-linux-amd64
-curl -LO https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/download/v1.1.1/SHA256SUMS.txt
+curl -LO https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/download/v1.1.2-pre1/one-more-ffmpeg-v1.1.2-pre1-linux-amd64
+curl -LO https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/download/v1.1.2-pre1/SHA256SUMS.txt
 sha256sum -c SHA256SUMS.txt --ignore-missing
-chmod +x one-more-ffmpeg-v1.1.1-linux-amd64
-./one-more-ffmpeg-v1.1.1-linux-amd64 version --json
+chmod +x one-more-ffmpeg-v1.1.2-pre1-linux-amd64
+./one-more-ffmpeg-v1.1.2-pre1-linux-amd64 version --json
 ```
 
 把二进制放到 PATH 中并重命名为 `one-more-ffmpeg` 后即可直接调用。
@@ -40,7 +40,7 @@ chmod +x one-more-ffmpeg-v1.1.1-linux-amd64
 ```bash
 sha256sum -c SHA256SUMS.txt --ignore-missing        # Linux/macOS
 # Windows PowerShell:
-Get-FileHash .\one-more-ffmpeg-v1.1.1-windows-amd64.exe -Algorithm SHA256
+Get-FileHash .\one-more-ffmpeg-v1.1.2-pre1-windows-amd64.exe -Algorithm SHA256
 ```
 
 Release 同时附带 Sigstore build provenance attestation，可用 `gh attestation verify` 校验来源。

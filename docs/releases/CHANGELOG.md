@@ -3,6 +3,27 @@
 本项目遵循 [Semantic Versioning 2.0.0](../reference/VERSIONING.md)。格式基于 [Keep a Changelog](https://keepachangelog.com/)。
 仅保留当前及上一版本的记录；更早的 Release 与历史快照已撤回。
 
+## [1.1.2-pre1] — 2026-11-18
+
+预发布版本：全量审查后修复 16+ 项 bug/缺陷，并引入 go-github 与 testscript。
+
+### Security / Correctness
+- 自更新读取 `[network] github_api` / `max_attempts` 配置（此前为死配置）；URL 校验拒绝 userinfo、重定向禁止 https→http 降级；digest 校验完整 hex。
+- 自定义 URL（provider add / asset_url / checksums_url / download / resolve）**允许 http 与 https**，便于自建镜像服务器；仍拒绝 URL 内嵌凭据，禁止 https→http 重定向降级。
+- checksums 抓取真正使用 `Resolver.Timeout` / `MaxRedirects`（此前硬编码 30s）。
+- `provider add --json` dry-run 输出规范化后的 provider ID，与 `--apply` 一致。
+- `env rollback` / `journal rollback` 缺 `--journal` 返回 `E6005`（对齐文档），不再误报用法错误。
+- release pin 契约只接受 `channel=daily`（无内置 provider 后 stable catalog 已移除）。
+- 进度渲染终态读取加锁，消除 `Close()` 与 `Complete()/Fail()` 的竞态；journal ID 回退防跨天碰撞。
+
+### Added / Refactor
+- 引入 `github.com/google/go-github/v93` 并用于自更新的 GitHub Releases 查询（为将来从 GitHub 获取 FFmpeg release 资产打基础）。
+- 引入 `github.com/rogpeppe/go-internal/testscript`，新增 `cmd/one-more-ffmpeg/testdata/*.txtar` 脚本化 CLI 测试（version / provider list / JSON 契约）。
+- 移除死依赖 `sethvargo/go-retry` 与空导入保活文件；`provider list` variants 与 resolve 校验统一为 `gpl/lgpl/nonfree`。
+- 清理已删除 flag 的 argv 扫描表；`takesValue` 不再包含 release 时代 flag。
+- 所有依赖更新至最新版本（直接依赖 + 间接依赖）。
+- 文档：清理 README/man/CLI_SCHEMA 中内置 provider 与 released 命令残留；修正 http URL 说明。
+
 ## [1.1.1] — 2026-11-18
 
 v1.1.0 bugfix：聚焦自更新可靠性、进度语义与缓存正确性。本版同时移除了内置 provider 与 Scoop/dnf 支持，CLI 契约调整为 18 命令 / 17 schema。

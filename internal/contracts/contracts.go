@@ -273,7 +273,7 @@ func validateDataFields(schema string, data map[string]any) error {
 			return apperrors.New(apperrors.E7003, "provider add id and url are required")
 		}
 		if !isHTTPS(added.URL) {
-			return apperrors.New(apperrors.E7003, "provider add url must be https")
+			return apperrors.New(apperrors.E7003, "provider add url must be http(s)")
 		}
 		switch added.Status {
 		case "added", "dry-run":
@@ -582,10 +582,10 @@ func validateRelease(raw []byte) error {
 			return apperrors.New(apperrors.E7003, "release field is required").WithDetails(map[string]any{"field": field})
 		}
 	}
-	switch release.Channel {
-	case "stable", "daily":
-	default:
-		return apperrors.New(apperrors.E7003, "release channel must be stable or daily")
+	// Custom-provider pins always use the daily channel; stable-line catalogs
+	// no longer exist.
+	if release.Channel != "daily" {
+		return apperrors.New(apperrors.E7003, "release channel must be daily")
 	}
 	// D1: a floating `latest` tag is only acceptable when the record also
 	// carries an immutable release id plus the published time and asset hash.
@@ -603,7 +603,7 @@ func validateRelease(raw []byte) error {
 		return apperrors.New(apperrors.E7003, "release published_at must be RFC 3339").WithCause(err.Error())
 	}
 	if !isHTTPS(release.AssetURL) {
-		return apperrors.New(apperrors.E7003, "release asset_url must be https")
+		return apperrors.New(apperrors.E7003, "release asset_url must be http(s)")
 	}
 	if !sha256Pattern.MatchString(release.AssetSHA256) {
 		return apperrors.New(apperrors.E7003, "release asset_sha256 must be lowercase hex")
@@ -633,7 +633,7 @@ func validateRelease(raw []byte) error {
 		return apperrors.New(apperrors.E7003, "nonfree release must not be redistributable")
 	}
 	if release.ChecksumsURL != "" && !isHTTPS(release.ChecksumsURL) {
-		return apperrors.New(apperrors.E7003, "release checksums_url must be https")
+		return apperrors.New(apperrors.E7003, "release checksums_url must be http(s)")
 	}
 	if release.ChecksumsSHA256 != "" && !sha256Pattern.MatchString(release.ChecksumsSHA256) {
 		return apperrors.New(apperrors.E7003, "release checksums_sha256 must be lowercase hex")

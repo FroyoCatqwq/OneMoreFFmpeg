@@ -72,7 +72,7 @@ func TestAddCustomRejectsReservedAndDuplicateIDs(t *testing.T) {
 
 func TestAddCustomValidatesURLAndHash(t *testing.T) {
 	entry := validCustom()
-	entry.URL = "http://example.invalid/ffmpeg.zip"
+	entry.URL = "https://user@example.invalid/ffmpeg.zip"
 	_, err := provider.AddCustom(nil, entry)
 	typed, ok := apperrors.As(err)
 	require.True(t, ok)

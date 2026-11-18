@@ -1,4 +1,4 @@
-.TH ONE-MORE-FFMPEG 1 "2026-11-19" "OneMoreFFmpeg v1.1.1" "User Commands"
+.TH ONE-MORE-FFMPEG 1 "2026-11-19" "OneMoreFFmpeg v1.1.2-pre1" "User Commands"
 .SH NAME
 one-more-ffmpeg \- discover, download, install and inspect FFmpeg builds
 .SH SYNOPSIS
@@ -41,23 +41,17 @@ KIND may be muxers, demuxers, devices, decoders, encoders, filters,
 pixel_formats, channel_layouts or sample_formats. --cache-dir, --no-cache and
 --refresh also apply to single-list probes.
 .TP
-.B release list --channel stable|daily [--days N] [--count N] --json
-Stable versions are derived from https://ffmpeg.org/download.html#releases;
-a 9.0 line is displayed as its latest patch (for example 9.0.2). Stable
-always reports days=0; --count truncates the sorted versions. Daily
-snapshots default to the last 7 days; --days and --count control the window.
-When a snapshot asset name has no version, the snapshot tag is used.
-.TP
-.B release install [--version V|--snapshot TAG] [--allow-nonfree] --apply
-Install the newest listed version or a selected version/snapshot.
---version and --snapshot are mutually exclusive; default is dry-run.
-.TP
 .B provider list|add ...
-List or register providers. provider add is dry-run by default and needs
+List or register custom providers. There are no built-in providers: register
+your own URL and SHA-256 with
+.B provider add --id ID --url URL --sha256 HEX
+.RI ( http " and " https " are accepted for self-hosted mirrors)."
+provider add is dry-run by default and needs
 .BR --apply .
 .TP
-.B resolve --provider ID --channel stable|daily --json
-Resolve a pinned release record.
+.B resolve --provider ID [--variant V] [--linkage L] [--allow-nonfree] --json
+Resolve a registered custom provider into a pinned release record.
+Only the daily channel exists; release-line/release-tag selectors are rejected.
 .TP
 .B download --release FILE --json
 Download and verify the pinned asset. FILE may be UTF-8 or UTF-16 JSON.

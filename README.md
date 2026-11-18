@@ -4,10 +4,10 @@
 
 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg> · 许可证：GPL-3.0-only
 
-**状态：v1.1.1** — Phase 1–7 全部完成，CLI 外部契约冻结；全项目审计后 bugfix；Windows + Linux + Docker 全新环境 `go test` / e2e 全绿，
+**状态：v1.1.2-pre1** — Phase 1–7 全部完成，CLI 外部契约冻结；全项目审计后 bugfix；Windows + Linux + Docker 全新环境 `go test` / e2e 全绿，
 GitHub Actions 提供质量门禁与 tag 发布流水线。产物见 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases)。
 
-> **仅 v1.1.1 受支持**：旧版本（v1.0.x 及更早）不再维护，请始终使用当前版本；仓库内 `docs/releases/` 的旧版说明仅作历史记录。
+> **仅 v1.1.2-pre1 受支持**：旧版本（v1.0.x 及更早）不再维护，请始终使用当前版本；仓库内 `docs/releases/` 的旧版说明仅作历史记录。
 
 🟢 **第一次用？先看 [`安装指南`](docs/guides/INSTALL.md)（手动二进制 + 校验）与 [`新手上手指南`](docs/guides/HOWTO.md)。黄金顺序：注册 `provider add` → `download/install --apply` → `env set --apply` → 开新终端 → `ffmpeg` 可用。**
 
@@ -17,7 +17,7 @@ GitHub Actions 提供质量门禁与 tag 发布流水线。产物见 [Releases](
 
 ## 1. 它解决什么
 
-机器上有哪些 `ffmpeg`/`ffprobe`/`ffplay`、来自哪里、能否用、支持哪些能力；如何从 BtbN / BnqDzj 下载稳定版或每日构建，
+机器上有哪些 `ffmpeg`/`ffprobe`/`ffplay`、来自哪里、能否用、支持哪些能力；如何从自定义 URL 下载并校验 FFmpeg，
 如何安装、切换、回滚、配置 PATH；以及让下游项目（LiveArchiveEncoder 等）通过**调用本 CLI 可执行文件**使用这些能力。
 
 一句话：**OneMoreFFmpeg 管“FFmpeg 从哪里来、装到哪里、怎么验证、怎么被发现、支持什么能力”。不提供 Go SDK 或插件接口。**
@@ -25,7 +25,7 @@ GitHub Actions 提供质量门禁与 tag 发布流水线。产物见 [Releases](
 ## 2. 能力与边界
 
 已实现：发现（PATH / 环境变量 / 指定目录 / 常见目录 / 显式 `--scan` 全盘扫描）、三件套校验、13 项能力检查（带缓存）、
-BtbN + BnqDzj + 自定义 URL（`--url` / `provider add`）、稳定版 / 每日构建 / release pin、下载（SHA-256 校验）、
+仅自定义 URL（`provider add --url --sha256`）、下载（SHA-256 校验）、
 安装（安全解压、版本化目录、`current`、journal）、`uninstall`、`env status|set|unset|rollback`、
 `journal list|rollback`、`doctor`，共 18 个冻结命令（含 v1.1 新增的 `update`；已移除 `release list|install`）。写入类命令默认 dry-run，需 `--apply`；`download` 与能力缓存会立即写文件。
 
@@ -45,7 +45,7 @@ BtbN + BnqDzj + 自定义 URL（`--url` / `provider add`）、稳定版 / 每日
 | 平台 | Windows x64 + Linux x86_64 |
 | CLI | `one-more-ffmpeg`（不提供 `omf` 内置别名；HOWTO 中 `omf` 是用户自定义 alias） |
 | 组件 | `urfave/cli/v3`、`pelletier/go-toml/v2`（TOML 1.1）、`log/slog` + `lmittmann/tint` |
-| 安装源 | 内置 BtbN + BnqDzj，自定义 URL 强制 SHA-256；nonfree 仅元数据可公开，二进制不进公开 Release |
+| 安装源 | 仅自定义 URL（http/https）+ SHA-256 pin；nonfree 仅本地使用，二进制不进公开 Release |
 | 外部集成 | 只调用 CLI 可执行文件，见 [`集成指南`](docs/guides/INTEGRATION.md) |
 | 版本规范 | SemVer；schema/错误码/目录布局显式版本化，见 [`VERSIONING.md`](docs/reference/VERSIONING.md) |
 
@@ -56,7 +56,7 @@ BtbN + BnqDzj + 自定义 URL（`--url` / `provider add`）、稳定版 / 每日
 - 上手：[`HOWTO.md`](docs/guides/HOWTO.md) · [`USAGE.md`](docs/guides/USAGE.md) · [`MIGRATION.md`](docs/guides/MIGRATION.md)
 - 契约：[`CLI_SCHEMA.md`](docs/reference/CLI_SCHEMA.md) · [`ERROR_CODES.md`](docs/reference/ERROR_CODES.md) · [`CAPABILITIES.md`](docs/reference/CAPABILITIES.md)
 - 开发：[`ARCHITECTURE.md`](docs/development/ARCHITECTURE.md) · [`E2E_TESTING.md`](docs/development/E2E_TESTING.md) · [`development/adr/`](docs/development/adr/)
-- 发布：[`CHANGELOG.md`](docs/releases/CHANGELOG.md) · [`release-v1.1.1.md`](docs/releases/release-v1.1.1.md)（旧版本 Release 与历史快照已撤回）
+- 发布：[`CHANGELOG.md`](docs/releases/CHANGELOG.md) · [`release-v1.1.2-pre1.md`](docs/releases/release-v1.1.2-pre1.md)（旧版本 Release 与历史快照已撤回）
 
 ## 5. 开发命令
 

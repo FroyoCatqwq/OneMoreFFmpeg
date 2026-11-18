@@ -214,7 +214,7 @@ func CustomSummary(entry Custom) model.ProviderSummary {
 		ID:              entry.ID,
 		Repository:      "custom",
 		Channels:        []string{"daily"},
-		Variants:        []string{"gpl", "lgpl", "nonfree", "nonfree-shared"},
+		Variants:        []string{"gpl", "lgpl", "nonfree"},
 		Linkages:        []string{"static", "shared"},
 		Redistributable: false,
 	}
@@ -242,8 +242,8 @@ func validateCustom(entry Custom, existing []Custom) error {
 			return apperrors.New(apperrors.E7005, "provider id already exists").WithDetails(map[string]any{"id": id})
 		}
 	}
-	if !isHTTPSURL(entry.URL) {
-		return apperrors.New(apperrors.E3008, "custom provider url must be https").WithDetails(map[string]any{"url": entry.URL})
+	if !isCustomURLAllowed(entry.URL) {
+		return apperrors.New(apperrors.E3008, "custom provider url must be http(s)").WithDetails(map[string]any{"url": entry.URL})
 	}
 	if !sha256Hex.MatchString(entry.SHA256) {
 		return apperrors.New(apperrors.E3009, "custom provider requires a sha256 pin").WithDetails(map[string]any{"id": id})
@@ -253,8 +253,8 @@ func validateCustom(entry Custom, existing []Custom) error {
 	} else if !hasArchiveExtension(name) {
 		return apperrors.New(apperrors.E3008, "custom provider url must point to a zip/tar.xz/tar.gz/tar.zst archive").WithDetails(map[string]any{"url": entry.URL})
 	}
-	if entry.ChecksumsURL != "" && !isHTTPSURL(entry.ChecksumsURL) {
-		return apperrors.New(apperrors.E3008, "custom checksums url must be https").WithDetails(map[string]any{"url": entry.ChecksumsURL})
+	if entry.ChecksumsURL != "" && !isCustomURLAllowed(entry.ChecksumsURL) {
+		return apperrors.New(apperrors.E3008, "custom checksums url must be http(s)").WithDetails(map[string]any{"url": entry.ChecksumsURL})
 	}
 	if entry.LicenseHint != "" && !licenseHints[entry.LicenseHint] {
 		return apperrors.New(apperrors.E7005, "custom license_hint is invalid").WithDetails(map[string]any{"license_hint": entry.LicenseHint})
@@ -262,9 +262,13 @@ func validateCustom(entry Custom, existing []Custom) error {
 	return nil
 }
 
-func isHTTPSURL(value string) bool {
+// isCustomURLAllowed accepts http and https for user-supplied provider URLs
+// (self-hosted build servers frequently use plain http). Credentials embedded
+// in the URL are always rejected.
+func isCustomURLAllowed(value string) bool {
 	parsed, err := url.Parse(strings.TrimSpace(value))
-	return err == nil && parsed.Scheme == "https" && parsed.Host != "" && parsed.User == nil
+	return err == nil && parsed.Host != "" && parsed.User == nil &&
+		(parsed.Scheme == "https" || parsed.Scheme == "http")
 }
 
 // assetNameFromURL returns the safe file name of a direct asset URL, or "".

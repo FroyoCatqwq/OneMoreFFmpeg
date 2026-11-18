@@ -32,9 +32,12 @@ func updateCommand(info buildinfo.Info) *urfave.Command {
 			if err != nil {
 				return apperrors.New(apperrors.E9003, "cannot determine executable path").WithCause(err.Error())
 			}
+			cfg := configFrom(ctx)
 			opts := selfupdate.Options{
 				CurrentVersion: info.Version,
 				Executable:     exe,
+				GitHubAPI:      cfg.Network.GitHubAPI,
+				MaxAttempts:    cfg.Network.MaxAttempts,
 			}
 			update, err := opts.Check(ctx)
 			if err != nil {

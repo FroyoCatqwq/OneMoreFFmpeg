@@ -15,22 +15,31 @@ import (
 // fetchURL downloads a small checksums file with strict HTTPS-only redirects
 // and a bounded body. It replaces the old GitHub-checksums fetcher, which was
 // tied to built-in providers.
-func fetchURL(ctx context.Context, rawURL string, maxRedirects int) ([]byte, error) {
+func fetchURL(ctx context.Context, rawURL string, maxRedirects int, timeout time.Duration) ([]byte, error) {
 	parsed, err := url.Parse(rawURL)
-	if err != nil || !strings.EqualFold(parsed.Scheme, "https") || parsed.Host == "" || parsed.User != nil {
-		return nil, apperrors.New(apperrors.E3008, "checksums url must be https").WithDetails(map[string]any{"url": rawURL})
+	scheme := strings.ToLower(parsed.Scheme)
+	if err != nil || (scheme != "https" && scheme != "http") || parsed.Host == "" || parsed.User != nil {
+		return nil, apperrors.New(apperrors.E3008, "checksums url must be http(s)").WithDetails(map[string]any{"url": rawURL})
 	}
 	if maxRedirects <= 0 {
 		maxRedirects = 5
 	}
+	if timeout <= 0 {
+		timeout = 30 * time.Second
+	}
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: timeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= maxRedirects {
 				return apperrors.New(apperrors.E3007, "too many redirects")
 			}
-			if !strings.EqualFold(req.URL.Scheme, "https") {
-				return apperrors.New(apperrors.E3008, "redirect must stay https")
+			target := strings.ToLower(req.URL.Scheme)
+			if target != "https" && target != "http" {
+				return apperrors.New(apperrors.E3008, "redirect must stay http(s)")
+			}
+			// Never downgrade an https source to http.
+			if scheme == "https" && target != "https" {
+				return apperrors.New(apperrors.E3008, "redirect must not downgrade https")
 			}
 			return nil
 		},

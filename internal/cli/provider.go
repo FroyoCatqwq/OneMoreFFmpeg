@@ -36,7 +36,7 @@ func providerCommand() *urfave.Command {
 func providerListCommand() *urfave.Command {
 	return &urfave.Command{
 		Name:  "list",
-		Usage: "list built-in and custom providers (offline)",
+		Usage: "list registered custom providers (offline)",
 		Action: func(ctx context.Context, cmd *urfave.Command) error {
 			if err := rejectExtraArgs(cmd); err != nil {
 				return err
@@ -106,8 +106,16 @@ func providerAddCommand() *urfave.Command {
 				if err != nil {
 					return err
 				}
-				if _, err := provider.AddCustom(existing, entry); err != nil {
+				updated, err := provider.AddCustom(existing, entry)
+				if err != nil {
 					return err
+				}
+				// Report the normalized ID so dry-run and --apply agree.
+				for _, c := range updated {
+					if strings.EqualFold(c.ID, entry.ID) {
+						entry.ID = c.ID
+						break
+					}
 				}
 			}
 			data := model.ProviderAddData{

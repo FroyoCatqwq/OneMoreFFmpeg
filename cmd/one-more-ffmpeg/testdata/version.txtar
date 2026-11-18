@@ -1,0 +1,6 @@
+# version command emits a JSON envelope on stdout.
+omf version --json
+stdout 'onemoreffmpeg.result/v1'
+stdout '"command":"version"'
+stdout '"version":"test"'
+! stderr .

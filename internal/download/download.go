@@ -102,7 +102,7 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 		return model.Artifact{}, apperrors.New(apperrors.E4005, "asset name is unsafe").WithDetails(map[string]any{"asset": release.AssetName})
 	}
 	if !isAllowedURL(release.AssetURL) {
-		return model.Artifact{}, apperrors.New(apperrors.E4001, "asset url must be https").WithDetails(map[string]any{"url": release.AssetURL})
+		return model.Artifact{}, apperrors.New(apperrors.E4001, "asset url must be http(s)").WithDetails(map[string]any{"url": release.AssetURL})
 	}
 
 	targetDir := filepath.Join(d.options.Dir, sha[:16])
@@ -317,7 +317,7 @@ func (d *Downloader) verifyChecksumsFile(ctx context.Context, release model.Rele
 		return nil
 	}
 	if !isAllowedURL(release.ChecksumsURL) {
-		return apperrors.New(apperrors.E4001, "checksums url must be https").WithDetails(map[string]any{"url": release.ChecksumsURL})
+		return apperrors.New(apperrors.E4001, "checksums url must be http(s)").WithDetails(map[string]any{"url": release.ChecksumsURL})
 	}
 	response, err := d.get(ctx, release.ChecksumsURL)
 	if err != nil {
@@ -388,7 +388,7 @@ func (d *Downloader) get(ctx context.Context, rawURL string) (*http.Response, er
 	maxRedirects := d.options.MaxRedirects
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		if !isAllowedURL(req.URL.String()) {
-			return apperrors.New(apperrors.E4001, "redirect target must be https").WithDetails(map[string]any{"url": req.URL.Redacted()})
+			return apperrors.New(apperrors.E4001, "redirect target must be http(s)").WithDetails(map[string]any{"url": req.URL.Redacted()})
 		}
 		// Never downgrade scheme. An https asset redirecting to http (even a
 		// loopback one) would expose the transfer and enable local-service
@@ -511,21 +511,13 @@ func contextError(err error) error {
 	return apperrors.New(apperrors.E4006, "download canceled").WithCause(err.Error())
 }
 
+// isAllowedURL accepts http and https for user-supplied custom provider URLs
+// (self-hosted mirrors are often plain http), but always rejects embedded
+// credentials. HTTPS->HTTP downgrade on redirect is enforced separately.
 func isAllowedURL(raw string) bool {
 	parsed, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || parsed.Host == "" || parsed.User != nil {
 		return false
 	}
-	if parsed.Scheme == "https" {
-		return true
-	}
-	return parsed.Scheme == "http" && isLoopback(parsed.Hostname())
-}
-
-func isLoopback(host string) bool {
-	if strings.EqualFold(host, "localhost") {
-		return true
-	}
-	ip := net.ParseIP(host)
-	return ip != nil && ip.IsLoopback()
+	return parsed.Scheme == "https" || parsed.Scheme == "http"
 }

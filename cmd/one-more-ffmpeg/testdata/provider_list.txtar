@@ -1,0 +1,5 @@
+# No built-in providers: registry starts empty, but still a valid envelope.
+omf provider list --json
+stdout 'onemoreffmpeg.provider-list/v1'
+stdout '"providers":\[\]'
+! stderr .

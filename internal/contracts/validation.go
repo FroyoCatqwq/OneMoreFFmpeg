@@ -1,32 +1,21 @@
 package contracts
 
 import (
-	"net"
 	"net/url"
 	"path/filepath"
 	"strings"
 )
 
-// isHTTPS accepts https URLs plus loopback http (for tests and self-hosted
-// mirrors), matching the download layer's URL policy. Credentials in the URL
-// are always rejected so tokens cannot be smuggled into release files.
+// isHTTPS accepts http and https for user-supplied custom URLs (self-hosted
+// mirrors are often plain http), matching the download/provider URL policy.
+// Credentials in the URL are always rejected so tokens cannot be smuggled into
+// release files.
 func isHTTPS(value string) bool {
 	parsed, err := url.Parse(value)
 	if err != nil || parsed.Host == "" || parsed.User != nil {
 		return false
 	}
-	if parsed.Scheme == "https" {
-		return true
-	}
-	return parsed.Scheme == "http" && isLoopback(parsed.Hostname())
-}
-
-func isLoopback(host string) bool {
-	if strings.EqualFold(host, "localhost") {
-		return true
-	}
-	ip := net.ParseIP(host)
-	return ip != nil && ip.IsLoopback()
+	return parsed.Scheme == "https" || parsed.Scheme == "http"
 }
 
 // safeAssetName rejects path separators and relative-path components so a

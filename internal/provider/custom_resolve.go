@@ -3,7 +3,6 @@ package provider
 import (
 	"bytes"
 	"context"
-	"net/url"
 	"strings"
 	"time"
 
@@ -37,14 +36,14 @@ func (r *Resolver) resolveCustom(ctx context.Context, req Request, entry Custom)
 		}
 	}
 
-	if !isStrictHTTPSURL(entry.URL) {
+	if !isCustomURLAllowed(entry.URL) {
 		return model.Release{}, apperrors.New(apperrors.E3008, "custom provider url is invalid").WithDetails(map[string]any{"url": entry.URL})
 	}
 	assetName := assetNameFromURL(entry.URL)
 	if assetName == "" {
 		return model.Release{}, apperrors.New(apperrors.E3008, "custom provider url has no usable file name").WithDetails(map[string]any{"url": entry.URL})
 	}
-	if entry.ChecksumsURL != "" && !isStrictHTTPSURL(entry.ChecksumsURL) {
+	if entry.ChecksumsURL != "" && !isCustomURLAllowed(entry.ChecksumsURL) {
 		return model.Release{}, apperrors.New(apperrors.E3008, "custom checksums url is invalid").WithDetails(map[string]any{"url": entry.ChecksumsURL})
 	}
 	pinnedAt := r.now().UTC().Format(time.RFC3339)
@@ -96,14 +95,6 @@ func (r *Resolver) resolveCustom(ctx context.Context, req Request, entry Custom)
 		Redistributable: false,
 		Warnings:        warnings,
 	}, nil
-}
-
-func isStrictHTTPSURL(raw string) bool {
-	parsed, err := url.Parse(strings.TrimSpace(raw))
-	if err != nil || parsed.Host == "" || parsed.User != nil {
-		return false
-	}
-	return parsed.Scheme == "https"
 }
 
 func contains(values []string, want string) bool {

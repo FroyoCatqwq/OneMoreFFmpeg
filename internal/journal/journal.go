@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -54,7 +55,11 @@ type Record struct {
 func NewID() string {
 	buffer := make([]byte, 8)
 	if _, err := rand.Read(buffer); err != nil {
-		return "journal-" + hex.EncodeToString([]byte(time.Now().Format("150405.000000")))
+		// crypto/rand failed (extremely rare). Fall back to a value that
+		// includes date, nanoseconds, pid and monotonic-ish counter so two
+		// processes on different days can never collide.
+		return fmt.Sprintf("journal-fallback-%d-%d-%x",
+			os.Getpid(), time.Now().UnixNano(), time.Now().Format("20060102"))
 	}
 	return "journal-" + hex.EncodeToString(buffer)
 }

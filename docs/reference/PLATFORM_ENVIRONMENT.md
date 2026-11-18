@@ -1,6 +1,6 @@
 # 平台环境变量与 current 指针细则
 
-> 状态：v1.1.1 现行，CLI 外部契约已冻结
+> 状态：v1.1.2-pre1 现行，CLI 外部契约已冻结
 > 日期：2026-11-10
 > 配套：[`ENVIRONMENT.md`](ENVIRONMENT.md)、[`ERROR_CODES.md`](ERROR_CODES.md)、[`CLI_SCHEMA.md`](CLI_SCHEMA.md)
 

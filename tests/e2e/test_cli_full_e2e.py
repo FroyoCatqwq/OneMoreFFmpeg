@@ -211,7 +211,7 @@ def test_download_rejects_offline_release_with_provider_flag(cli, tmp_path: Path
     release = tmp_path / "release.json"
     release.write_text(json.dumps({
         "schema": "onemoreffmpeg.release/v1", "provider": "custom",
-        "repository": "custom", "channel": "stable",
+        "repository": "custom", "channel": "daily",
         "release_tag": "latest", "release_id": "1", "published_at": "2026-01-01T00:00:00Z",
         "asset_name": "x.zip", "asset_url": "https://example.invalid/x.zip",
         "asset_sha256": "a" * 64, "variant": "gpl", "linkage": "static",
@@ -225,7 +225,7 @@ def test_install_rejects_short_sha(cli, tmp_path: Path):
     release = tmp_path / "release.json"
     release.write_text(json.dumps({
         "schema": "onemoreffmpeg.release/v1", "provider": "custom",
-        "repository": "custom", "channel": "stable",
+        "repository": "custom", "channel": "daily",
         "release_tag": "latest", "release_id": "1", "published_at": "2026-01-01T00:00:00Z",
         "asset_name": "x.zip", "asset_url": "https://example.invalid/x.zip",
         "asset_sha256": "abcd", "variant": "gpl", "linkage": "static",
@@ -247,7 +247,7 @@ def test_env_unset_envelope(cli):
 
 
 def test_env_rollback_requires_journal(cli):
-    assert_error(cli.run("env", "rollback", "--json"), "OMF-E7001", 2)
+    assert_error(cli.run("env", "rollback", "--json"), "OMF-E6005", 1)
 
 
 def test_env_rollback_missing_journal_is_runtime_error(cli):

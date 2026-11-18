@@ -40,17 +40,26 @@ func (noopProgress) Close()       {}
 // terminalState guards idempotent terminal transitions.
 type terminalState struct {
 	once  sync.Once
+	mu    sync.RWMutex
 	state string // "", "completed", "failed", "aborted"
 }
 
 func (t *terminalState) set(state string, fn func()) bool {
 	applied := false
 	t.once.Do(func() {
+		t.mu.Lock()
 		t.state = state
+		t.mu.Unlock()
 		fn()
 		applied = true
 	})
 	return applied
+}
+
+func (t *terminalState) current() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.state
 }
 
 // stepProgress renders plain stage lines for non-interactive output.
@@ -185,7 +194,7 @@ func (b *barProgress) Abort() {
 func (b *barProgress) Close() {
 	b.close.Do(func() {
 		// Only stop the renderer; never mark success.
-		if b.term.state == "" {
+		if b.term.current() == "" {
 			b.tracker.MarkAsErrored()
 			b.tracker.UpdateMessage(b.tracker.Message + " (stopped)")
 		}

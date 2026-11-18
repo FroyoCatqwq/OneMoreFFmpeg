@@ -221,9 +221,11 @@ func TestFetchEnforcesSizeLimit(t *testing.T) {
 	require.Equal(t, apperrors.E4004, typed.Code)
 }
 
-func TestFetchRejectsPlainHTTPRedirect(t *testing.T) {
+func TestFetchRejectsUnsafeRedirectScheme(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		http.Redirect(writer, request, "http://example.invalid/asset.zip", http.StatusFound)
+		// http and https redirects are both allowed for custom URLs (self-hosted
+		// mirrors); other schemes are still rejected.
+		http.Redirect(writer, request, "ftp://example.invalid/asset.zip", http.StatusFound)
 	}))
 	t.Cleanup(server.Close)
 
@@ -239,7 +241,7 @@ func TestFetchRejectsPlainHTTPRedirect(t *testing.T) {
 	typed, ok := apperrors.As(err)
 	require.True(t, ok)
 	require.Equal(t, apperrors.E4001, typed.Code)
-	require.Contains(t, typed.Message, "redirect target must be https")
+	require.Contains(t, typed.Message, "redirect target must be http(s)")
 }
 
 func TestFetchReplacesCorruptExistingFile(t *testing.T) {

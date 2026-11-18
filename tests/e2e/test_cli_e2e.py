@@ -19,7 +19,7 @@ def release_for(archive: Path) -> dict:
         "schema": "onemoreffmpeg.release/v1",
         "provider": "custom",
         "repository": "custom",
-        "channel": "stable",
+        "channel": "daily",
         "release_tag": "latest",
         "release_id": "441698707",
         "published_at": "2026-11-11T13:00:32Z",

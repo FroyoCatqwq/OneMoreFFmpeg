@@ -1,0 +1,4 @@
+# --json help is refused with a JSON error envelope on stdout, never plain text.
+! omf --json help
+stdout 'onemoreffmpeg.error/v1'
+stdout '"code":"OMF-E1001"'

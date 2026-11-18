@@ -207,12 +207,11 @@ var takesValue = map[string]bool{
 	"--config": true, "-c": true, "--log-level": true,
 	"--dir": true, "--roots": true, "--max-depth": true, "--max-files": true,
 	"--timeout": true, "--probe-timeout": true,
-	"--provider": true, "--channel": true, "--target": true, "--variant": true,
-	"--linkage": true, "--release-line": true, "--release-tag": true,
+	"--provider": true, "--target": true, "--variant": true,
+	"--linkage": true,
 	"--release": true, "--artifact": true, "--root": true, "--journal": true,
 	"--id": true, "--url": true, "--sha256": true, "--checksums-url": true,
-	"--license-hint": true, "--max-bytes": true, "--days": true, "--count": true,
-	"--releases-url": true, "--version": true, "--snapshot": true, "--only": true,
+	"--license-hint": true, "--max-bytes": true, "--only": true,
 	"--installation-id": true, "--help-topic": true, "--cache-dir": true,
 }
 
@@ -298,7 +297,7 @@ func rejectOfflineResolveFlags(cmd *urfave.Command) error {
 	if strings.TrimSpace(cmd.String("release")) == "" {
 		return nil
 	}
-	for _, name := range []string{"provider", "channel", "target", "variant", "linkage", "release-line", "release-tag"} {
+	for _, name := range []string{"provider", "target", "variant", "linkage"} {
 		if cmd.IsSet(name) {
 			return apperrors.New(apperrors.E1001, "--release cannot be combined with provider resolve flags").
 				WithDetails(map[string]any{"flag": "--" + name})

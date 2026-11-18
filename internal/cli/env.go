@@ -195,7 +195,7 @@ func envRollbackCommand() *urfave.Command {
 			}
 			id := cmd.String("journal")
 			if id == "" {
-				return apperrors.New(apperrors.E7001, "--journal is required")
+				return apperrors.New(apperrors.E6005, "--journal id is required for rollback")
 			}
 			root, err := paths.DataRoot()
 			if err != nil {
