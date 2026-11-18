@@ -1,7 +1,7 @@
 # v1.1.1（2026-11-18）
 
-> Bugfix 版本：修复 v1.1.0 自更新可靠性、包管理器保护、进度语义与缓存正确性问题。
-> CLI 外部契约保持 19 命令 / 18 个 `/v1` schema；新增错误码 `OMF-E7008`（自更新被来源策略阻止，退出 2）。
+> Bugfix 版本：修复 v1.1.0 自更新可靠性、进度语义、缓存正确性与全盘扫描权限问题。
+> CLI 外部契约保持 19 命令 / 18 个 `/v1` schema。
 > 产物：Windows x64 / Linux x64 二进制、RHEL 9+ x86_64 RPM、`SHA256SUMS.txt`、build provenance；Scoop bucket 同步更新到 v1.1.1。
 
 ## 修复要点
@@ -11,19 +11,13 @@
 - **自更新失败可靠恢复**：回滚错误用 `errors.Join` 合并、不再吞掉；恢复失败时保留唯一备份并在错误中给出路径；新增阶段 journal 与崩溃恢复 `Recover()`；保留原文件权限；备份清理失败记录日志。
 
 ### P1
-- **包管理器保护**：识别 OneMoreFFmpeg 自身安装来源（RPM `rpm -qf` / Scoop 路径 / Manual / Unknown）。Scoop 与 RPM 管理的程序在 `update --apply` 时被拒绝（E7008，JSON details 给出来源与推荐命令）；Unknown 默认拒绝，可显式 `--allow-unmanaged-override`；`update --check` 照常工作。
 - **Windows 真实替换测试**：文件替换抽象为可注入 `FileOps`，临时文件覆盖成功替换、目标占用/权限失败、恢复成功、恢复失败保留备份、权限保留；Windows CI 不再 Skip 核心替换路径。
 - **统一缓存存储**：key 文件名改为 SHA-256 摘要（消除碰撞），entry 保存 key digest/schema 并校验；读写错误传播；`Prune()` 清理过期/损坏文件；capabilities 的 JSON/锁/原子写不再复制实现。
 - **严格 SemVer**：只接受 `X.Y.Z`（或 tag `vX.Y.Z`），拒绝缺字段、多字段、空字段、非数字、前导零、溢出、prerelease；数值语义比较。
 
-## 自更新来源策略
+## 全盘扫描权限
 
-| 来源 | `update --check` | `update --apply` |
-|---|---|---|
-| 手动下载 | 正常 | 允许 |
-| Scoop | 正常并说明来源 | 拒绝，提示 `scoop update one-more-ffmpeg` |
-| RPM/DNF | 正常并说明来源 | 拒绝，提示 `sudo dnf upgrade one-more-ffmpeg` |
-| Unknown | 正常并说明不明 | 默认拒绝；确需时 `--allow-unmanaged-override` |
+`detect --scan` 与 `detect --dir <root> --recursive` 会遍历整个文件系统根目录，普通权限下会因大量目录不可读而产生不完整结果。v1.1.1 起这类全盘扫描要求 elevated 权限：Linux 需 root 或 sudo，Windows 需 Administrator 或 SYSTEM；未提权时返回 `OMF-E6003` 并给出重新运行提示。普通目录扫描（指定具体路径）不受影响。
 
 ## 信任边界（Build Provenance）
 

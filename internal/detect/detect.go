@@ -6,6 +6,7 @@ import (
 	stderrors "errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/ffexec"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
 )
 
 type Options struct {
@@ -70,7 +72,8 @@ type Result struct {
 }
 
 type Detector struct {
-	Runner ffexec.Runner
+	Runner     ffexec.Runner
+	IsElevated func() bool // injectable; nil uses platform.IsElevated
 }
 
 func New() *Detector {
@@ -80,6 +83,42 @@ func New() *Detector {
 			WaitDelay: 500 * time.Millisecond,
 		},
 	}
+}
+
+func (d *Detector) elevated() bool {
+	if d != nil && d.IsElevated != nil {
+		return d.IsElevated()
+	}
+	return platform.IsElevated()
+}
+
+// isFilesystemRoot reports whether path is a volume root: "/" on Unix or a
+// drive root like `C:\` on Windows. Full-tree scans from these roots require
+// elevation because most entries are unreadable without it.
+func isFilesystemRoot(path string) bool {
+	clean := filepath.Clean(path)
+	if runtime.GOOS == "windows" {
+		volume := filepath.VolumeName(clean)
+		return volume != "" && clean == volume+string(filepath.Separator)
+	}
+	return clean == string(filepath.Separator)
+}
+
+// requireElevationForFullScan enforces the elevated-process policy for scans
+// that traverse an entire filesystem root (default --scan roots or an explicit
+// --dir pointing at a volume root with --recursive).
+func (d *Detector) requireElevationForFullScan(opts Options) error {
+	// --scan with no explicit Roots uses defaultScanRoots() which includes
+	// filesystem roots ("/", drive letters); an explicit Roots list is a
+	// scoped scan and does not need elevation.
+	fullScan := (opts.Scan && len(opts.Roots) == 0) ||
+		(opts.Dir != "" && opts.Recursive && isFilesystemRoot(opts.Dir))
+	if !fullScan || d.elevated() {
+		return nil
+	}
+	return apperrors.New(apperrors.E6003,
+		"full filesystem scan requires elevation: run as root (Linux) or Administrator/SYSTEM (Windows), or use sudo").
+		WithDetails(map[string]any{"elevated": false, "scan": true})
 }
 
 type session struct {
@@ -132,6 +171,9 @@ func (s *session) addPath(raw, source string, fatal bool, details map[string]any
 
 func (d *Detector) Detect(ctx context.Context, opts Options) (Result, error) {
 	opts = normalizeOptions(opts)
+	if err := d.requireElevationForFullScan(opts); err != nil {
+		return Result{}, err
+	}
 	if ctx == nil {
 		ctx = context.Background()
 	}

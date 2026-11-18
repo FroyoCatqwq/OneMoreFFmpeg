@@ -147,7 +147,7 @@
 |---|---|---|
 | `--dir <PATH>` | 无 | 显式 trio 目录或 ffmpeg 可执行文件路径 |
 | `--recursive` | false | 在 `--dir` 下递归查找 |
-| `--scan` | false | 显式扫描默认根或 `--roots` |
+| `--scan` | false | 显式扫描默认根或 `--roots`；无 `--roots` 时为全盘扫描，要求 elevated（Linux root/sudo、Windows Administrator/SYSTEM），否则 `OMF-E6003` |
 | `--roots <CSV>` | 无 | 逗号分隔扫描根；必须配合 `--scan` |
 | `--max-depth <N>` | 8 | 扫描最大深度 |
 | `--max-files <N>` | 200000 | 一次扫描（所有 root 合计）的最大文件数，超限记 `OMF-E1008` |

@@ -127,6 +127,7 @@ man one-more-ffmpeg
 | `E6007` | 试图删除/覆盖非本项目管理文件 |
 | `E6009` | data-root 或能力缓存正被另一进程加锁，稍后重试 |
 | `update` 显示无更新但版本确实落后 | 检查网络与 stderr 日志（`--log-level debug`）；非 amd64 平台不支持自更新 |
+| `OMF-E6003` on `detect --scan` | 全盘扫描需提权：Linux 用 sudo/root，Windows 用 Administrator/SYSTEM；或改用 `--scan --roots <具体目录>` |
 | `doctor healthy=false` | 查看 `checks[]` 中失败的项 |
 | 能力检测结果疑似过时 | 确认是否替换过 FFmpeg 二进制；缓存按内容指纹自动失效，必要时 `--refresh` |
 | `journal_pending` 非空 | `journal list --json` 后 rollback 或人工确认 |

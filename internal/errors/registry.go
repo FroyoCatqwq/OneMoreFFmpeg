@@ -78,7 +78,6 @@ const (
 	E7005 Code = "OMF-E7005"
 	E7006 Code = "OMF-E7006"
 	E7007 Code = "OMF-E7007"
-	E7008 Code = "OMF-E7008"
 
 	E9001 Code = "OMF-E9001"
 	E9002 Code = "OMF-E9002"
@@ -175,7 +174,6 @@ var codeInfo = map[Code]struct {
 	E7005: {"INVALID_VALUE", "invalid value"},
 	E7006: {"JSON_OUTPUT_FAILED", "stdout JSON serialization failed"},
 	E7007: {"CONFIG_PATH_INVALID", "config path invalid or unreadable"},
-	E7008: {"SELF_UPDATE_BLOCKED", "self-update blocked by install source policy"},
 
 	E9001: {"INTERNAL_INVARIANT", "internal invariant failed"},
 	E9002: {"INTERNAL_PANIC", "panic caught at boundary"},
@@ -195,7 +193,7 @@ func exitFor(code Code) int {
 	switch code {
 	case E1011, E4006, E9004:
 		return 130
-	case E2005, E3001, E3004, E3008, E3009, E6003, E6004, E7001, E7002, E7003, E7004, E7005, E7007, E7008:
+	case E2005, E3001, E3004, E3008, E3009, E6003, E6004, E7001, E7002, E7003, E7004, E7005, E7007:
 		return 2
 	case E7006:
 		return 1

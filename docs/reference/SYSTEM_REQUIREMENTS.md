@@ -6,6 +6,21 @@
 
 ---
 
+## 0. 全盘扫描权限（v1.1.1 起）
+
+`detect --scan` 在未指定 `--roots` 时使用默认全盘根（Linux `/`、`/home`、`/opt`、`/usr/local`；Windows 所有固定盘符），`detect --dir <volume-root> --recursive` 从文件系统根递归遍历。这类**全盘扫描要求 elevated 进程**：
+
+| 平台 | 可接受的运行身份 |
+|---|---|
+| Linux | `root`（euid 0），或 `sudo one-more-ffmpeg detect --scan ...` |
+| Windows | 提升的 Administrator 令牌，或 `SYSTEM` 账户 |
+
+普通权限下执行全盘扫描返回 `OMF-E6003`（`SYSTEM_SCOPE_DENIED`），JSON `details` 含 `elevated:false` 与 `scan:true`，并在消息中提示用 sudo/管理员重新运行。这样可以避免普通用户得到大量"权限拒绝"导致的**不完整且误导**的扫描结果。
+
+**不受影响**：指定具体目录的扫描（`--dir <普通目录>`、`--scan --roots <dir1,dir2>`）不需要提权，普通用户可正常使用。
+
+---
+
 ## 1. 操作系统
 
 ### Windows
