@@ -41,7 +41,7 @@ alias omf=./one-more-ffmpeg-v1.1.0-linux-amd64
 
 # 1) 确认能跑
 omf version
-# 期望：OneMoreFFmpeg 1.0.2 (...) linux/amd64 ...
+# 期望：OneMoreFFmpeg 1.1.0 (...) linux/amd64 ...
 
 # 2) 安装（默认 btbn 的 daily GPL 版）。会联网下载，几十 MB，请耐心等待，不要 Ctrl+C！
 omf install --apply
@@ -110,6 +110,10 @@ ffmpeg -version                              # 新窗口里验证
 | `detect` | 扫描系统里**已有的** FFmpeg（PATH/常见目录） | 否 |
 | `uninstall --apply` | 把某版本移入 quarantine（可恢复） | 是（默认 dry-run） |
 | `journal list` / `journal rollback --apply` | 看流水 / 回滚 | rollback 是 |
+| `provider list` / `provider add --apply` | 看 / 添加 provider | add 是（默认 dry-run） |
+| `release list` / `release install --apply` | 看官方版本 / 安装指定版本 | install 是（默认 dry-run） |
+| `capabilities --dir <root>` / `--only <kind>` | 检查 FFmpeg 能力（默认走缓存） | 否（只读，写缓存文件） |
+| `update` / `update --apply` | 检查新版 / 自更新本程序 | apply 是（默认 dry-run） |
 
 > `detect` 扫的是「系统里已经能找到的」FFmpeg。你刚 `install` 完、还没 `env set` 时，它不在 PATH 里，`detect` 可能显示 0——这**不代表安装失败**，用 `doctor` 看托管安装才准。
 
@@ -228,7 +232,23 @@ omf doctor                 # healthy: true
 
 ---
 
-## 9. 下一步
+## 9. 更新 OneMoreFFmpeg 自己（v1.1 新功能）
+
+工具能**自己更新自己**（只更新 CLI 程序，不影响已安装的 FFmpeg）：
+
+```bash
+omf update            # 只检查有没有新版，不改动（默认 dry-run）
+omf update --apply    # 下载新版、校验 SHA-256、原子替换当前程序
+omf update --json     # 机器可读输出；外部程序据此决定是否提示用户
+```
+
+- 用 Scoop 安装的用户也可以用 `scoop update one-more-ffmpeg`，两者等价；
+- 替换程序时若失败会自动回滚到旧版，不会把工具弄坏；
+- Windows 上正在运行的程序不能直接覆盖，`--apply` 会用"旧文件改名 → 新文件就位"策略完成。
+
+> 下载 FFmpeg 时，如果终端是交互式的会显示进度条（含百分比与预计剩余时间）；在 CI、`--json` 或输出被重定向（pipe）时改为纯文本阶段日志或完全不输出动画字符，stdout 始终只有 JSON。
+
+## 10. 下一步
 
 - 内置完整教程：`omf --in-detail-usage`
 - 进阶教程：[`USAGE.md`](USAGE.md)

@@ -55,6 +55,15 @@ ENVIRONMENT / HEALTH
   journal rollback --journal <id> --apply --json
                                           install/uninstall/env rollback (default dry-run)
 
+SELF-UPDATE / OUTPUT
+  update --json                           check for a newer CLI (dry-run)
+  update --apply --json                   download, verify SHA-256, replace this binary
+      --check and --apply are mutually exclusive; amd64 only; data schema update/v1.
+  --log-level debug|trace                 diagnostics on stderr (trace is more verbose)
+  --quiet                                 only errors (overrides --log-level)
+  Download/update progress: TTY shows animated bar (ETA), CI/pipes show plain
+      stage lines, --json suppresses it; progress never writes to stdout.
+
 SAFETY
   - Install/uninstall/rollback/provider add are dry-run by default.
   - download and capabilities cache can write without --apply.

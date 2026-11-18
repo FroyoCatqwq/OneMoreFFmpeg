@@ -69,6 +69,17 @@ Get-FileHash .\one-more-ffmpeg-v1.1.0-windows-amd64.exe -Algorithm SHA256
 
 Release 同时附带 Sigstore build provenance attestation，可用 `gh attestation verify` 校验来源。
 
+## 保持更新
+
+v1.1 起工具可检查并更新自身。Scoop 安装用 `scoop update one-more-ffmpeg`；手动安装的二进制可用：
+
+```bash
+one-more-ffmpeg update            # 仅检查，输出 update_available
+one-more-ffmpeg update --apply    # 下载校验后替换自身
+```
+
+`--apply` 会校验新版本的 SHA-256 digest 并原子替换，失败自动回滚。`--json` 下仅 stdout 输出 JSON 信封，进度与日志走 stderr。
+
 ## 下一步
 
 安装完成后按 [`HOWTO.md`](HOWTO.md) 的黄金顺序操作：`install --apply` → `env set --apply` → 开新终端 → `ffmpeg` 可用。
