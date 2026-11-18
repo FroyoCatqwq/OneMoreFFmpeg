@@ -1,7 +1,18 @@
 # 更新日志
 
 本项目遵循 [Semantic Versioning 2.0.0](../reference/VERSIONING.md)。格式基于 [Keep a Changelog](https://keepachangelog.com/)。
-仅保留当前及上一版本的记录；更早的 Release 与历史快照已撤回。
+仅保留当前及上一版本的记录，外加未发布版本 roadmap；更早的 Release 与历史快照已撤回。
+
+## [Unreleased] — v1.1.0（开发中）
+
+### Added
+- **`update` 命令（自更新）**：默认 dry-run 检查 GitHub Releases 最新稳定版，`--apply` 下载并校验 SHA-256 后原子替换当前可执行文件；Windows 采用旧文件改名策略，失败自动回滚。新增 `onemoreffmpeg.update/v1` schema（契约扩为 19 命令 / 18 schema）。
+- **下载进度条**：`download` 在非 `--json` 模式向 stderr 渲染人类可读进度；`--json` 保持 stdout 纯 JSON。
+- **独立 `internal/output` 层**：CLI 与下载层不再直接使用 JSON/表格/进度第三方库（encoding/json/v2、go-pretty、tidwall/pretty 封装在 output 包内）。
+- **独立 `internal/cache` 层**：基于 otter 的内存缓存 + 磁盘持久化（TTL、原子写），调用方不直接接触缓存库。
+
+### Changed
+- 引入依赖：`jedib0t/go-pretty/v6`、`tidwall/pretty`、`maypok86/otter/v2`、标准库 `encoding/json/v2`；`gofrs/flock` 继续作为文件并发锁。
 
 ## [1.0.3] — 2026-11-19
 

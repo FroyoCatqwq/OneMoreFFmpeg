@@ -40,6 +40,7 @@ var knownCommands = map[string]struct{}{
 	"journal.list":     {},
 	"journal.rollback": {},
 	"release.list":     {},
+	"update":           {},
 }
 
 // commandDataSchemas is the authoritative command -> allowed data.schema map.
@@ -64,6 +65,7 @@ var CommandDataSchemas = map[string][]string{
 	"journal.list":     {model.JournalListSchema},
 	"journal.rollback": {model.JournalActionSchema},
 	"release.list":     {model.ReleaseCatalogSchema},
+	"update":           {model.UpdateSchema},
 }
 
 // ValidateCommand checks that a result command is part of the frozen CLI set.

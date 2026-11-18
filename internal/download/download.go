@@ -22,6 +22,7 @@ import (
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/checksum"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/output"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
 )
 
@@ -51,6 +52,12 @@ type Options struct {
 	// file still verifies against the pinned sha256, but the second, independent
 	// source is missing -- the run must say so instead of silently downgrading.
 	Warn func(string)
+
+	// ProgressWriter, when non-nil, receives a human-readable download progress
+	// bar. CLI callers leave it nil under --json so stdout stays pure JSON.
+	// The progress renderer lives in internal/output; this package never
+	// imports a presentation library directly.
+	ProgressWriter io.Writer
 }
 
 // Downloader is safe for reuse; each Fetch is independent.
@@ -209,9 +216,18 @@ func (d *Downloader) download(ctx context.Context, rawURL, finalPath, expected s
 		return apperrors.New(apperrors.E4005, "cannot create temporary file").WithCause(err.Error())
 	}
 	tmpPath := tmp.Name()
+	finishProgress := func() {} // replaced below once the bar exists
 	cleanup := func() {
 		_ = tmp.Close()
 		_ = os.Remove(tmpPath)
+		finishProgress()
+	}
+
+	// Progress rendering is owned by internal/output; --json callers pass nil.
+	var progressBar *output.Progress
+	if d.options.ProgressWriter != nil {
+		progressBar = output.NewProgress(d.options.ProgressWriter, filepath.Base(finalPath), response.ContentLength)
+		finishProgress = func() { progressBar.Finish() }
 	}
 
 	hasher := sha256.New()
@@ -225,6 +241,9 @@ func (d *Downloader) download(ctx context.Context, rawURL, finalPath, expected s
 		read, readErr := response.Body.Read(buffer)
 		if read > 0 {
 			total += int64(read)
+			if progressBar != nil {
+				progressBar.Update(total)
+			}
 			if total > d.options.MaxBytes {
 				cleanup()
 				return apperrors.New(apperrors.E4004, "download exceeds size limit").WithDetails(map[string]any{"limit": d.options.MaxBytes})
@@ -257,13 +276,16 @@ func (d *Downloader) download(ctx context.Context, rawURL, finalPath, expected s
 	}
 	if err := tmp.Close(); err != nil {
 		_ = os.Remove(tmpPath)
+		finishProgress()
 		return apperrors.New(apperrors.E4005, "cannot close temporary file").WithCause(err.Error())
 	}
 	_ = os.Chmod(tmpPath, 0o644)
 	if err := commitFile(tmpPath, finalPath); err != nil {
 		_ = os.Remove(tmpPath)
+		finishProgress()
 		return apperrors.New(apperrors.E4005, "cannot commit downloaded file").WithCause(err.Error())
 	}
+	finishProgress()
 	return nil
 }
 

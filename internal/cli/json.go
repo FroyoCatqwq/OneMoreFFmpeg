@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -14,6 +12,7 @@ import (
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/contracts"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/output"
 )
 
 func wantsJSON(args []string) bool {
@@ -66,13 +65,13 @@ func writerFor(cmd *urfave.Command) io.Writer {
 }
 
 func encodeJSON(w io.Writer, value any) error {
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(value); err != nil {
+	// JSON encoding is owned by internal/output; the CLI never depends on a
+	// serialization library directly.
+	payload, err := output.EncodeJSON(value)
+	if err != nil {
 		return apperrors.New(apperrors.E7006, "stdout JSON serialization failed").WithCause(err.Error())
 	}
-	if _, err := w.Write(buf.Bytes()); err != nil {
+	if _, err := w.Write(payload); err != nil {
 		// Mark this specific error so writeFailure does not attempt a second
 		// stdout write (which would mix a partial object with an error object).
 		return apperrors.New(apperrors.E7006, "stdout JSON write failed").WithCause(err.Error()).

@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -101,12 +102,19 @@ func downloadCommand() *urfave.Command {
 				return apperrors.New(apperrors.E7001, "--dir must be an absolute path").WithDetails(map[string]any{"dir": directory})
 			}
 			timeout, _ := time.ParseDuration(cfg.Network.Timeout)
+			// A progress bar is human output only: it goes to stderr and is
+			// disabled under --json so stdout stays a pure JSON envelope.
+			var progressWriter io.Writer
+			if !jsonEnabled(cmd) {
+				progressWriter = stderrFrom(ctx)
+			}
 			instance, err := download.New(download.Options{
-				Dir:          directory,
-				MaxBytes:     maxBytes,
-				MaxRedirects: cfg.Download.MaxRedirects,
-				Timeout:      timeout,
-				Warn:         warnToStderr(ctx),
+				Dir:            directory,
+				MaxBytes:       maxBytes,
+				MaxRedirects:   cfg.Download.MaxRedirects,
+				Timeout:        timeout,
+				Warn:           warnToStderr(ctx),
+				ProgressWriter: progressWriter,
 			})
 			if err != nil {
 				return err

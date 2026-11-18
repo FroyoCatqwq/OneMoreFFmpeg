@@ -28,13 +28,13 @@ RHEL 9+：`sudo dnf install -y https://github.com/FroyoCatqwq/OneMoreFFmpeg/rele
 已实现：发现（PATH / 环境变量 / 指定目录 / 常见目录 / 显式 `--scan` 全盘扫描）、三件套校验、13 项能力检查（带缓存）、
 BtbN + BnqDzj + 自定义 URL（`--url` / `provider add`）、稳定版 / 每日构建 / release pin、下载（SHA-256 校验）、
 安装（安全解压、版本化目录、`current`、journal）、`uninstall`、`env status|set|unset|rollback`、`release list|install`、
-`journal list|rollback`、`doctor`，共 18 个冻结命令。写入类命令默认 dry-run，需 `--apply`；`download` 与能力缓存会立即写文件。
+`journal list|rollback`、`doctor`，共 19 个冻结命令（含 v1.1 新增的 `update`）。写入类命令默认 dry-run，需 `--apply`；`download` 与能力缓存会立即写文件。
 
 明确不做：包管理器识别（Scoop/winget/apt…）、Go API / 插件 / JSON-RPC / C ABI、GUI/TUI、FFmpeg 自构建、私有制品库、自动更新。
 
 对外契约只有 **CLI 参数 + stdout JSON（或文件产物）+ stderr 日志 + 退出码**：
 
-- [`CLI_SCHEMA.md`](docs/reference/CLI_SCHEMA.md) — 唯一契约：JSON v1，18 命令 / 17 个 `/v1` schema，`freeze_test.go` 守护；
+- [`CLI_SCHEMA.md`](docs/reference/CLI_SCHEMA.md) — 唯一契约：JSON v1，19 命令 / 18 个 `/v1` schema，`freeze_test.go` 守护；
 - [`ERROR_CODES.md`](docs/reference/ERROR_CODES.md) — 错误码 / 警告码 / 退出码（0/1/2/130）注册表；
 - 字段示例见 [`reference/schemas/`](docs/reference/schemas/README.md)。
 

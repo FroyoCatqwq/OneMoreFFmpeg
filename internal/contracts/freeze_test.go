@@ -20,7 +20,7 @@ var frozenCommands = []string{
 	"capabilities", "detect", "doctor", "download", "env.rollback", "env.set",
 	"env.status", "env.unset", "install", "journal.list", "journal.rollback",
 	"provider.add", "provider.list", "release.list", "resolve", "uninstall",
-	"validate", "version",
+	"update", "validate", "version",
 }
 
 var frozenDataSchemas = []string{
@@ -39,6 +39,7 @@ var frozenDataSchemas = []string{
 	"onemoreffmpeg.release-catalog/v1",
 	"onemoreffmpeg.release/v1",
 	"onemoreffmpeg.uninstall/v1",
+	"onemoreffmpeg.update/v1",
 	"onemoreffmpeg.validate/v1",
 	"onemoreffmpeg.version/v1",
 }

@@ -144,6 +144,7 @@ func New(opts RunOptions) (*urfave.Command, error) {
 			uninstallCommand(),
 			journalCommand(),
 			releaseCommand(),
+			updateCommand(opts.Version),
 		},
 		Before: func(ctx context.Context, cmd *urfave.Command) (context.Context, error) {
 			cfg, configPath, err := loadConfig(cmd)

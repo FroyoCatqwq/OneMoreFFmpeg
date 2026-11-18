@@ -44,7 +44,8 @@
         { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.env-set/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/envSet" } } } },
         { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.doctor/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/doctor" } } } },
         { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.journal-list/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/journalList" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.journal-action/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/journalAction" } } } }
+        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.journal-action/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/journalAction" } } } },
+        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.update/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/update" } } } }
       ]
     },
     "error": {
@@ -143,6 +144,20 @@
       "type": "object",
       "required": ["schema", "journal_id", "action"],
       "properties": { "schema": { "const": "onemoreffmpeg.journal-action/v1" }, "journal_id": { "type": "string" }, "action": { "type": "string" }, "applied": { "type": "boolean" }, "detail": { "type": "string" } }
+    },
+    "update": {
+      "type": "object",
+      "required": ["schema", "current_version", "latest_version", "update_available", "applied"],
+      "properties": {
+        "schema": { "const": "onemoreffmpeg.update/v1" },
+        "current_version": { "type": "string" },
+        "latest_version": { "type": "string" },
+        "update_available": { "type": "boolean" },
+        "asset_name": { "type": "string" },
+        "release_url": { "type": "string" },
+        "applied": { "type": "boolean" },
+        "operations": { "type": "array", "items": { "type": "string" } }
+      }
     }
   }
 }

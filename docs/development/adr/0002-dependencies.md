@@ -417,11 +417,11 @@ github.com/sethvargo/go-retry
 
 ---
 
-## 8. 当前实际依赖（v1.0.3，权威）
+## 8. 当前实际依赖（v1.1.0-dev，权威）
 
 以 `go.mod` 为准；许可证全文见 `THIRD_PARTY_NOTICES.md` 与 `third_party/licenses/`。
 
-### 8.1 直接依赖（16 个）
+### 8.1 直接依赖（20 个）
 
 | 库 | 版本 | 用途 |
 |---|---|---|
@@ -441,11 +441,17 @@ github.com/sethvargo/go-retry
 | `github.com/gofrs/flock` | v0.13.2 | **v1.0.1 引入**：跨进程 OS 文件锁（替代手写 flock/LockFileEx） |
 | `github.com/rogpeppe/go-internal` | v1.16.0 | **v1.0.1 引入**：`lockedfile` 原子写 journal |
 | `github.com/santhosh-tekuri/jsonschema/v6` | v6.0.3 | **v1.0.1 引入**：校验 golden examples 与 `contract.schema.json` |
+| `github.com/jedib0t/go-pretty/v6` | v6.9.2 | **v1.1 引入**：表格与下载进度条（封装在 `internal/output`） |
+| `github.com/tidwall/pretty` | v1.3.0 | **v1.1 引入**：JSON 美化（封装在 `internal/output`） |
+| `github.com/maypok86/otter/v2` | v2.4.0 | **v1.1 引入**：内存缓存（封装在 `internal/cache`） |
+| 标准库 `encoding/json/v2` | Go 1.27 内置 | **v1.1 引入**：JSON 编解码（封装在 `internal/output`） |
+
+`gofrs/flock` 继续作为文件并发锁（v1.0.1 引入），本版无变更。
 
 ### 8.2 间接依赖（2 个）
 
 - `go.yaml.in/yaml/v3` v3.0.5（CI YAML 校验用）
-- `golang.org/x/text` v0.14.0
+- `golang.org/x/text` v0.22.0
 
 ### 8.3 开发工具链（不在 go.mod）
 
@@ -458,3 +464,4 @@ github.com/sethvargo/go-retry
 |---|---|
 | Phase 1（v0.6.0） | 落地 §5 的 13 项最小集 |
 | v1.0.1 | 新增 `gofrs/flock`、`rogpeppe/go-internal/lockedfile`、`santhosh-tekuri/jsonschema/v6`；引入 golangci-lint v2 + gosec 门禁 |
+| v1.1.0-dev | 新增 `go-pretty/v6`、`tidwall/pretty`、`maypok86/otter/v2`、标准库 `encoding/json/v2`；输出/缓存分别收敛到 `internal/output`、`internal/cache`，CLI 不直接依赖第三方库 |

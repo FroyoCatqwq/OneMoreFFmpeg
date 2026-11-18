@@ -30,7 +30,7 @@
 | [`reference/ENVIRONMENT.md`](reference/ENVIRONMENT.md) / [`PLATFORM_ENVIRONMENT.md`](reference/PLATFORM_ENVIRONMENT.md) | PATH / 环境变量 / current / journal 的跨平台细则 |
 | [`reference/SYSTEM_REQUIREMENTS.md`](reference/SYSTEM_REQUIREMENTS.md) | 系统要求、权限与提权、事务锁 |
 | [`reference/VERSIONING.md`](reference/VERSIONING.md) | SemVer 版本与发布规范 |
-| [`reference/schemas/`](reference/schemas/README.md) | 17 个 `/v1` data schema 的 golden 示例 |
+| [`reference/schemas/`](reference/schemas/README.md) | 18 个 `/v1` data schema 的 golden 示例 |
 | [`reference/man/one-more-ffmpeg.1`](reference/man/one-more-ffmpeg.1) | Linux man 页 |
 
 ## 3. 开发与决策（development/）
@@ -57,7 +57,7 @@
 | 内置来源 | BtbN + BnqDzj nonfree；支持自定义 URL（强制 SHA-256 校验） |
 | channel | `stable` / `daily`，解析为 release tag + asset SHA-256 |
 | 能力命令 | 13 个 FFmpeg 参数 / 能力入口 |
-| 对外契约 | 18 命令 / 17 个 `/v1` data schema / 退出码 0/1/2/130，`internal/contracts/freeze_test.go` 守护 |
+| 对外契约 | 19 命令 / 18 个 `/v1` data schema / 退出码 0/1/2/130，`internal/contracts/freeze_test.go` 守护 |
 | 外部集成 | 只调用 CLI 可执行文件；不提供 Go API / 插件 / JSON-RPC / C ABI |
 | 明确不做 | 包管理器识别、GUI/TUI、FFmpeg 自构建、私有制品库、自动更新服务 |
 | 许可证 | GPL-3.0-only；nonfree FFmpeg 元数据可公开，二进制不可随公开 Release 分发 |

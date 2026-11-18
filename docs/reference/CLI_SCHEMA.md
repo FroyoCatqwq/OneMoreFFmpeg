@@ -105,8 +105,9 @@
 | `journal list` / `journal rollback` | 已实现（rollback 默认 dry-run） |
 | `release list` / `release install` | 已实现（动态官方版本 + 近 7 天快照） |
 | `capabilities --only <kind>` | 已实现（单命令、单列表输出） |
+| `update` | 已实现（v1.1，默认 dry-run 检查；`--apply` 才自更新） |
 
-18 个命令的 data 表与示例**均已实现**，并由 `internal/contracts` 做字段级校验；`data.schema` 冻结为 `/v1`，未注册的 schema、主版本升级或命令/data.schema 不匹配会得到 `OMF-E7003`（契约校验由 `internal/contracts` 守护）。
+19 个命令的 data 表与示例**均已实现**（含 v1.1 的 `update`），并由 `internal/contracts` 做字段级校验；`data.schema` 冻结为 `/v1`，未注册的 schema、主版本升级或命令/data.schema 不匹配会得到 `OMF-E7003`（契约校验由 `internal/contracts` 守护）。
 
 ### 4.1 `version`
 
@@ -566,7 +567,7 @@ provider 摘要：
 
 - `channel=stable`：版本号来自 FFmpeg 官网 release 页，9.0 线展示其最后一个补丁（如 9.0.2），8.1 线展示 8.1.3；下载资产从 provider release URL 解析；`--days` 对 stable 不适用并输出 0，`--count` 会截断排序后的版本；
 - `channel=daily`：默认展示最近 7 天的 `autobuild-*` 快照；`--days` 改变窗口，`--count` 限制数量；版本从资产名解析，无法解析时回退为 snapshot tag（覆盖 `master` / `nX.Y-latest` 资产）；
-- `release install`：`--version` 或 `--snapshot` 选择（二者互斥），未指定时安装列表第一个；为支持选择旧版本，内部会忽略 `--count` 并扩大查找窗口；默认 dry-run，`--apply` 才安装；nonfree provider 需 `--allow-nonfree`，未显式指定 `--variant` 时自动使用 `nonfree`。`release install` 输出的 `result.command` 为 `install`，复用 install 的 data schema，**不作为独立 result.command 计入 18 个冻结命令**。
+- `release install`：`--version` 或 `--snapshot` 选择（二者互斥），未指定时安装列表第一个；为支持选择旧版本，内部会忽略 `--count` 并扩大查找窗口；默认 dry-run，`--apply` 才安装；nonfree provider 需 `--allow-nonfree`，未显式指定 `--variant` 时自动使用 `nonfree`。`release install` 输出的 `result.command` 为 `install`，复用 install 的 data schema，**不作为独立 result.command 计入 19 个冻结命令**。
 
 ### 4.16 `journal list` / `journal rollback`（已实现）
 
@@ -576,11 +577,33 @@ provider 摘要：
 - `env rollback --journal <id>` 只接受 `env-set` / `env-unset` 记录；指向 install/uninstall 记录或已回滚记录返回 `OMF-E7001`，id 非法/缺失返回 `OMF-E6005`；
 - uninstall 先把安装目录移入 `<data-root>/quarantine/<journal-id>/`，回滚时恢复目录与 current。
 
+### 4.17 `update`（v1.1，默认 dry-run）
+
+`data.schema` = `onemoreffmpeg.update/v1`。查询 GitHub Releases 的最新稳定版，与内建版本比较；默认只检查，`--apply` 才下载并替换当前可执行文件。
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `current_version` | string | 当前内建版本 |
+| `latest_version` | string | 最新稳定版（有更新时） |
+| `update_available` | bool | 是否存在更新 |
+| `asset_name` | string | 对应平台的产物名（有更新时） |
+| `release_url` | string | Release 页面（有更新时） |
+| `applied` | bool | 是否已执行替换（仅 `--apply` 成功为 true） |
+| `operations` | array | 检查/应用的操作摘要 |
+
+规则：
+
+- `--check` 与 `--apply` 互斥，同时给出返回 `OMF-E1001`；
+- 默认 dry-run：只检查不下载、不替换（`applied=false`）；
+- `--apply` 时按平台选择二进制，SHA-256 校验通过后原子替换；Windows 因运行中的 exe 不能覆盖，采用"旧文件改名 → 新文件就位 → 删除旧文件"，任一步失败回滚；
+- 进度条走 stderr，`--json` 时不渲染，stdout 仍是纯 JSON 信封；
+- 只支持 amd64（Windows/Linux）产物；其它平台返回 `OMF-E3007`。
+
 ---
 
 ## 5. 版本与兼容性
 
-> **Phase 6 契约冻结（2026-11-14）**：命令集（18 个 result.command）、`data.schema` 集（17 个，全 `/v1`）与退出码映射已冻结，
+> **Phase 6 契约冻结（2026-11-14）**：命令集（19 个 result.command）、`data.schema` 集（18 个，全 `/v1`）与退出码映射已冻结，
 > 由 `internal/contracts/freeze_test.go` 在 CI 中守护——任何静默改动都会使测试失败。契约变更必须走主版本升级与 [`VERSIONING.md`](VERSIONING.md)。
 > 外部消费者见 [`../../examples/external-caller/`](../../examples/external-caller/README.md)。
 

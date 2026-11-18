@@ -23,6 +23,7 @@ const (
 	JournalActionSchema  = "onemoreffmpeg.journal-action/v1"
 	CapabilityListSchema = "onemoreffmpeg.capability-list/v1"
 	ReleaseCatalogSchema = "onemoreffmpeg.release-catalog/v1"
+	UpdateSchema         = "onemoreffmpeg.update/v1"
 )
 
 var KnownDataSchemas = map[string]struct{}{
@@ -43,6 +44,19 @@ var KnownDataSchemas = map[string]struct{}{
 	JournalActionSchema:  {},
 	CapabilityListSchema: {},
 	ReleaseCatalogSchema: {},
+	UpdateSchema:         {},
+}
+
+// UpdateData is the result payload for `update --json`.
+type UpdateData struct {
+	Schema          string   `json:"schema"`
+	CurrentVersion  string   `json:"current_version"`
+	LatestVersion   string   `json:"latest_version"`
+	UpdateAvailable bool     `json:"update_available"`
+	AssetName       string   `json:"asset_name,omitempty"`
+	ReleaseURL      string   `json:"release_url,omitempty"`
+	Applied         bool     `json:"applied"`
+	Operations      []string `json:"operations,omitempty"`
 }
 
 type Result struct {

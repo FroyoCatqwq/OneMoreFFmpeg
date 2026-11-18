@@ -7,7 +7,7 @@ OMF_E2E_PYTHON = "3.14"
 
 [tasks."e2e-pytest"]
 description = "Run cross-platform CLI e2e tests with pytest/asyncio"
-run = "uv run --python 3.14 --with-requirements tests/e2e/requirements.txt pytest -n auto --timeout=180 tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py tests/e2e/test_env_real_e2e.py tests/e2e/test_real_network_e2e.py"
+run = "uv run --python 3.14 --with-requirements tests/e2e/requirements.txt pytest -n auto --timeout=180 tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py tests/e2e/test_env_real_e2e.py tests/e2e/test_real_network_e2e.py tests/e2e/test_update_e2e.py"
 
 [tasks."e2e-robot"]
 description = "Run Robot Framework smoke suite"

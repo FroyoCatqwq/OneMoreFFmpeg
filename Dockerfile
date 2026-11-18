@@ -26,7 +26,8 @@ CMD ["sh", "-c", "set -e; \
   go test -count=1 ./...; \
   uv run --python 3.14 --with-requirements tests/e2e/requirements.txt \
     pytest -c tests/e2e/pytest.ini -n 2 -q \
-    tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py tests/e2e/test_env_real_e2e.py; \
+    tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py tests/e2e/test_env_real_e2e.py \
+    tests/e2e/test_real_network_e2e.py tests/e2e/test_update_e2e.py; \
   uv run --python 3.14 --with-requirements tests/e2e/requirements.txt \
     robot --outputdir tests/e2e/results/robot tests/e2e/robot; \
   git clone --depth 1 --branch v1.14.0 https://github.com/bats-core/bats-core.git /tmp/bats-core; \

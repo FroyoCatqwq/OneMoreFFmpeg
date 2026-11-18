@@ -14,7 +14,7 @@ pwsh -NoProfile -Command '
   go build -trimpath -o dist/one-more-ffmpeg-windows-amd64.exe ./cmd/one-more-ffmpeg
   $env:OMF_BINARY = (Resolve-Path "dist/one-more-ffmpeg-windows-amd64.exe").Path
   uv run --python 3.14 --with-requirements tests/e2e/requirements.txt `
-    pytest -c tests/e2e/pytest.ini -n 2 -q tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py tests/e2e/test_env_real_e2e.py tests/e2e/test_real_network_e2e.py
+    pytest -c tests/e2e/pytest.ini -n 2 -q tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py tests/e2e/test_env_real_e2e.py tests/e2e/test_real_network_e2e.py tests/e2e/test_update_e2e.py
   uv run --python 3.14 --with-requirements tests/e2e/requirements.txt `
     robot --outputdir tests/e2e/results/robot tests/e2e/robot
 '
@@ -73,7 +73,7 @@ docker compose up --build --abort-on-container-exit --exit-code-from e2e-fresh
 - 非法 release 拒绝；
 - asyncio 并行只读命令；
 - Windows junction / Linux symlink 与 shim 路径差异由同一套 pytest 用例覆盖；
-- `test_cli_full_e2e.py`：全部 18 个冻结命令的 JSON 信封形状、stdout JSON-only（含 help/`--json` 冲突）、
+- `test_cli_full_e2e.py`：全部 19 个冻结命令的 JSON 信封形状、stdout JSON-only（含 help/`--json` 冲突）、
   capabilities 字段级解析（版本/许可证/13 条命令/9 类列表/缓存命中与刷新）、9 种 `--only`、
   参数互斥（`--release` + provider flags、`--only` + `--help-topic`）、各错误码退出码。
 
