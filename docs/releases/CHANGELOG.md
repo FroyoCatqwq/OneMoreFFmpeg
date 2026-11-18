@@ -3,6 +3,18 @@
 本项目遵循 [Semantic Versioning 2.0.0](../reference/VERSIONING.md)。格式基于 [Keep a Changelog](https://keepachangelog.com/)。
 仅保留当前及上一版本的记录；更早的 Release 与历史快照已撤回。
 
+## [1.0.3] — 2026-11-19
+
+Bugfix 版本。全量审查核心包（provider/download/capabilities/install/env）后修复潜在 bug。
+
+### Fixed
+- 重装同一 SHA 并加 `--emit-trio-lock` 时不再静默忽略该 flag（reuse 分支补写 lock 并回写 `install.json` 的 `LockPath`）。
+- `capabilities list <kind>` 缓存命中时按当前 trio 状态补 `W1001 ffplay is missing`，与全量收集结果一致。
+- `--days` 极大正数不再因 `time.Duration` 溢出导致 daily catalog 过滤为空（clamp 100 年上界 + `AddDate`）。
+- Linux 下 `env status` 的 PATH 变量名比较改为平台敏感（`envNameKey`），小写 `path` 不再被误判为 PATH。
+
+四项均附回归测试；CLI 外部契约不变。
+
 ## [1.0.2] — 2026-11-18
 
 Bugfix 版本。全量审查每个包与每份文档后修复确认的缺陷。

@@ -135,6 +135,29 @@ func TestInstallApplySwitchesCurrentAndJournals(t *testing.T) {
 	require.Equal(t, "onemoreffmpeg.install-record/v1", stored["schema"])
 }
 
+func TestInstallReuseHonorsEmitLock(t *testing.T) {
+	fake := testutil.NewFakeFFmpeg(t)
+	enableFakeVersion(t)
+	archivePath, sha := buildArchive(t, fake)
+	root := t.TempDir()
+
+	// Initial install without a trio lock.
+	first, err := install.Run(context.Background(), install.Options{
+		DataRoot: root, Release: testRelease(sha), ArchivePath: archivePath, Apply: true,
+	})
+	require.NoError(t, err)
+	require.NoFileExists(t, filepath.Join(first.RootDir, "ffmpeg-trio.lock"))
+
+	// Re-applying the same install with EmitLock must produce the lock file.
+	second, err := install.Run(context.Background(), install.Options{
+		DataRoot: root, Release: testRelease(sha), ArchivePath: archivePath,
+		Apply: true, Force: true, EmitLock: true,
+	})
+	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(second.RootDir, "ffmpeg-trio.lock"))
+	require.NotEmpty(t, second.LockPath)
+}
+
 func TestInstallForceReplacesExistingDirectory(t *testing.T) {
 	fake := testutil.NewFakeFFmpeg(t)
 	enableFakeVersion(t)

@@ -1,6 +1,6 @@
 # Go 依赖库评估
 
-> 决策日期：2026-11-10；最近更新：2026-11-18（v1.0.2）
+> 决策日期：2026-11-10；最近更新：2026-11-19（v1.0.3）
 > 状态：已接受。§1–§7 是 2026-11-10 的**历史评估快照**（版本表为当时数据，不再更新）；
 > **当前实际依赖以 §8 与 `go.mod` / `THIRD_PARTY_NOTICES.md` 为准**。
 > 适用：OneMoreFFmpeg CLI-first 范围
@@ -389,7 +389,7 @@ github.com/ulikunitz/xz
 github.com/sethvargo/go-retry
 ```
 
-历史说明：Phase 0 时仓库只有 `go.mod`；上表是 Phase 1 计划的最小集（13 项）。**v1.0.2 的实际依赖（16 个直接 + 2 个间接）见 §8。**
+历史说明：Phase 0 时仓库只有 `go.mod`；上表是 Phase 1 计划的最小集（13 项）。**v1.0.3 的实际依赖（16 个直接 + 2 个间接）见 §8。**
 
 ---
 
@@ -413,11 +413,11 @@ github.com/sethvargo/go-retry
 >
 > 包管理器识别、Go API、JSON-RPC、gRPC、C ABI 插件都明确推迟，不进入当前依赖范围。
 >
-> **注意**：以上是 Phase 1 时的核心库决策；v1.0.2 追加了 3 个运行时库（flock / go-internal / jsonschema），见 §8。
+> **注意**：以上是 Phase 1 时的核心库决策；v1.0.3 追加了 3 个运行时库（flock / go-internal / jsonschema），见 §8。
 
 ---
 
-## 8. 当前实际依赖（v1.0.2，权威）
+## 8. 当前实际依赖（v1.0.3，权威）
 
 以 `go.mod` 为准；许可证全文见 `THIRD_PARTY_NOTICES.md` 与 `third_party/licenses/`。
 

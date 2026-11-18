@@ -82,7 +82,7 @@ func pathContains(environment []string, dir string) bool {
 	target := filepath.Clean(dir)
 	for _, pair := range environment {
 		key, value, ok := strings.Cut(pair, "=")
-		if !ok || !strings.EqualFold(key, "PATH") {
+		if !ok || envNameKey(key) != envNameKey("PATH") {
 			continue
 		}
 		for _, entry := range filepath.SplitList(value) {

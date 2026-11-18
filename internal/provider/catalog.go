@@ -153,7 +153,14 @@ func dailyCatalog(ctx context.Context, opts CatalogOptions, owner, repo string) 
 	if opts.Now != nil {
 		now = opts.Now
 	}
-	cutoff := now().UTC().Add(-time.Duration(opts.Days) * 24 * time.Hour)
+	// Clamp to a sane upper bound and use AddDate to avoid the int64-nanosecond
+	// overflow of time.Duration(days)*24h for very large --days values.
+	const maxCatalogDays = 36500 // 100 years
+	days := opts.Days
+	if days > maxCatalogDays {
+		days = maxCatalogDays
+	}
+	cutoff := now().UTC().AddDate(0, 0, -days)
 	entries := make([]CatalogEntry, 0, len(releases))
 	for _, release := range releases {
 		if !autobuildTagPattern.MatchString(release.TagName) || release.PublishedAt.Before(cutoff) {

@@ -71,6 +71,12 @@ func (c *Collector) CollectList(ctx context.Context, opts Options, kind string) 
 		cachePath = filepath.Join(cacheDir, "list-"+kind+"-"+fingerprint+".json")
 		if !opts.Refresh {
 			if cached, ok, cacheWarnings := readListCache(cachePath, kind, fingerprint); ok {
+				// A cached list must reflect the CURRENT trio state: ffplay may
+				// have gone missing after this list was cached. The full
+				// collector adds the same W1001 on a cache hit (see collect()).
+				if opts.Installation.FFplay == "" {
+					cached.Warnings = ensureWarning(cached.Warnings, newWarning(apperrors.W1001, "ffplay is missing", nil))
+				}
 				return cached, nil
 			} else {
 				warnings = append(warnings, cacheWarnings...)

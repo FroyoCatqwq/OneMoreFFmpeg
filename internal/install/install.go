@@ -96,6 +96,15 @@ func Run(ctx context.Context, opts Options) (model.InstallData, error) {
 					}
 					data.CurrentPointer = pointer
 				}
+				// Reusing an existing install must still honour --emit-lock: an
+				// earlier install may have been created without it, yet the user
+				// now explicitly asks for a trio lock file.
+				if opts.EmitLock && data.LockPath == "" {
+					data.LockPath = filepath.Join(targetDir, "ffmpeg-trio.lock")
+					if err := writeLock(targetDir, data); err != nil {
+						return model.InstallData{}, err
+					}
+				}
 				if err := writeRecord(targetDir, record{Schema: "onemoreffmpeg.install-record/v1", InstalledAt: now().UTC().Format(time.RFC3339), AssetName: opts.Release.AssetName, Installation: data}); err != nil {
 					return model.InstallData{}, err
 				}

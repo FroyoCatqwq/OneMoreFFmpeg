@@ -134,3 +134,17 @@ func TestDailyCatalogDefaultsToSevenDays(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, capped, 1)
 }
+
+func TestDailyCatalogHugeDaysDoesNotOverflow(t *testing.T) {
+	now := time.Date(2026, 11, 13, 12, 0, 0, 0, time.UTC)
+	server := catalogServer(t, now)
+	// A huge positive --days must be clamped, not overflow into a future
+	// cutoff that filters out every release (time.Duration(days)*24h bug).
+	entries, err := provider.ListCatalog(context.Background(), provider.CatalogOptions{
+		Provider: provider.IDBtbn, Channel: provider.ChannelDaily, Target: "win64",
+		Variant: "gpl", Linkage: "static", Days: 1 << 40, Count: 1,
+		Client: catalogClient(t, server), Now: func() time.Time { return now },
+	})
+	require.NoError(t, err)
+	require.Len(t, entries, 1, "huge days must still include recent releases")
+}
