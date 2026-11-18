@@ -18,6 +18,7 @@ import (
 
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/ffexec"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/logging"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 )
 
@@ -115,6 +116,7 @@ func CommandKeys(topic string) []string {
 }
 
 func (c *Collector) Collect(ctx context.Context, opts Options) (model.CapabilitySet, error) {
+	logger := logging.FromContext(ctx)
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -137,6 +139,7 @@ func (c *Collector) Collect(ctx context.Context, opts Options) (model.Capability
 
 	specs := commandSpecs(opts.HelpTopic)
 	fingerprint := c.capabilityFingerprint(opts.Installation, opts.HelpTopic, specs, opts.CommandTimeout)
+	logger.Debug("capability fingerprint", "topic", opts.HelpTopic, "fingerprint", fingerprint)
 
 	warnings := []model.Warning{}
 	if opts.Installation.FFplay == "" {
@@ -158,6 +161,7 @@ func (c *Collector) Collect(ctx context.Context, opts Options) (model.Capability
 		cached, ok, cacheWarnings := readCache(cachePath, fingerprint, specs, opts.HelpTopic, opts.Installation.ID)
 		warnings = mergeWarnings(warnings, cacheWarnings)
 		if ok {
+			logger.Debug("capability cache hit", "path", cachePath)
 			cached.CacheHit = true
 			if opts.Installation.FFplay == "" {
 				cached.Warnings = ensureWarning(cached.Warnings, newWarning(apperrors.W1001, "ffplay is missing", nil))

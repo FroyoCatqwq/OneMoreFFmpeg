@@ -9,6 +9,7 @@ require (
 	github.com/klauspost/compress v1.20.4
 	github.com/lmittmann/tint v1.2.1
 	github.com/mattn/go-isatty v0.0.24
+	github.com/maypok86/otter/v2 v2.4.0
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/rogpeppe/go-internal v1.16.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
@@ -25,7 +26,6 @@ require (
 
 require (
 	github.com/mattn/go-runewidth v0.0.16 // indirect
-	github.com/maypok86/otter/v2 v2.4.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/text v0.22.0 // indirect

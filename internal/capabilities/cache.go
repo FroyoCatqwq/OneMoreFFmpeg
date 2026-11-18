@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/lock"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/paths"
 )
@@ -61,6 +62,18 @@ func writeCache(path string, set model.CapabilitySet) *model.Warning {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return warningPtr(apperrors.W1007, "cannot create capability cache directory", map[string]any{"path": dir, "cause": err.Error()})
 	}
+	// Serialize writers across processes with the shared OS-level lock, so a
+	// concurrent capability refresh cannot interleave renamed cache files.
+	// Keep sidecar lock files OUTSIDE the cache directory so readers that
+	// enumerate it see only .json entries. The sibling directory is derived
+	// deterministically from the cache dir name for cross-process consistency.
+	lockDir := filepath.Join(filepath.Dir(dir), "."+filepath.Base(dir)+".locks")
+	lockPath := filepath.Join(lockDir, filepath.Base(path)+".lock")
+	unlock, err := lock.FilePath(lockPath)
+	if err != nil {
+		return warningPtr(apperrors.W1007, "cannot lock capability cache", map[string]any{"path": path, "cause": err.Error()})
+	}
+	defer unlock()
 	data, err := json.MarshalIndent(set, "", "  ")
 	if err != nil {
 		return warningPtr(apperrors.W1007, "cannot encode capability cache", map[string]any{"path": path, "cause": err.Error()})

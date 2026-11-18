@@ -21,6 +21,7 @@ import (
 
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/checksum"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/logging"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/output"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
@@ -87,6 +88,8 @@ func New(options Options) (*Downloader, error) {
 
 // Fetch downloads, verifies and records one artifact.
 func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Artifact, error) {
+	logging.FromContext(ctx).Debug("download start", "asset", release.AssetName, "sha256", release.AssetSHA256)
+
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -224,7 +227,7 @@ func (d *Downloader) download(ctx context.Context, rawURL, finalPath, expected s
 	}
 
 	// Progress rendering is owned by internal/output; --json callers pass nil.
-	var progressBar *output.Progress
+	var progressBar output.Progress
 	if d.options.ProgressWriter != nil {
 		progressBar = output.NewProgress(d.options.ProgressWriter, filepath.Base(finalPath), response.ContentLength)
 		finishProgress = func() { progressBar.Finish() }

@@ -201,7 +201,7 @@ func (o Options) Apply(ctx context.Context, u *Update) error {
 	}()
 
 	hasher := sha256.New()
-	var progress *output.Progress
+	var progress output.Progress
 	if o.ProgressWriter != nil {
 		progress = output.NewProgress(o.ProgressWriter, u.AssetName, resp.ContentLength)
 	}

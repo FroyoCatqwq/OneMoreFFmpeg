@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/lock"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 )
 
@@ -146,6 +147,13 @@ func writeListCache(path string, value model.CapabilityListData) *model.Warning 
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return warningPtr(apperrors.W1007, "cannot create capability cache directory", map[string]any{"path": dir, "cause": err.Error()})
 	}
+	lockDir := filepath.Join(filepath.Dir(dir), "."+filepath.Base(dir)+".locks")
+	lockPath := filepath.Join(lockDir, filepath.Base(path)+".lock")
+	unlock, err := lock.FilePath(lockPath)
+	if err != nil {
+		return warningPtr(apperrors.W1007, "cannot lock capability list cache", map[string]any{"path": path, "cause": err.Error()})
+	}
+	defer unlock()
 	payload, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
 		return warningPtr(apperrors.W1007, "cannot encode capability list cache", map[string]any{"path": path, "cause": err.Error()})

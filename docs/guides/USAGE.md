@@ -16,16 +16,16 @@
 ## 2. 快速开始（Windows）
 
 ```powershell
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe version --json
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe detect --json
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe capabilities --dir C:\ffmpeg --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe version --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe detect --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe capabilities --dir C:\ffmpeg --json
 ```
 
 只查一类能力（真正只运行对应 FFmpeg 命令）：
 
 ```powershell
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe capabilities --dir C:\ffmpeg --only encoders --json
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe capabilities --dir C:\ffmpeg --only muxers --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe capabilities --dir C:\ffmpeg --only encoders --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe capabilities --dir C:\ffmpeg --only muxers --json
 ```
 
 支持的 `--only`：`muxers`、`demuxers`、`devices`、`decoders`、`encoders`、`filters`、`pixel_formats`、`channel_layouts`、`sample_formats`。单类探测也支持 `--cache-dir` / `--no-cache` / `--refresh`，缓存键按 kind 独立计算。
@@ -35,17 +35,17 @@
 稳定版版本信息来自 `https://ffmpeg.org/download.html#releases`，下载链接来自 provider release 资产。大版本线 `9.0` 会展示该线最后一个补丁版本（例如 `9.0.2`），`8.1` 展示 `8.1.3`；版本号不写死。
 
 ```powershell
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe release list --channel stable --target win64 --json
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe release list --channel daily --days 7 --json
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe release list --channel daily --days 14 --count 3 --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe release list --channel stable --target win64 --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe release list --channel daily --days 7 --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe release list --channel daily --days 14 --count 3 --json
 ```
 
 每日/快照版默认只展示最近 7 天。可指定 `--days` 调整窗口、`--count` 限制展示数量。stable 的 `days` 固定输出 0，但 `--count` 会截断版本列表；daily 资产名无法解析版本时回退为 snapshot tag。选择安装：
 
 ```powershell
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe release install --channel stable --version 9.0.2 --json
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe release install --channel stable --version 9.0.2 --apply --json
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe release install --channel daily --snapshot autobuild-2026-11-12-12-00 --apply --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe release install --channel stable --version 9.0.2 --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe release install --channel stable --version 9.0.2 --apply --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe release install --channel daily --snapshot autobuild-2026-11-12-12-00 --apply --json
 ```
 
 不传 `--version` / `--snapshot` 时安装当前列表里的第一个（最新）版本；二者不能同时使用。`--provider bnqdzj-nonfree` 且未显式指定 `--variant` 时自动使用 `nonfree`，但仍需 `--allow-nonfree`。`release install` 与 `install` 一样默认 dry-run。
@@ -53,11 +53,11 @@
 ## 4. 解析、下载、安装
 
 ```powershell
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe resolve --provider btbn --channel stable --target win64 --json |
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe resolve --provider btbn --channel stable --target win64 --json |
   Out-File -Encoding utf8 .\release.json
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe download --release .\release.json --json
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe install --release .\release.json --json
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe install --release .\release.json --apply --emit-trio-lock --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe download --release .\release.json --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe install --release .\release.json --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe install --release .\release.json --apply --emit-trio-lock --json
 ```
 
 PowerShell 7 推荐 `Out-File -Encoding utf8`；PowerShell 5 的 `>` 会生成 UTF-16LE，程序也能读取，但建议显式指定编码。
@@ -67,11 +67,11 @@ PowerShell 7 推荐 `Out-File -Encoding utf8`；PowerShell 5 的 `>` 会生成 U
 ## 5. 环境与健康检查
 
 ```powershell
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe env status --json
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe env set --json            # dry-run
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe env set --apply --json
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe doctor --json
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe doctor --strict --json    # 不健康时退出 1
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe env status --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe env set --json            # dry-run
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe env set --apply --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe doctor --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe doctor --strict --json    # 不健康时退出 1
 ```
 
 Windows `env set` 写 HKCU\Environment 并广播 `WM_SETTINGCHANGE`；Linux 写 `~/.local/bin` shim 与 `~/.profile` 托管块（`--no-shell-rc`、`--no-path`、`--no-variables`、`--lae-compat` 可控制内容）。当前进程不会立即看到新的 PATH，请打开新终端。`doctor` 默认退出 0，即使 `healthy=false`，脚本必须读取 `data.healthy`；加 `--strict` 后不健康会返回 `OMF-E6006` 并退出 1（报告在 `details.report`）。
@@ -81,9 +81,9 @@ Windows `env set` 写 HKCU\Environment 并广播 `WM_SETTINGCHANGE`；Linux 写 
 ## 6. 卸载与回滚
 
 ```powershell
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe uninstall --root C:\...\apps\btbn\latest\<sha16> --apply --json
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe journal list --json
-.\one-more-ffmpeg-v1.0.3-windows-amd64.exe journal rollback --journal journal-... --apply --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe uninstall --root C:\...\apps\btbn\latest\<sha16> --apply --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe journal list --json
+.\one-more-ffmpeg-v1.1.0-windows-amd64.exe journal rollback --journal journal-... --apply --json
 ```
 
 `uninstall` 不直接删除，而是把安装目录移到 `<data-root>/quarantine/<journal-id>/`，因此可完整恢复；不会删除下载归档、provider 或非本项目管理目录。`journal rollback` 支持 install、uninstall、env-set、env-unset。

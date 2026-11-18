@@ -13,6 +13,7 @@ import (
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/ffexec"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/journal"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/logging"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
 )
@@ -31,6 +32,9 @@ type Options struct {
 
 // Run installs one archive. Without Apply it only validates and previews.
 func Run(ctx context.Context, opts Options) (model.InstallData, error) {
+	logger := logging.FromContext(ctx)
+	logger.Debug("install run", "apply", opts.Apply, "provider", opts.Release.Provider,
+		"release", opts.Release.ReleaseTag, "variant", opts.Release.Variant)
 	if opts.Release.Schema != model.ReleaseSchema {
 		return model.InstallData{}, apperrors.New(apperrors.E7003, "release schema mismatch")
 	}

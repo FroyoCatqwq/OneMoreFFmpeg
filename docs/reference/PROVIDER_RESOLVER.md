@@ -1,6 +1,6 @@
 # Provider Resolver 细则
 
-> 状态：v1.0.3 现行，CLI 外部契约已冻结
+> 状态：v1.1.0 现行，CLI 外部契约已冻结
 > 日期：2026-11-10
 > 配套：[`PROVIDERS.md`](PROVIDERS.md)、[`ERROR_CODES.md`](ERROR_CODES.md)、[`CLI_SCHEMA.md`](CLI_SCHEMA.md)
 

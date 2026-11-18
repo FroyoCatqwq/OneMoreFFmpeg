@@ -1,6 +1,6 @@
 # FFmpeg 发现与可用性校验
 
-> 状态：v1.0.3 现行，契约已冻结
+> 状态：v1.1.0 现行，契约已冻结
 > 原则：先只读、显式扫描、结果可审计、不误删
 > 当前不做包管理器识别
 > 实现入口：`internal/detect/`；CLI：`detect` / `validate`
@@ -298,7 +298,7 @@ scan
 
 ---
 
-## 11. CLI 映射（v1.0.3 冻结）
+## 11. CLI 映射（v1.1.0 冻结）
 
 ```text
 detect --dir <PATH> [--recursive] [--json]
