@@ -87,11 +87,13 @@ func isScoopPath(executable string) bool {
 	home, _ := os.UserHomeDir()
 	roots := []string{}
 	if v := os.Getenv("SCOOP"); v != "" {
-		roots = append(roots, filepath.Join(v, "apps"))
+		roots = append(roots, filepath.Join(v, "apps"), filepath.Join(v, "shims"))
 	}
 	if home != "" {
 		roots = append(roots, filepath.Join(home, "scoop", "apps"),
-			filepath.Join(home, "AppData", "Local", "scoop", "apps"))
+			filepath.Join(home, "scoop", "shims"),
+			filepath.Join(home, "AppData", "Local", "scoop", "apps"),
+			filepath.Join(home, "AppData", "Local", "scoop", "shims"))
 	}
 	for _, root := range roots {
 		if root == "" {

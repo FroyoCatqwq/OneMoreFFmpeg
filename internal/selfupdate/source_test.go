@@ -69,6 +69,15 @@ func TestGuardApplyBlocksManagedAndUnknown(t *testing.T) {
 	require.Error(t, err, "override must not bypass package-managed protection")
 }
 
+func TestScoopShimsDirectoryIsManaged(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("SCOOP", root)
+	exe := filepath.Join(root, "shims", "one-more-ffmpeg.exe")
+	source, info := DetectSource(exe)
+	require.Equal(t, InstallSourceScoop, source, "Scoop shims are managed files: %+v", info)
+	require.Contains(t, info.Advice, "scoop update")
+}
+
 func TestScoopEnvAloneDoesNotMisclassify(t *testing.T) {
 	t.Setenv("SCOOP", t.TempDir())
 	exe := filepath.Join(t.TempDir(), "one-more-ffmpeg.exe")
