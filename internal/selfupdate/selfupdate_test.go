@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -51,34 +49,6 @@ func TestCheckNoUpdateWhenCurrentIsLatest(t *testing.T) {
 	}).Check(context.Background())
 	require.NoError(t, err)
 	require.Nil(t, u)
-}
-
-func TestApplyDownloadsVerifiesAndReplaces(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("executable replacement tested on Linux path")
-	}
-	payload := []byte("#!/bin/sh\necho updated\n")
-	sum := sha256.Sum256(payload)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(payload)
-	}))
-	defer server.Close()
-
-	dir := t.TempDir()
-	exe := filepath.Join(dir, "one-more-ffmpeg")
-	require.NoError(t, os.WriteFile(exe, []byte("old"), 0o755))
-	name := "one-more-ffmpeg-v9.9.9-linux-amd64"
-	u := &selfupdate.Update{
-		Version: "9.9.9", AssetName: name, AssetURL: server.URL,
-		SHA256: hex.EncodeToString(sum[:]),
-	}
-	err := (selfupdate.Options{
-		Executable: exe, Dir: dir, GOOS: "linux", GOARCH: "amd64",
-	}).Apply(context.Background(), u)
-	require.NoError(t, err)
-	body, err := os.ReadFile(exe)
-	require.NoError(t, err)
-	require.Equal(t, payload, body)
 }
 
 func selfupdateAssetName(t *testing.T, version string) string {

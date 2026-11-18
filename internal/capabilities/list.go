@@ -2,16 +2,14 @@ package capabilities
 
 import (
 	"context"
-	"encoding/json"
 	stderrors "errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/cache"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
-	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/lock"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 )
 
@@ -128,51 +126,22 @@ func (c *Collector) CollectList(ctx context.Context, opts Options, kind string) 
 }
 
 func readListCache(path, kind, fingerprint string) (model.CapabilityListData, bool, []model.Warning) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
+	var cached model.CapabilityListData
+	if err := cache.ReadJSON(path, &cached); err != nil {
 		if os.IsNotExist(err) {
 			return model.CapabilityListData{}, false, nil
 		}
 		return model.CapabilityListData{}, false, []model.Warning{newWarning(apperrors.W1003, "capability list cache is unreadable", map[string]any{"path": path, "cause": err.Error()})}
 	}
-	var cached model.CapabilityListData
-	if err := json.Unmarshal(raw, &cached); err != nil || cached.Schema != model.CapabilityListSchema || cached.Kind != kind || cached.Fingerprint != fingerprint {
+	if cached.Schema != model.CapabilityListSchema || cached.Kind != kind || cached.Fingerprint != fingerprint {
 		return model.CapabilityListData{}, false, []model.Warning{newWarning(apperrors.W1003, "capability list cache is stale or corrupt", map[string]any{"path": path})}
 	}
 	return cached, true, nil
 }
 
 func writeListCache(path string, value model.CapabilityListData) *model.Warning {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return warningPtr(apperrors.W1007, "cannot create capability cache directory", map[string]any{"path": dir, "cause": err.Error()})
-	}
-	lockDir := filepath.Join(filepath.Dir(dir), "."+filepath.Base(dir)+".locks")
-	lockPath := filepath.Join(lockDir, filepath.Base(path)+".lock")
-	unlock, err := lock.FilePath(lockPath)
-	if err != nil {
-		return warningPtr(apperrors.W1007, "cannot lock capability list cache", map[string]any{"path": path, "cause": err.Error()})
-	}
-	defer unlock()
-	payload, err := json.MarshalIndent(value, "", "  ")
-	if err != nil {
-		return warningPtr(apperrors.W1007, "cannot encode capability list cache", map[string]any{"path": path, "cause": err.Error()})
-	}
-	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".*.tmp")
-	if err != nil {
-		return warningPtr(apperrors.W1007, "cannot create capability list temp file", map[string]any{"path": dir, "cause": err.Error()})
-	}
-	tmpPath := tmp.Name()
-	_, writeErr := tmp.Write(payload)
-	closeErr := tmp.Close()
-	if writeErr != nil || closeErr != nil {
-		_ = os.Remove(tmpPath)
-		return warningPtr(apperrors.W1007, "cannot write capability list cache", map[string]any{"path": tmpPath, "cause": fmt.Sprint(writeErr, closeErr)})
-	}
-	_ = os.Chmod(tmpPath, 0o644)
-	if err := commitCacheFile(tmpPath, path); err != nil {
-		_ = os.Remove(tmpPath)
-		return warningPtr(apperrors.W1007, "cannot commit capability list cache", map[string]any{"path": path, "cause": err.Error()})
+	if err := cache.WriteJSON(path, value, 0o644); err != nil {
+		return warningPtr(apperrors.W1007, "cannot write capability list cache", map[string]any{"path": path, "cause": err.Error()})
 	}
 	return nil
 }

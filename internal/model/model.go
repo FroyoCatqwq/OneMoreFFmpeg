@@ -57,6 +57,8 @@ type UpdateData struct {
 	ReleaseURL      string   `json:"release_url,omitempty"`
 	Applied         bool     `json:"applied"`
 	Operations      []string `json:"operations,omitempty"`
+	Source          string   `json:"source,omitempty"`
+	Advice          string   `json:"advice,omitempty"`
 }
 
 type Result struct {

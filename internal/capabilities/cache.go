@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/cache"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
-	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/lock"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/paths"
 )
@@ -29,16 +29,14 @@ func resolveCacheDir(explicit string) (string, error) {
 }
 
 func readCache(path, fingerprint string, specs []commandSpec, topic, installationID string) (model.CapabilitySet, bool, []model.Warning) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
+	var cached model.CapabilitySet
+	// Shared storage layer owns JSON decoding, atomic-read locking and error
+	// classification; this module only applies business validity rules below.
+	if err := cache.ReadJSON(path, &cached); err != nil {
 		if os.IsNotExist(err) {
 			return model.CapabilitySet{}, false, nil
 		}
-		return model.CapabilitySet{}, false, []model.Warning{newWarning(apperrors.W1003, "capability cache is unreadable", map[string]any{"path": path, "cause": err.Error()})}
-	}
-	var cached model.CapabilitySet
-	if err := json.Unmarshal(raw, &cached); err != nil {
-		return model.CapabilitySet{}, false, []model.Warning{newWarning(apperrors.W1003, "capability cache is corrupt", map[string]any{"path": path, "cause": err.Error()})}
+		return model.CapabilitySet{}, false, []model.Warning{newWarning(apperrors.W1003, "capability cache is unreadable or corrupt", map[string]any{"path": path, "cause": err.Error()})}
 	}
 	if cached.Schema != model.CapabilitiesSchema || cached.Fingerprint != fingerprint {
 		return model.CapabilitySet{}, false, []model.Warning{newWarning(apperrors.W1003, "capability cache is stale", map[string]any{"path": path})}
@@ -58,57 +56,10 @@ func readCache(path, fingerprint string, specs []commandSpec, topic, installatio
 }
 
 func writeCache(path string, set model.CapabilitySet) *model.Warning {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return warningPtr(apperrors.W1007, "cannot create capability cache directory", map[string]any{"path": dir, "cause": err.Error()})
-	}
-	// Serialize writers across processes with the shared OS-level lock, so a
-	// concurrent capability refresh cannot interleave renamed cache files.
-	// Keep sidecar lock files OUTSIDE the cache directory so readers that
-	// enumerate it see only .json entries. The sibling directory is derived
-	// deterministically from the cache dir name for cross-process consistency.
-	lockDir := filepath.Join(filepath.Dir(dir), "."+filepath.Base(dir)+".locks")
-	lockPath := filepath.Join(lockDir, filepath.Base(path)+".lock")
-	unlock, err := lock.FilePath(lockPath)
-	if err != nil {
-		return warningPtr(apperrors.W1007, "cannot lock capability cache", map[string]any{"path": path, "cause": err.Error()})
-	}
-	defer unlock()
-	data, err := json.MarshalIndent(set, "", "  ")
-	if err != nil {
-		return warningPtr(apperrors.W1007, "cannot encode capability cache", map[string]any{"path": path, "cause": err.Error()})
-	}
-	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".*.tmp")
-	if err != nil {
-		return warningPtr(apperrors.W1007, "cannot create capability cache temp file", map[string]any{"path": dir, "cause": err.Error()})
-	}
-	tmpPath := tmp.Name()
-	discard := func() {
-		_ = tmp.Close()
-		_ = os.Remove(tmpPath)
-	}
-	if _, err := tmp.Write(data); err != nil {
-		discard()
-		return warningPtr(apperrors.W1007, "cannot write capability cache", map[string]any{"path": tmpPath, "cause": err.Error()})
-	}
-	if err := tmp.Close(); err != nil {
-		_ = os.Remove(tmpPath)
-		return warningPtr(apperrors.W1007, "cannot close capability cache temp file", map[string]any{"path": tmpPath, "cause": err.Error()})
-	}
-	_ = os.Chmod(tmpPath, 0o644)
-	if err := commitCacheFile(tmpPath, path); err != nil {
-		_ = os.Remove(tmpPath)
-		return warningPtr(apperrors.W1007, "cannot commit capability cache", map[string]any{"path": path, "cause": err.Error()})
+	if err := cache.WriteJSON(path, set, 0o644); err != nil {
+		return warningPtr(apperrors.W1007, "cannot write capability cache", map[string]any{"path": path, "cause": err.Error()})
 	}
 	return nil
-}
-
-// commitCacheFile relies on os.Rename replacing the target atomically on
-// both POSIX and Windows. If the target is locked by another process the
-// commit fails and the previous cache file is left untouched, which is
-// preferable to deleting the only good copy.
-func commitCacheFile(tmpPath, path string) error {
-	return os.Rename(tmpPath, path)
 }
 
 func stderrSummary(value string) string {

@@ -1,6 +1,7 @@
 package output
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,39 +16,70 @@ import (
 
 func humanBytes(n int64) string { return humanize.Bytes(uint64(n)) }
 
-// Progress reports byte-transfer progress. Callers in the business layer
-// depend only on this interface; animation and environment detection live
-// entirely inside this package.
+// Progress reports byte-transfer progress. The terminal states are distinct:
+// a failed or aborted transfer must never render as 100%/complete. All methods
+// are safe to call concurrently and terminal transitions are idempotent.
 type Progress interface {
 	Update(n int64)
-	Finish()
+	Complete()
+	Fail(err error)
+	Abort()
+	// Close releases renderer resources only. It never marks success and is
+	// intended for deferred cleanup on paths that did not reach a terminal state.
+	Close()
 }
 
 type noopProgress struct{}
 
 func (noopProgress) Update(int64) {}
-func (noopProgress) Finish()      {}
+func (noopProgress) Complete()    {}
+func (noopProgress) Fail(error)   {}
+func (noopProgress) Abort()       {}
+func (noopProgress) Close()       {}
 
-// stepProgress is used when the output is not an interactive terminal:
-// plain stage lines with no animation / escape characters (CI, pipes,
-// redirected stderr).
+// terminalState guards idempotent terminal transitions.
+type terminalState struct {
+	once  sync.Once
+	state string // "", "completed", "failed", "aborted"
+}
+
+func (t *terminalState) set(state string, fn func()) bool {
+	applied := false
+	t.once.Do(func() {
+		t.state = state
+		fn()
+		applied = true
+	})
+	return applied
+}
+
+// stepProgress renders plain stage lines for non-interactive output.
 type stepProgress struct {
 	w       io.Writer
 	label   string
 	total   int64
+	current int64
 	mu      sync.Mutex
 	lastPct int
-	once    sync.Once
+	term    terminalState
 }
 
 func (s *stepProgress) Update(n int64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if n > s.current {
+		s.current = n
+	}
 	if s.total <= 0 {
-		return
+		return // unknown total: never invent a percentage
 	}
 	pct := int(n * 100 / s.total)
-	// Log coarse milestones only: 0, 25, 50, 75, 100%.
+	// Only 25/50/75 are progress milestones. 100% is a SUCCESS terminal state
+	// printed exclusively by Complete(): receiving all bytes does not mean the
+	// checksum/commit succeeded, so Update must never render 100%.
+	if pct >= 100 {
+		return
+	}
 	milestone := (pct / 25) * 25
 	if milestone > s.lastPct {
 		s.lastPct = milestone
@@ -55,41 +87,113 @@ func (s *stepProgress) Update(n int64) {
 	}
 }
 
-func (s *stepProgress) Finish() {
-	s.once.Do(func() {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-		if s.total > 0 {
-			_, _ = fmt.Fprintf(s.w, "%s: 100%% (%s)\n", s.label, humanBytes(s.total))
+func (s *stepProgress) terminalLine(status string, withErr error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	received := humanBytes(s.current)
+	if s.total > 0 {
+		if status == "completed" {
+			_, _ = fmt.Fprintf(s.w, "%s: completed 100%% (%s)\n", s.label, humanBytes(s.total))
+		} else if withErr != nil {
+			_, _ = fmt.Fprintf(s.w, "%s: %s after %s/%s (%v)\n", s.label, status, received, humanBytes(s.total), withErr)
 		} else {
-			_, _ = fmt.Fprintf(s.w, "%s: done\n", s.label)
+			_, _ = fmt.Fprintf(s.w, "%s: %s at %s/%s\n", s.label, status, received, humanBytes(s.total))
 		}
-	})
+		return
+	}
+	// Unknown total: report bytes received without a fabricated percentage.
+	if withErr != nil {
+		_, _ = fmt.Fprintf(s.w, "%s: %s after %s (%v)\n", s.label, status, received, withErr)
+	} else {
+		_, _ = fmt.Fprintf(s.w, "%s: %s (%s received)\n", s.label, status, received)
+	}
 }
 
-// barProgress is the interactive TTY renderer backed by go-pretty.
+func (s *stepProgress) Complete() {
+	s.term.set("completed", func() { s.terminalLine("completed", nil) })
+}
+
+func (s *stepProgress) Fail(err error) {
+	if err == nil {
+		err = errors.New("unknown error")
+	}
+	s.term.set("failed", func() { s.terminalLine("failed", err) })
+}
+
+func (s *stepProgress) Abort() {
+	s.term.set("aborted", func() { s.terminalLine("cancelled", nil) })
+}
+
+func (s *stepProgress) Close() { /* no renderer resources */ }
+
+// barProgress renders an animated bar on a TTY via go-pretty.
 type barProgress struct {
 	writer  progress.Writer
 	tracker *progress.Tracker
-	once    sync.Once
+	term    terminalState
 	done    chan struct{}
+	close   sync.Once
 }
 
-func (b *barProgress) Update(n int64) { b.tracker.SetValue(n) }
+func (b *barProgress) Update(n int64) {
+	// With AutoStopDisabled the bar never auto-completes when value reaches
+	// total. Clamp below total so a failed checksum after a full byte stream
+	// cannot show 100%; only Complete() sets the final value.
+	if b.tracker.Total > 1 && n >= b.tracker.Total {
+		n = b.tracker.Total - 1
+	}
+	b.tracker.SetValue(n)
+}
 
-func (b *barProgress) Finish() {
-	b.once.Do(func() {
-		b.tracker.MarkAsDone()
-		select {
-		case <-b.done:
-		case <-time.After(2 * time.Second):
+func (b *barProgress) finishRenderer() {
+	select {
+	case <-b.done:
+	case <-time.After(2 * time.Second):
+	}
+}
+
+func (b *barProgress) Complete() {
+	b.term.set("completed", func() {
+		if b.tracker.Total > 0 {
+			b.tracker.SetValue(b.tracker.Total)
 		}
+		b.tracker.MarkAsDone()
+		b.finishRenderer()
+	})
+}
+
+func (b *barProgress) Fail(err error) {
+	if err == nil {
+		err = errors.New("unknown error")
+	}
+	b.term.set("failed", func() {
+		// MarkAsErrored keeps the last real value and never renders completion.
+		b.tracker.MarkAsErrored()
+		b.tracker.UpdateMessage(fmt.Sprintf("%s (failed: %v)", b.tracker.Message, err))
+		b.finishRenderer()
+	})
+}
+
+func (b *barProgress) Abort() {
+	b.term.set("aborted", func() {
+		b.tracker.MarkAsErrored()
+		b.tracker.UpdateMessage(b.tracker.Message + " (cancelled)")
+		b.finishRenderer()
+	})
+}
+
+func (b *barProgress) Close() {
+	b.close.Do(func() {
+		// Only stop the renderer; never mark success.
+		if b.term.state == "" {
+			b.tracker.MarkAsErrored()
+			b.tracker.UpdateMessage(b.tracker.Message + " (stopped)")
+		}
+		b.finishRenderer()
 	})
 }
 
 // interactive reports whether animated progress is appropriate for w.
-// Animation is disabled for non-files, non-TTYs, CI environments and when
-// the user asks for reduced motion / no color.
 func interactive(w io.Writer) bool {
 	if w == nil {
 		return false
@@ -106,10 +210,7 @@ func interactive(w io.Writer) bool {
 	return ok && (isatty.IsTerminal(file.Fd()) || isatty.IsCygwinTerminal(file.Fd()))
 }
 
-// NewProgress returns a Progress appropriate for the destination. TTY output
-// gets an animated bar with percentage and ETA; CI/pipes get plain stage
-// lines; a nil writer yields a no-op (used for --json where stdout must stay
-// pure JSON).
+// NewProgress returns a Progress appropriate for the destination.
 func NewProgress(w io.Writer, label string, total int64) Progress {
 	if w == nil {
 		return noopProgress{}
@@ -124,10 +225,13 @@ func NewProgress(w io.Writer, label string, total int64) Progress {
 	pw.SetTrackerLength(25)
 	pw.SetMessageLength(24)
 	pw.SetNumTrackersExpected(1)
-	pw.SetStyle(progress.StyleDefault) // default style includes ETA + percentage
+	pw.SetStyle(progress.StyleDefault)
 	pw.SetUpdateFrequency(100 * time.Millisecond)
 
-	tracker := &progress.Tracker{Message: label, Total: total, Units: progress.UnitsBytes}
+	tracker := &progress.Tracker{
+		Message: label, Total: total, Units: progress.UnitsBytes,
+		AutoStopDisabled: true, // only Complete() may mark success
+	}
 	pw.AppendTracker(tracker)
 	p := &barProgress{writer: pw, tracker: tracker, done: make(chan struct{})}
 	go func() {

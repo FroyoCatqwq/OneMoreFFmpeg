@@ -1,10 +1,10 @@
 # 文档索引
 
 > OneMoreFFmpeg — 统一管理 FFmpeg 的发现、下载、安装、环境与能力检查的 CLI。
-> 当前版本 **v1.1.0**（唯一受支持版本）；Phase 1–7 全部完成，CLI 外部契约冻结。
+> 当前版本 **v1.1.1**（唯一受支持版本）；Phase 1–7 全部完成，CLI 外部契约冻结。
 > 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg>
 
-本目录按用途分为四类（guides / reference / development / releases）；仅描述当前 v1.1.0 的事实。
+本目录按用途分为四类（guides / reference / development / releases）；仅描述当前 v1.1.1 的事实。
 
 ## 1. 上手与使用（guides/）
 
@@ -45,7 +45,7 @@
 ## 4. 发布记录
 
 - [`releases/CHANGELOG.md`](releases/CHANGELOG.md) — 变更记录；
-- [`releases/release-v1.1.0.md`](releases/release-v1.1.0.md) — 当前版本发布说明（更早的 Release 与 tag 已撤回）。
+- [`releases/release-v1.1.1.md`](releases/release-v1.1.1.md) — 当前版本发布说明（更早的 Release 与 tag 已撤回）。
 
 ## 5. 决策快照
 
@@ -59,7 +59,7 @@
 | 能力命令 | 13 个 FFmpeg 参数 / 能力入口 |
 | 对外契约 | 19 命令 / 18 个 `/v1` data schema / 退出码 0/1/2/130，`internal/contracts/freeze_test.go` 守护 |
 | 外部集成 | 只调用 CLI 可执行文件；不提供 Go API / 插件 / JSON-RPC / C ABI |
-| 明确不做 | 包管理器识别、GUI/TUI、FFmpeg 自构建、私有制品库、自动更新服务 |
+| 明确不做 | 包管理器识别（第三方 FFmpeg）、GUI/TUI、FFmpeg 自构建、私有制品库、后台自动更新服务（用户主动 `update` 已支持） |
 | 许可证 | GPL-3.0-only；nonfree FFmpeg 元数据可公开，二进制不可随公开 Release 分发 |
 | 质量门禁 | gofmt / vet / golangci-lint v2（含 gosec）/ test / govulncheck / fuzz + Windows/Linux e2e + Docker 全新环境（见 CI） |
-| 当前基线 | **v1.1.0**（唯一受支持版本；更早的 Release/tag 与 CI 记录已撤回） |
+| 当前基线 | **v1.1.1**（唯一受支持版本；更早的 Release/tag 与 CI 记录已撤回） |

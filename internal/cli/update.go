@@ -15,7 +15,7 @@ import (
 )
 
 // updateCommand exposes the self-update feature. Default is a dry-run check;
-// --apply performs the download + atomic replacement.
+// --apply performs the download + verified replacement.
 func updateCommand(info buildinfo.Info) *urfave.Command {
 	return &urfave.Command{
 		Name:  "update",
@@ -23,6 +23,7 @@ func updateCommand(info buildinfo.Info) *urfave.Command {
 		Flags: []urfave.Flag{
 			&urfave.BoolFlag{Name: "check", Usage: "only check for updates without applying (default)"},
 			&urfave.BoolFlag{Name: "apply", Usage: "actually download and install the update"},
+			&urfave.BoolFlag{Name: "allow-unmanaged-override", Usage: "allow in-place replacement when install source is unknown (use with care)"},
 		},
 		Action: func(ctx context.Context, cmd *urfave.Command) error {
 			if cmd.Bool("apply") && cmd.Bool("check") {
@@ -32,6 +33,7 @@ func updateCommand(info buildinfo.Info) *urfave.Command {
 			if err != nil {
 				return apperrors.New(apperrors.E9003, "cannot determine executable path").WithCause(err.Error())
 			}
+			sourceInfo := selfupdate.CheckSource(exe)
 			opts := selfupdate.Options{
 				CurrentVersion: info.Version,
 				Executable:     exe,
@@ -44,13 +46,18 @@ func updateCommand(info buildinfo.Info) *urfave.Command {
 				Schema:          model.UpdateSchema,
 				CurrentVersion:  info.Version,
 				UpdateAvailable: update != nil,
+				Source:          sourceInfo.Source,
+				Advice:          sourceInfo.Advice,
 			}
 			if update != nil {
 				data.LatestVersion = update.Version
 				data.AssetName = update.AssetName
 				data.ReleaseURL = update.ReleaseURL
 			}
-			human := fmt.Sprintf("current: %s\n", info.Version)
+			human := fmt.Sprintf("current: %s (install source: %s)\n", info.Version, sourceInfo.Source)
+			if sourceInfo.Advice != "" {
+				human += "note: " + sourceInfo.Advice + "\n"
+			}
 			if update == nil {
 				human += "already up to date\n"
 				data.Operations = []string{"check: up to date"}
@@ -63,6 +70,10 @@ func updateCommand(info buildinfo.Info) *urfave.Command {
 				return writeResult(cmd, "update", data, human)
 			}
 
+			// --apply: enforce install-source policy before any download.
+			if err := selfupdate.GuardApply(exe, cmd.Bool("allow-unmanaged-override")); err != nil {
+				return err
+			}
 			var progress io.Writer
 			if !jsonEnabled(cmd) {
 				progress = stderrFrom(ctx)

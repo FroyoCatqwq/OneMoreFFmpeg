@@ -3,6 +3,22 @@
 本项目遵循 [Semantic Versioning 2.0.0](../reference/VERSIONING.md)。格式基于 [Keep a Changelog](https://keepachangelog.com/)。
 仅保留当前及上一版本的记录；更早的 Release 与历史快照已撤回。
 
+## [1.1.1] — 2026-11-18
+
+v1.1.0 bugfix：聚焦自更新可靠性、包管理器保护、进度语义与缓存正确性。CLI 契约保持 19 命令 / 18 schema 不变（新增错误码 `E7008`）。
+
+### Fixed
+- **自更新回滚**：失败时不再忽略恢复错误；`errors.Join` 同时报告"新程序安装失败"与"旧程序恢复失败"，保留唯一可恢复备份及其路径；新增 staged/verified/backup_created/replaced/committed 阶段 journal 与 `Recover()` 崩溃恢复；保留原可执行文件权限；备份清理失败记录诊断。
+- **包管理器保护**：新增安装来源识别（RPM `rpm -qf`、Scoop 路径、Manual、Unknown）；Scoop/RPM 管理的程序拒绝 `update --apply` 原地替换（E7008 + JSON details 给出来源与建议），Unknown 默认拒绝（可 `--allow-unmanaged-override` 显式放行）；`update --check` 不受影响。
+- **进度语义**：`Progress` 拆为 `Update/Complete/Fail/Abort/Close` 四态互斥幂等；失败/取消/校验失败/提交失败不再显示 100%/completed；未知 Content-Length 不伪造百分比；TTY 与非 TTY 语义一致；进度只写 stderr。
+- **缓存**：key 文件名改为 SHA-256 稳定摘要（消除 `a/b` 与 `a_b` 碰撞），entry 保存 key digest 与 schema 并校验；读写错误真实传播；新增 `Prune()` 过期/损坏文件清理（限制在 cache root、不跟随 symlink）；`InvalidateErr` 不吞 I/O 错误。
+- **capabilities**：缓存读写统一走 `internal/cache` 的 JSON/锁/原子写辅助，业务层只保留 fingerprint 与有效性判断。
+- **版本校验**：自更新只接受严格 `X.Y.Z`（拒绝缺/多/空字段、非数字、前导零、溢出、prerelease），数值语义比较；`v` 前缀由 Check 规范化。
+- **Windows 测试**：自更新替换/恢复用可注入 `FileOps` 在临时文件上测试，Windows CI 不再跳过核心替换路径。
+
+### Changed
+- 依赖与文档：`E7008` 注册到错误码文档（双向校验测试守护）；README 澄清"用户主动 update"与"后台自动更新"的区别；CHANGELOG/VERSIONING/安装指南/第三方声明同步到 v1.1.1。
+
 ## [1.1.0] — 2026-11-18
 
 首个 MINOR 版本：新增自更新与下载进度条两个功能，并保持 CLI 契约稳定扩充。

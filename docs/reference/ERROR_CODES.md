@@ -1,6 +1,6 @@
 # 错误码注册表 v1
 
-> 状态：v1.1.0 现行，CLI 外部契约已冻结
+> 状态：v1.1.1 现行，CLI 外部契约已冻结
 > 日期：2026-11-10
 > 适用：CLI stdout JSON、日志 `code` 字段、未来 JSON-RPC `error.code`
 > 原则：稳定、不可复用、不可静默改语义
@@ -45,7 +45,7 @@
 |---:|---|---|
 | 0 | 成功 | 无 |
 | 1 | 运行期错误 | 除下表列出的用法/取消码之外的 其他所有已注册 E 码 |
-| 2 | 用法/配置/契约错误 | `E7001–E7005`、`E7007`、`E2005`、`E3001`、`E3004`、`E3008`、`E3009`、`E6003`、`E6004` |
+| 2 | 用法/配置/契约错误 | `E7001–E7005`、`E7007`、`E7008`、`E2005`、`E3001`、`E3004`、`E3008`、`E3009`、`E6003`、`E6004` |
 | 130 | 用户取消 | `OMF-E1011`、`OMF-E4006`、`OMF-E9004` |
 
 > 退出码由 `internal/errors.exitFor` 唯一决定；上表两行不重叠：凡是退出 2 的 E2/E3/E6 码都不再计入“运行期错误”。
@@ -208,6 +208,7 @@ OMF-Wxxxx  警告码（不导致命令失败）
 | `OMF-E7005` | `INVALID_VALUE` | 类型/范围/枚举非法 | 2 |
 | `OMF-E7006` | `JSON_OUTPUT_FAILED` | stdout JSON 序列化或写入失败；失败后不再向 stdout 追加第二个对象，只写 stderr | 1 |
 | `OMF-E7007` | `CONFIG_PATH_INVALID` | config / release / providers 文件路径不存在或不可读；`ONE_MORE_FFMPEG_HOME` 非绝对路径 | 2 |
+| `OMF-E7008` | `SELF_UPDATE_BLOCKED` | 自更新被安装来源策略阻止：Scoop/RPM 管理的应用请用包管理器更新；来源未知需显式 `--allow-unmanaged-override` | 2 |
 
 ---
 

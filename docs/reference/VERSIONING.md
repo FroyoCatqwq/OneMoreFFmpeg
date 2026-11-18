@@ -1,6 +1,6 @@
 # 版本与发布规范
 
-> 本项目遵循 [Semantic Versioning 2.0.0](https://semver.org/)；发布 tag 使用 `v` 前缀，例如 `v1.1.0`。
+> 本项目遵循 [Semantic Versioning 2.0.0](https://semver.org/)；发布 tag 使用 `v` 前缀，例如 `v1.1.1`。
 
 ## 1. 版本号含义（v1.0 起适用标准 SemVer）
 
@@ -51,4 +51,5 @@ SHA256SUMS.txt
 | v1.0.1 | 2026-11-17 | Bugfix：全项目源码审计后修复 CLI 契约绕过、token 泄露、重定向降级、GitHub 分页、doctor 假二进制、flag 互斥等缺陷（历史版本，Release 与文档已撤回） |
 | v1.0.2 | 2026-11-17 | Bugfix：嵌套 help 契约绕过、锁文件符号链接风险、参数校验、checksums 查找、分页 nil ctx、文档错漏（历史版本） |
 | v1.0.3 | 2026-11-18 | Bugfix：全量审查核心包后修复 4 个潜在 bug（emit-trio-lock reuse、能力缓存 W1001、days 溢出、Linux PATH 大小写）（历史版本） |
-| v1.1.0 | 2026-11-18 | 首个 MINOR：新增 `update` 自更新命令与下载进度条；独立 output/cache 层；slog+tint 日志接入业务层；能力缓存跨进程锁；进度条 TTY/CI/JSON/Pipe 自适应。详见 [`release-v1.1.0.md`](../releases/release-v1.1.0.md) |
+| v1.1.0 | 2026-11-18 | 首个 MINOR：新增 `update` 自更新命令与下载进度条；独立 output/cache 层；slog+tint 日志接入业务层；能力缓存跨进程锁；进度条 TTY/CI/JSON/Pipe 自适应（历史版本） |
+| v1.1.1 | 2026-11-18 | Bugfix：自更新失败时可靠恢复旧程序（errors.Join 不吞回滚错误、阶段 journal、崩溃恢复）、包管理器来源保护（Scoop/RPM 拒绝原地覆盖）、下载进度四态语义（失败不显示 100%）、Windows 真实替换测试、缓存统一存储与 key 摘要、严格 SemVer 校验。详见 [`release-v1.1.1.md`](../releases/release-v1.1.1.md) |

@@ -1,6 +1,6 @@
 # Go 依赖库评估
 
-> 决策日期：2026-11-10；最近更新：2026-11-19（v1.1.0）
+> 决策日期：2026-11-10；最近更新：2026-11-19（v1.1.1）
 > 状态：已接受。§1–§7 是 2026-11-10 的**历史评估快照**（版本表为当时数据，不再更新）；
 > **当前实际依赖以 §8 与 `go.mod` / `THIRD_PARTY_NOTICES.md` 为准**。
 > 适用：OneMoreFFmpeg CLI-first 范围
@@ -97,7 +97,7 @@ Go SDK + 进程插件框架 + gRPC 服务 + 包管理器集成 + GUI/TUI
 | xz 解压 | `github.com/ulikunitz/xz` | v0.5.17 | 2026-09-19 | 采用 |
 | HTTP 重试 | `net/http`（自带退避；`sethvargo/go-retry` 保留在 go.mod 但运行时未使用） | v0.5.0 | 2026-10-05 | 见 §8 |
 | 测试 | `github.com/stretchr/testify` | v1.12.1 | 2026-08-17 | 采用 |
-| 可读大小 | `github.com/dustin/go-humanize` | v1.1.0 | 2026-09-17 | 采用 |
+| 可读大小 | `github.com/dustin/go-humanize` | v1.1.1 | 2026-09-17 | 采用 |
 
 ### 3.2 未来候选，不进入当前 M0
 
@@ -260,7 +260,7 @@ Go SDK + 进程插件框架 + gRPC 服务 + 包管理器集成 + GUI/TUI
 已通过官方 README 核实：
 
 ```text
-This library supports TOML v1.1.0.
+This library supports TOML v1.1.1.
 Import: github.com/pelletier/go-toml/v2
 License: MIT
 ```
@@ -389,7 +389,7 @@ github.com/ulikunitz/xz
 github.com/sethvargo/go-retry
 ```
 
-历史说明：Phase 0 时仓库只有 `go.mod`；上表是 Phase 1 计划的最小集（13 项）。**v1.1.0 的实际依赖（16 个直接 + 2 个间接）见 §8。**
+历史说明：Phase 0 时仓库只有 `go.mod`；上表是 Phase 1 计划的最小集（13 项）。**v1.1.1 的实际依赖（16 个直接 + 2 个间接）见 §8。**
 
 ---
 
@@ -413,11 +413,11 @@ github.com/sethvargo/go-retry
 >
 > 包管理器识别、Go API、JSON-RPC、gRPC、C ABI 插件都明确推迟，不进入当前依赖范围。
 >
-> **注意**：以上是 Phase 1 时的核心库决策；v1.1.0 追加了 3 个运行时库（flock / go-internal / jsonschema），见 §8。
+> **注意**：以上是 Phase 1 时的核心库决策；v1.1.1 追加了 3 个运行时库（flock / go-internal / jsonschema），见 §8。
 
 ---
 
-## 8. 当前实际依赖（v1.1.0，权威）
+## 8. 当前实际依赖（v1.1.1，权威）
 
 以 `go.mod` 为准；许可证全文见 `THIRD_PARTY_NOTICES.md` 与 `third_party/licenses/`。
 
@@ -429,7 +429,7 @@ github.com/sethvargo/go-retry
 | `github.com/pelletier/go-toml/v2` | v2.4.3 | 配置（TOML 1.1） |
 | `github.com/lmittmann/tint` | v1.2.1 | 开发日志 handler |
 | `github.com/mattn/go-isatty` | v0.0.24 | TTY 检测 |
-| `github.com/dustin/go-humanize` | v1.1.0 | 人类可读大小 |
+| `github.com/dustin/go-humanize` | v1.1.1 | 人类可读大小 |
 | `github.com/klauspost/compress` | v1.20.4 | zstd/gzip/deflate |
 | `github.com/ulikunitz/xz` | v0.5.17 | xz 解压 |
 | `golang.org/x/sync` | v0.25.0 | `errgroup` 并发 |
@@ -464,4 +464,4 @@ github.com/sethvargo/go-retry
 |---|---|
 | Phase 1（v0.6.0） | 落地 §5 的 13 项最小集 |
 | v1.0.1 | 新增 `gofrs/flock`、`rogpeppe/go-internal/lockedfile`、`santhosh-tekuri/jsonschema/v6`；引入 golangci-lint v2 + gosec 门禁 |
-| v1.1.0-dev | 新增 `go-pretty/v6`、`tidwall/pretty`、`maypok86/otter/v2`、标准库 `encoding/json/v2`；输出/缓存分别收敛到 `internal/output`、`internal/cache`，CLI 不直接依赖第三方库 |
+| v1.1.1-dev | 新增 `go-pretty/v6`、`tidwall/pretty`、`maypok86/otter/v2`、标准库 `encoding/json/v2`；输出/缓存分别收敛到 `internal/output`、`internal/cache`，CLI 不直接依赖第三方库 |

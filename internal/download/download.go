@@ -219,27 +219,41 @@ func (d *Downloader) download(ctx context.Context, rawURL, finalPath, expected s
 		return apperrors.New(apperrors.E4005, "cannot create temporary file").WithCause(err.Error())
 	}
 	tmpPath := tmp.Name()
-	finishProgress := func() {} // replaced below once the bar exists
-	cleanup := func() {
-		_ = tmp.Close()
-		_ = os.Remove(tmpPath)
-		finishProgress()
-	}
-
-	// Progress rendering is owned by internal/output; --json callers pass nil.
+	// Progress terminal state is set explicitly per outcome; cleanup only
+	// releases resources and NEVER marks the transfer complete.
 	var progressBar output.Progress
 	if d.options.ProgressWriter != nil {
 		progressBar = output.NewProgress(d.options.ProgressWriter, filepath.Base(finalPath), response.ContentLength)
-		finishProgress = func() { progressBar.Finish() }
+		defer progressBar.Close()
+	}
+	cleanup := func() {
+		_ = tmp.Close()
+		_ = os.Remove(tmpPath)
+	}
+	failProgress := func(err error) {
+		if progressBar == nil {
+			return
+		}
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			progressBar.Abort()
+		} else {
+			progressBar.Fail(err)
+		}
 	}
 
 	hasher := sha256.New()
 	buffer := make([]byte, chunkSize)
 	var total int64
+	// fail is the single error exit for this transfer: release temp resources,
+	// render the correct terminal state, then return the typed error.
+	fail := func(err error) error {
+		cleanup()
+		failProgress(err)
+		return err
+	}
 	for {
 		if err := ctx.Err(); err != nil {
-			cleanup()
-			return contextError(err)
+			return fail(contextError(err))
 		}
 		read, readErr := response.Body.Read(buffer)
 		if read > 0 {
@@ -248,12 +262,10 @@ func (d *Downloader) download(ctx context.Context, rawURL, finalPath, expected s
 				progressBar.Update(total)
 			}
 			if total > d.options.MaxBytes {
-				cleanup()
-				return apperrors.New(apperrors.E4004, "download exceeds size limit").WithDetails(map[string]any{"limit": d.options.MaxBytes})
+				return fail(apperrors.New(apperrors.E4004, "download exceeds size limit").WithDetails(map[string]any{"limit": d.options.MaxBytes}))
 			}
 			if _, writeErr := tmp.Write(buffer[:read]); writeErr != nil {
-				cleanup()
-				return apperrors.New(apperrors.E4005, "cannot write temporary file").WithCause(writeErr.Error())
+				return fail(apperrors.New(apperrors.E4005, "cannot write temporary file").WithCause(writeErr.Error()))
 			}
 			_, _ = hasher.Write(buffer[:read])
 		}
@@ -261,34 +273,35 @@ func (d *Downloader) download(ctx context.Context, rawURL, finalPath, expected s
 			if errors.Is(readErr, io.EOF) {
 				break
 			}
-			cleanup()
 			if ctxErr := ctx.Err(); ctxErr != nil {
-				return contextError(ctxErr)
+				return fail(contextError(ctxErr))
 			}
-			return apperrors.New(apperrors.E4001, "download stream failed").WithCause(readErr.Error())
+			return fail(apperrors.New(apperrors.E4001, "download stream failed").WithCause(readErr.Error()))
 		}
 	}
 
 	actual := hex.EncodeToString(hasher.Sum(nil))
 	if actual != expected {
-		cleanup()
-		return apperrors.New(apperrors.E4002, "asset sha256 mismatch").WithDetails(map[string]any{
+		return fail(apperrors.New(apperrors.E4002, "asset sha256 mismatch").WithDetails(map[string]any{
 			"expected": expected,
 			"actual":   actual,
-		})
+		}))
 	}
+	// Everything through commit must succeed before the transfer is "complete".
 	if err := tmp.Close(); err != nil {
 		_ = os.Remove(tmpPath)
-		finishProgress()
+		failProgress(err)
 		return apperrors.New(apperrors.E4005, "cannot close temporary file").WithCause(err.Error())
 	}
 	_ = os.Chmod(tmpPath, 0o644)
 	if err := commitFile(tmpPath, finalPath); err != nil {
 		_ = os.Remove(tmpPath)
-		finishProgress()
+		failProgress(err)
 		return apperrors.New(apperrors.E4005, "cannot commit downloaded file").WithCause(err.Error())
 	}
-	finishProgress()
+	if progressBar != nil {
+		progressBar.Complete()
+	}
 	return nil
 }
 

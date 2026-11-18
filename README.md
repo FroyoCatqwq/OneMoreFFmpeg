@@ -4,15 +4,15 @@
 
 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg> · 许可证：GPL-3.0-only
 
-**状态：v1.1.0** — Phase 1–7 全部完成，CLI 外部契约冻结；全项目审计后 bugfix；Windows + Linux + Docker 全新环境 `go test` / e2e 全绿，
+**状态：v1.1.1** — Phase 1–7 全部完成，CLI 外部契约冻结；全项目审计后 bugfix；Windows + Linux + Docker 全新环境 `go test` / e2e 全绿，
 GitHub Actions 提供质量门禁与 tag 发布流水线。产物见 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases)。
 
-> **仅 v1.1.0 受支持**：旧版本（v1.0.x 及更早）不再维护，请始终使用当前版本；仓库内 `docs/releases/` 的旧版说明仅作历史记录。
+> **仅 v1.1.1 受支持**：旧版本（v1.0.x 及更早）不再维护，请始终使用当前版本；仓库内 `docs/releases/` 的旧版说明仅作历史记录。
 
 🟢 **第一次用？先看 [`安装指南`](docs/guides/INSTALL.md)（Scoop / dnf / 手动二进制）与 [`新手上手指南`](docs/guides/HOWTO.md)。黄金顺序：`install --apply` → `env set --apply` → 开新终端 → `ffmpeg` 可用。**
 
 Windows：`scoop bucket add omf https://github.com/FroyoCatqwq/OneMoreFFmpeg-bucket` → `scoop install one-more-ffmpeg`。
-RHEL 9+：`sudo dnf install -y https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/download/v1.1.0/one-more-ffmpeg-1.1.0-1.el9.x86_64.rpm`。
+RHEL 9+：`sudo dnf install -y https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/download/v1.1.1/one-more-ffmpeg-1.1.1-1.el9.x86_64.rpm`。
 
 ---
 
@@ -30,7 +30,7 @@ BtbN + BnqDzj + 自定义 URL（`--url` / `provider add`）、稳定版 / 每日
 安装（安全解压、版本化目录、`current`、journal）、`uninstall`、`env status|set|unset|rollback`、`release list|install`、
 `journal list|rollback`、`doctor`，共 19 个冻结命令（含 v1.1 新增的 `update`）。写入类命令默认 dry-run，需 `--apply`；`download` 与能力缓存会立即写文件。
 
-明确不做：包管理器识别（Scoop/winget/apt…）、Go API / 插件 / JSON-RPC / C ABI、GUI/TUI、FFmpeg 自构建、私有制品库、自动更新。
+明确不做：包管理器识别（Scoop/winget/apt 管理第三方 FFmpeg）、Go API / 插件 / JSON-RPC / C ABI、GUI/TUI、FFmpeg 自构建、私有制品库、**后台自动更新 / 静默替换 / 常驻更新服务**（v1.1 起已支持用户主动执行的 `update` 检查与 `update --apply` 自更新，二者不等同）。
 
 对外契约只有 **CLI 参数 + stdout JSON（或文件产物）+ stderr 日志 + 退出码**：
 
@@ -57,7 +57,7 @@ BtbN + BnqDzj + 自定义 URL（`--url` / `provider add`）、稳定版 / 每日
 - 上手：[`HOWTO.md`](docs/guides/HOWTO.md) · [`USAGE.md`](docs/guides/USAGE.md) · [`MIGRATION.md`](docs/guides/MIGRATION.md)
 - 契约：[`CLI_SCHEMA.md`](docs/reference/CLI_SCHEMA.md) · [`ERROR_CODES.md`](docs/reference/ERROR_CODES.md) · [`CAPABILITIES.md`](docs/reference/CAPABILITIES.md)
 - 开发：[`ARCHITECTURE.md`](docs/development/ARCHITECTURE.md) · [`E2E_TESTING.md`](docs/development/E2E_TESTING.md) · [`development/adr/`](docs/development/adr/)
-- 发布：[`CHANGELOG.md`](docs/releases/CHANGELOG.md) · [`release-v1.1.0.md`](docs/releases/release-v1.1.0.md)（旧版本 Release 与历史快照已撤回）
+- 发布：[`CHANGELOG.md`](docs/releases/CHANGELOG.md) · [`release-v1.1.1.md`](docs/releases/release-v1.1.1.md)（旧版本 Release 与历史快照已撤回）
 
 ## 5. 开发命令
 

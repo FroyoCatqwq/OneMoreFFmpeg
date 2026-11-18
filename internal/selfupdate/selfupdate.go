@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,8 +21,8 @@ import (
 	"time"
 
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/logging"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/output"
-	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
 	ggithub "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/provider/github"
 )
 
@@ -45,6 +46,7 @@ type Options struct {
 	Dir            string // staging directory for the new binary
 	ProgressWriter io.Writer
 	Now            func() time.Time
+	FileOps        FileOps // injectable file operations; nil uses realFileOps
 }
 
 // Update describes an available update.
@@ -204,6 +206,17 @@ func (o Options) Apply(ctx context.Context, u *Update) error {
 	var progress output.Progress
 	if o.ProgressWriter != nil {
 		progress = output.NewProgress(o.ProgressWriter, u.AssetName, resp.ContentLength)
+		defer progress.Close()
+	}
+	failProgress := func(err error) {
+		if progress == nil {
+			return
+		}
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			progress.Abort()
+		} else {
+			progress.Fail(err)
+		}
 	}
 	buf := make([]byte, 128*1024)
 	var total int64
@@ -212,15 +225,12 @@ func (o Options) Apply(ctx context.Context, u *Update) error {
 		if n > 0 {
 			total += int64(n)
 			if total > maxUpdateBytes {
-				if progress != nil {
-					progress.Finish()
-				}
-				return apperrors.New(apperrors.E4004, "update exceeds size limit")
+				err := apperrors.New(apperrors.E4004, "update exceeds size limit")
+				failProgress(err)
+				return err
 			}
 			if _, err := tmp.Write(buf[:n]); err != nil {
-				if progress != nil {
-					progress.Finish()
-				}
+				failProgress(err)
 				return err
 			}
 			_, _ = hasher.Write(buf[:n])
@@ -232,58 +242,164 @@ func (o Options) Apply(ctx context.Context, u *Update) error {
 			break
 		}
 		if readErr != nil {
-			if progress != nil {
-				progress.Finish()
-			}
+			failProgress(readErr)
 			return readErr
 		}
 	}
-	if progress != nil {
-		progress.Finish()
-	}
 	if sum := hex.EncodeToString(hasher.Sum(nil)); sum != u.SHA256 {
-		return apperrors.New(apperrors.E4002, "update sha256 mismatch").
+		err := apperrors.New(apperrors.E4002, "update sha256 mismatch").
 			WithDetails(map[string]any{"expected": u.SHA256, "actual": sum})
+		failProgress(err)
+		return err
 	}
-	if err := tmp.Chmod(0o755); err != nil {
+	// Preserve the running executable's permission bits instead of assuming
+	// 0755 (releases may be installed with stricter modes).
+	targetMode := os.FileMode(0o755)
+	if info, err := os.Stat(o.Executable); err == nil {
+		targetMode = info.Mode().Perm()
+	}
+	if err := tmp.Chmod(targetMode); err != nil {
+		failProgress(err)
 		return err
 	}
 	if err := tmp.Close(); err != nil {
+		failProgress(err)
 		return err
 	}
-	if err := platform.RenamePath(tmpPath, staging); err != nil {
-		return err
+	ops := o.FileOps
+	if ops == nil {
+		ops = realFileOps{}
+	}
+	if err := ops.Rename(tmpPath, staging); err != nil {
+		failProgress(err)
+		return apperrors.New(apperrors.E5009, "cannot stage update").WithCause(err.Error())
 	}
 	ok = true
 
+	// Stage journal: every transition is persisted atomically so a crash can
+	// be recovered on next start (Options.Recover).
+	state := updateState{Version: u.Version, Stage: "staged", Executable: o.Executable, Staging: staging}
+	if err := writeState(ops, o.Executable, state); err != nil {
+		failProgress(err)
+		return err
+	}
+	if info, err := ops.Stat(staging); err != nil || info.Size() < 1 {
+		failProgress(fmt.Errorf("staged update is empty"))
+		return apperrors.New(apperrors.E4002, "staged update is empty")
+	}
+	state.Stage = "verified"
+	if err := writeState(ops, o.Executable, state); err != nil {
+		failProgress(err)
+		return err
+	}
+
 	backup := o.Executable + ".old"
-	_ = os.Remove(backup)
-	if err := platform.RenamePath(o.Executable, backup); err != nil {
+	// A leftover backup from a previous crashed run must be preserved as the
+	// only recovery copy, not silently overwritten.
+	if _, err := ops.Stat(backup); err == nil {
+		failProgress(fmt.Errorf("backup already exists: %s", backup))
+		return apperrors.New(apperrors.E5009, "previous update backup still exists; recover it first").
+			WithDetails(map[string]any{"backup": backup})
+	}
+	if err := ops.Rename(o.Executable, backup); err != nil {
+		failProgress(err)
 		return apperrors.New(apperrors.E5009, "cannot move running executable aside").WithCause(err.Error())
 	}
-	if err := platform.RenamePath(staging, o.Executable); err != nil {
-		_ = platform.RenamePath(backup, o.Executable)
-		return apperrors.New(apperrors.E5009, "cannot install new executable").WithCause(err.Error())
+	state.Stage = "backup_created"
+	state.Backup = backup
+	if err := writeState(ops, o.Executable, state); err != nil {
+		// Journal write failed after backup: roll back and surface both errors.
+		rollbackErr := ops.Rename(backup, o.Executable)
+		if rollbackErr != nil {
+			return errors.Join(
+				fmt.Errorf("write update state: %w", err),
+				fmt.Errorf("restore previous executable: %w; backup retained at %s", rollbackErr, backup),
+			)
+		}
+		failProgress(err)
+		return fmt.Errorf("write update state: %w (previous executable restored)", err)
 	}
-	_ = os.Remove(backup)
+	if err := ops.Rename(staging, o.Executable); err != nil {
+		// Rollback must not be ignored; keep the backup if restoration also fails.
+		rollbackErr := ops.Rename(backup, o.Executable)
+		if rollbackErr != nil {
+			failProgress(err)
+			return errors.Join(
+				fmt.Errorf("install updated executable: %w", err),
+				fmt.Errorf("restore previous executable: %w; backup retained at %s", rollbackErr, backup),
+			)
+		}
+		failProgress(err)
+		return apperrors.New(apperrors.E5009, "update failed; previous executable restored").WithCause(err.Error())
+	}
+	state.Stage = "replaced"
+	if err := writeState(ops, o.Executable, state); err != nil {
+		// The new binary is in place; record failure but do not pretend success.
+		logging.FromContext(ctx).Warn("update state write failed after replacement", "err", err)
+	}
+	state.Stage = "committed"
+	if err := writeState(ops, o.Executable, state); err != nil {
+		logging.FromContext(ctx).Warn("update commit state write failed", "err", err)
+	}
+	// Best-effort backup cleanup with diagnostics (never silent).
+	if err := ops.Remove(backup); err != nil && !os.IsNotExist(err) {
+		logging.FromContext(ctx).Warn("update backup cleanup failed", "backup", backup, "err", err)
+	}
+	if progress != nil {
+		progress.Complete()
+	}
 	return nil
 }
 
-func validVersion(v string) bool {
+// parseStrictVersion accepts ONLY the project's stable X.Y.Z release format.
+// It rejects missing/extra fields, empty fields, non-digits, leading zeros,
+// negative values and integer overflow. Release tags with a leading "v" are
+// normalized by Check before this call. Prerelease builds are never accepted.
+func parseStrictVersion(v string) ([3]int, error) {
+	var out [3]int
 	if v == "" {
-		return false
+		return out, fmt.Errorf("empty version")
 	}
-	for _, r := range v {
-		if (r < '0' || r > '9') && r != '.' {
-			return false
+	parts := strings.Split(v, ".")
+	if len(parts) != 3 {
+		return out, fmt.Errorf("version %q must be X.Y.Z", v)
+	}
+	for i, part := range parts {
+		if part == "" {
+			return out, fmt.Errorf("version %q has empty field", v)
 		}
+		for _, r := range part {
+			if r < '0' || r > '9' {
+				return out, fmt.Errorf("version %q has non-digit field", v)
+			}
+		}
+		if len(part) > 1 && part[0] == '0' {
+			return out, fmt.Errorf("version %q has leading zero", v)
+		}
+		n, err := strconv.Atoi(part)
+		if err != nil {
+			return out, fmt.Errorf("version %q overflow: %w", v, err)
+		}
+		out[i] = n
 	}
-	return true
+	return out, nil
+}
+
+func validVersion(v string) bool {
+	_, err := parseStrictVersion(v)
+	return err == nil
 }
 
 func isNewer(candidate, current string) bool {
-	c := parseVersion(candidate)
-	cur := parseVersion(current)
+	c, err := parseStrictVersion(candidate)
+	if err != nil {
+		return false
+	}
+	cur, err := parseStrictVersion(current)
+	if err != nil {
+		// dev/unknown local versions are older than any valid release.
+		return true
+	}
 	for i := 0; i < 3; i++ {
 		if c[i] != cur[i] {
 			return c[i] > cur[i]
@@ -292,21 +408,11 @@ func isNewer(candidate, current string) bool {
 	return false
 }
 
-func parseVersion(v string) [3]int {
-	var out [3]int
-	parts := strings.Split(v, ".")
-	for i := 0; i < len(parts) && i < 3; i++ {
-		out[i], _ = strconv.Atoi(parts[i])
-	}
-	return out
-}
-
 func isHTTPSURL(raw string) bool {
 	lower := strings.ToLower(raw)
 	if strings.HasPrefix(lower, "https://") {
 		return true
 	}
-	// Loopback http is allowed for local tests only.
 	return strings.HasPrefix(lower, "http://127.0.0.1:") ||
 		strings.HasPrefix(lower, "http://localhost:") ||
 		strings.HasPrefix(lower, "http://[::1]:")

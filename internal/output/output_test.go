@@ -42,6 +42,7 @@ func TestProgressNoPanic(t *testing.T) {
 	p := output.NewProgress(&buf, "download", 100)
 	p.Update(50)
 	p.Update(100)
-	p.Finish()
-	p.Finish() // idempotent
+	p.Complete()
+	p.Complete() // idempotent
+	p.Close()
 }

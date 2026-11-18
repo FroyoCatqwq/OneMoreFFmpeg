@@ -1,14 +1,14 @@
 # THIRD_PARTY_NOTICES
 
-> Status: maintained; reviewed alongside v1.1.0 (2026-11-19)
+> Status: maintained; reviewed alongside v1.1.1 (2026-11-19)
 > Date: 2026-11-19
 > Project license: GPL-3.0-only (see root LICENSE)
 
-This file lists Go modules recorded by `go list -m all`. License texts are copied under `third_party/licenses/` where available. v1.1.0 is the current supported release; keep this list in sync whenever `go.mod` changes. Automated license checking via CI is not implemented yet (tracked separately, not a release blocker for v1.1.0).
+This file lists Go modules recorded by `go list -m all`. License texts are copied under `third_party/licenses/` where available. v1.1.1 is the current supported release; keep this list in sync whenever `go.mod` changes. Automated license checking via CI is not implemented yet (tracked separately, not a release blocker for v1.1.1).
 
 | Module | Version | Detected license | License text |
 |---|---|---|---|
-| `github.com/dustin/go-humanize` | `v1.1.0` | MIT | `third_party/licenses/github.com_dustin_go-humanize.txt` |
+| `github.com/dustin/go-humanize` | `v1.1.1` | MIT | `third_party/licenses/github.com_dustin_go-humanize.txt` |
 | `github.com/gofrs/flock` | `v0.13.2` | BSD-3-Clause | `third_party/licenses/github.com_gofrs_flock.txt` |
 | `github.com/jedib0t/go-pretty/v6` | `v6.9.2` | MIT | `third_party/licenses/github.com_jedib0t_go-pretty_v6.txt` |
 | `github.com/klauspost/compress` | `v1.20.4` | BSD-3-Clause | `third_party/licenses/github.com_klauspost_compress.txt` |
