@@ -33,30 +33,21 @@
 
 支持的 `--only`：`muxers`、`demuxers`、`devices`、`decoders`、`encoders`、`filters`、`pixel_formats`、`channel_layouts`、`sample_formats`。单类探测也支持 `--cache-dir` / `--no-cache` / `--refresh`，缓存键按 kind 独立计算。
 
-## 3. 版本目录
+## 3. 自定义 provider（无内置来源）
 
-稳定版版本信息来自 `https://ffmpeg.org/download.html#releases`，下载链接来自 provider release 资产。大版本线 `9.0` 会展示该线最后一个补丁版本（例如 `9.0.2`），`8.1` 展示 `8.1.3`；版本号不写死。
-
-```powershell
-.\one-more-ffmpeg-v1.1.1-windows-amd64.exe release list --channel stable --target win64 --json
-.\one-more-ffmpeg-v1.1.1-windows-amd64.exe release list --channel daily --days 7 --json
-.\one-more-ffmpeg-v1.1.1-windows-amd64.exe release list --channel daily --days 14 --count 3 --json
-```
-
-每日/快照版默认只展示最近 7 天。可指定 `--days` 调整窗口、`--count` 限制展示数量。stable 的 `days` 固定输出 0，但 `--count` 会截断版本列表；daily 资产名无法解析版本时回退为 snapshot tag。选择安装：
+项目不内置任何 provider，也不读取 ffmpeg.org 版本目录。所有 FFmpeg 来源都由你用 URL + SHA-256 登记：
 
 ```powershell
-.\one-more-ffmpeg-v1.1.1-windows-amd64.exe release install --channel stable --version 9.0.2 --json
-.\one-more-ffmpeg-v1.1.1-windows-amd64.exe release install --channel stable --version 9.0.2 --apply --json
-.\one-more-ffmpeg-v1.1.1-windows-amd64.exe release install --channel daily --snapshot autobuild-2026-11-12-12-00 --apply --json
+.\one-more-ffmpeg-v1.1.1-windows-amd64.exe provider add --id my-ffmpeg --url https://example.invalid/ffmpeg.zip --sha256 <64位SHA256> --apply --json
+.\one-more-ffmpeg-v1.1.1-windows-amd64.exe provider list --json
 ```
 
-不传 `--version` / `--snapshot` 时安装当前列表里的第一个（最新）版本；二者不能同时使用。`--provider bnqdzj-nonfree` 且未显式指定 `--variant` 时自动使用 `nonfree`，但仍需 `--allow-nonfree`。`release install` 与 `install` 一样默认 dry-run。
+没有 `release list` / `release install`：版本与资产完全由你提供的 URL 决定。nonfree 变体需 `--allow-nonfree`，且只能本地使用、不可再分发。
 
 ## 4. 解析、下载、安装
 
 ```powershell
-.\one-more-ffmpeg-v1.1.1-windows-amd64.exe resolve --provider btbn --channel stable --target win64 --json |
+.\one-more-ffmpeg-v1.1.1-windows-amd64.exe resolve --provider my-ffmpeg --target win64 --json |
   Out-File -Encoding utf8 .\release.json
 .\one-more-ffmpeg-v1.1.1-windows-amd64.exe download --release .\release.json --json
 .\one-more-ffmpeg-v1.1.1-windows-amd64.exe install --release .\release.json --json
@@ -84,7 +75,7 @@ Windows `env set` 写 HKCU\Environment 并广播 `WM_SETTINGCHANGE`；Linux 写 
 ## 6. 卸载与回滚
 
 ```powershell
-.\one-more-ffmpeg-v1.1.1-windows-amd64.exe uninstall --root C:\...\apps\btbn\latest\<sha16> --apply --json
+.\one-more-ffmpeg-v1.1.1-windows-amd64.exe uninstall --root C:\...\apps\my-ffmpeg\latest\<sha16> --apply --json
 .\one-more-ffmpeg-v1.1.1-windows-amd64.exe journal list --json
 .\one-more-ffmpeg-v1.1.1-windows-amd64.exe journal rollback --journal journal-... --apply --json
 ```

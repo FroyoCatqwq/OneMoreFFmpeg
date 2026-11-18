@@ -103,8 +103,8 @@
 | `env set` / `env unset` / `env rollback` | 已实现（默认 dry-run） |
 | `uninstall` | 已实现（默认 dry-run，隔离到 quarantine，可回滚） |
 | `journal list` / `journal rollback` | 已实现（rollback 默认 dry-run） |
-| `release list` / `release install` | 已实现（动态官方版本 + 近 7 天快照） |
 | `capabilities --only <kind>` | 已实现（单命令、单列表输出） |
+| 自定义 provider | 已实现（URL + SHA-256 pin，无内置 provider） |
 | `update` | 已实现（v1.1，默认 dry-run 检查；`--apply` 才自更新） |
 
 19 个命令的 data 表与示例**均已实现**（含 v1.1 的 `update`），并由 `internal/contracts` 做字段级校验；`data.schema` 冻结为 `/v1`，未注册的 schema、主版本升级或命令/data.schema 不匹配会得到 `OMF-E7003`（契约校验由 `internal/contracts` 守护）。
@@ -272,7 +272,7 @@ one-more-ffmpeg capabilities --installation-id <ID>
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `providers` | array | 内置 provider 在前（btbn、bnqdzj-nonfree），自定义 provider 按 `providers.toml` 顺序追加 |
+| `providers` | array | 用户登记的自定义 provider，按 `providers.toml` 顺序；无内置 provider，初始为空数组 |
 
 provider 摘要：
 
@@ -306,7 +306,7 @@ provider 摘要：
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
-| `--id` | 无 | 必填；`^[a-z0-9][a-z0-9-]{0,63}$`，不能是 `btbn` / `bnqdzj-nonfree` / `custom` |
+| `--id` | 无 | 必填；`^[a-z0-9][a-z0-9-]{0,63}$`，不能是 `custom` |
 | `--url` | 无 | 必填；仅 https，格式必须与 `archive.FormatFor` 支持的一致：`.zip` / `.tar.xz` / `.tar.gz` / `.tgz` / `.tar.zst` |
 | `--sha256` | 无 | 必填；缺失 `OMF-E3009`，格式错误同码 |
 | `--checksums-url` | 无 | 可选；仅 https |
@@ -322,64 +322,19 @@ provider 摘要：
 
 ---
 
-### 4.7 `resolve`（已实现）
+### 4.7 `resolve`（已实现，仅自定义 provider）
 
-`data` 字段遵循 `onemoreffmpeg.release/v1`：
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `provider` | string | provider id |
-| `repository` | string | `owner/repo` 或自定义来源标识 |
-| `channel` | string | `stable` / `daily` |
-| `release_tag` | string | 具体 tag；`latest` 仅允许同时携带 `release_id` + `published_at` + `asset_sha256`（D1） |
-| `release_id` | string | 可选；GitHub release 不可变 id，`release_tag=latest` 时必填 |
-| `published_at` | string | RFC 3339 UTC |
-| `pinned_at` | string | 可选；本次 pin 的 RFC 3339 时间 |
-| `asset_name` | string | 资产名 |
-| `asset_url` | string | HTTPS URL |
-| `asset_sha256` | string | SHA-256 |
-| `checksums_url` | string | 可为空 |
-| `checksums_sha256` | string | 可为空 |
-| `variant` | string | gpl / lgpl / nonfree / ... |
-| `linkage` | string | static / shared / unknown |
-| `target` | string | win64 / linux64 |
-| `license_hint` | string | gpl / lgpl / nonfree / custom |
-| `redistributable` | boolean | nonfree 必须为 false |
-| `warnings` | array | 可选；`OMF-W1006` 等 |
-
-`resolve` 选项：
+`data.schema` = `onemoreffmpeg.release/v1`。项目**没有内置 provider 或版本目录**：只有一个自定义 URL + SHA-256。解析时用登记的 `asset_url` 与 `asset_sha256` 产出 pin，channel 固定 `daily`。
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
-| `--provider <ID>` | `btbn` | 内置或已登记 provider |
-| `--channel <CH>` | `daily` | `stable` / `daily` |
+| `--provider <ID>` | 无（必填） | 已登记自定义 provider ID |
 | `--target <T>` | 当前平台 | `win64` / `linux64`；其他平台 `OMF-E3003` |
-| `--variant <V>` | `gpl` | `gpl` / `lgpl` / `nonfree`（另接受 `*-shared` 输入别名，输出归一化为三值之一 + `linkage=shared`） |
+| `--variant <V>` | `gpl` | `gpl` / `lgpl` / `nonfree` |
 | `--linkage <L>` | `static` | `static` / `shared` |
-| `--release-line <X>` | 最高 `nX.Y` | 仅 btbn stable；`master` 只用于 daily |
-| `--release-tag <TAG>` | 无 | 显式 pin；与 `--release-line` 互斥；daily 不接受 `latest` |
-| `--allow-nonfree` | false | nonfree provider 必填，缺失返回 `OMF-E7001`；成功时输出 `OMF-W1006` |
+| `--allow-nonfree` | false | nonfree 必填，缺失返回 `OMF-E7001`；成功输出 `OMF-W1006` |
 
-`release_tag=latest` 的合法条件是同时具备 `release_id`、`published_at` 与非空 `asset_sha256`；缺少任一字段返回 `OMF-E3010`。其他 channel/tag 组合按 `PROVIDER_RESOLVER.md` §7。
-
-实现行为：
-
-- `stable` + btbn：解析 `latest` release，在 `nX.Y` 资产中取最高版本（可用 `--release-line` 指定）；`release_tag` 记录 `latest`，同时写 `release_id` / `published_at` / `asset_sha256`；
-- `daily` + btbn/bnqdzj：列出 releases，取最新 `autobuild-*`，记录具体 tag；daily 必须匹配 master 资产，缺失返回 `E3003`，**不回退** stable-line 资产；
-- 资产格式按 target 优先：win64 选 `.zip`，linux64 选 `.tar.xz`；同一 release line 仍有多个匹配时返回 `E3003`；
-- `--release-tag` 显式指定时直接按 tag 解析；custom provider 不接受 `--release-tag` / `--release-line`（`E7001`）；
-- 校验来源优先级：GitHub asset `digest` > release 内 `checksums.sha256` > `OMF-E3005`；两者同时存在但不一致返回 `OMF-E4002`；digest 存在而 checksums 拉取失败时降级为仅 digest（不写 `checksums_url` / `checksums_sha256`）；
-- custom provider 的 `checksums_url` 会在 resolve 时拉取并计算 `checksums_sha256`，同时校验目标行；
-- `resolve` 只产出 pin，不下载资产；`asset_url` 必须为 https；
-- `[network] timeout` 与 `[download] max_redirects` 同时作用于 GitHub API 与 checksums 请求；`max_redirects=0` 表示禁止重定向；
-- 输出前按 `onemoreffmpeg.release/v1` 做运行时字段级校验，不满足契约返回 `OMF-E7003` 而不是输出非法 pin；
-- nonfree-only provider 只提供 `nonfree*` variant；`--variant gpl` 返回 `E7001`，且无论 variant 为何都要求 `--allow-nonfree`。
-
-示例：[`schemas/examples/provider-resolve.example.json`](schemas/examples/provider-resolve.example.json)
-
-详见 [`PROVIDER_RESOLVER.md`](PROVIDER_RESOLVER.md)。
-
----
+`--release-line` / `--release-tag` / `--channel stable` 不再支持（分别返回 `OMF-E7001` / `OMF-E3004`）。若登记了 `checksums_url`，resolve 时拉取并校验 `checksums_sha256`；`asset_url` 必须为 https。输出前按 `onemoreffmpeg.release/v1` 做运行时字段级校验，不满足契约返回 `OMF-E7003`。nonfree 变体要求 `--allow-nonfree` 并输出 `OMF-W1006`。
 
 ### 4.8 `download`（已实现）
 
@@ -561,14 +516,6 @@ provider 摘要：
 
 `data` 遵循 `onemoreffmpeg.capability-list/v1`：`kind` / `entries` / `command` / `installation_id` / `fingerprint` / `warnings`。只执行该类别所需的 FFmpeg 命令，不输出其他类别。`--cache-dir` / `--no-cache` / `--refresh` 同样生效：缓存文件为 `list-<kind>-<fingerprint>.json`，写入失败记录 `OMF-W1007`。不支持的 `--only <kind>` 属于非法枚举值，返回 `OMF-E7005`（退出 2），而非 help topic 的 `OMF-E2005`。
 
-### 4.15 `release list` / `release install`（已实现）
-
-`release list` 的 `data` 遵循 `onemoreffmpeg.release-catalog/v1`：
-
-- `channel=stable`：版本号来自 FFmpeg 官网 release 页，9.0 线展示其最后一个补丁（如 9.0.2），8.1 线展示 8.1.3；下载资产从 provider release URL 解析；`--days` 对 stable 不适用并输出 0，`--count` 会截断排序后的版本；
-- `channel=daily`：默认展示最近 7 天的 `autobuild-*` 快照；`--days` 改变窗口，`--count` 限制数量；版本从资产名解析，无法解析时回退为 snapshot tag（覆盖 `master` / `nX.Y-latest` 资产）；
-- `release install`：`--version` 或 `--snapshot` 选择（二者互斥），未指定时安装列表第一个；为支持选择旧版本，内部会忽略 `--count` 并扩大查找窗口；默认 dry-run，`--apply` 才安装；nonfree provider 需 `--allow-nonfree`，未显式指定 `--variant` 时自动使用 `nonfree`。`release install` 输出的 `result.command` 为 `install`，复用 install 的 data schema，**不作为独立 result.command 计入 19 个冻结命令**。
-
 ### 4.16 `journal list` / `journal rollback`（已实现）
 
 - `journal list`：`onemoreffmpeg.journal-list/v1`，输出全部 record 摘要与 pending ID；遇到损坏/不可读记录不再静默跳过，返回 `OMF-E6005`（带 `file` 详情，退出 1）；
@@ -603,7 +550,7 @@ provider 摘要：
 
 ## 5. 版本与兼容性
 
-> **Phase 6 契约冻结（2026-11-14）**：命令集（19 个 result.command）、`data.schema` 集（18 个，全 `/v1`）与退出码映射已冻结，
+> **Phase 6 契约冻结（2026-11-14）**：命令集（18 个 result.command）、`data.schema` 集（17 个，全 `/v1`）与退出码映射已冻结，
 > 由 `internal/contracts/freeze_test.go` 在 CI 中守护——任何静默改动都会使测试失败。契约变更必须走主版本升级与 [`VERSIONING.md`](VERSIONING.md)。
 > 外部消费者见 [`../../examples/external-caller/`](../../examples/external-caller/README.md)。
 

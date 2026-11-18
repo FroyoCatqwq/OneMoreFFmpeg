@@ -128,7 +128,7 @@ func TestValidateDataRequiresKnownSchema(t *testing.T) {
 }
 
 func TestValidateCommand(t *testing.T) {
-	for _, name := range []string{"journal.list", "journal.rollback", "release.list", "uninstall"} {
+	for _, name := range []string{"journal.list", "journal.rollback", "uninstall"} {
 		require.NoError(t, contracts.ValidateCommand(name), name)
 	}
 	err := contracts.ValidateCommand("not-a-command")
@@ -340,8 +340,9 @@ func TestValidateExampleRejectsInvalidArtifact(t *testing.T) {
 }
 
 func TestValidateExampleRejectsInvalidProviderData(t *testing.T) {
-	empty := map[string]any{"schema": model.ProviderListSchema, "providers": []any{}}
-	err := contracts.ValidateExample(writeResultExample(t, "provider.list", empty))
+	// Empty providers is valid now (no built-ins); a missing/invalid field is not.
+	malformed := map[string]any{"schema": model.ProviderListSchema, "providers": "not-an-array"}
+	err := contracts.ValidateExample(writeResultExample(t, "provider.list", malformed))
 	typed, ok := apperrors.As(err)
 	require.True(t, ok)
 	require.Equal(t, apperrors.E7003, typed.Code)
@@ -349,7 +350,7 @@ func TestValidateExampleRejectsInvalidProviderData(t *testing.T) {
 	incomplete := map[string]any{
 		"schema": model.ProviderListSchema,
 		"providers": []any{map[string]any{
-			"id": "btbn", "repository": "FFmpeg-Builds/FFmpeg-Builds",
+			"id": "my-ffmpeg", "repository": "custom",
 		}},
 	}
 	err = contracts.ValidateExample(writeResultExample(t, "provider.list", incomplete))

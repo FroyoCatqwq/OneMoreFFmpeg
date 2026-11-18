@@ -1,5 +1,7 @@
-// Package provider defines the FFmpeg release providers, their registry and
-// the pinning resolver (asset matching, checksums selection, nonfree consent).
+// Package provider defines custom (user-supplied URL) FFmpeg providers and
+// the resolver that pins them. OneMoreFFmpeg no longer ships built-in
+// providers: every download source is an explicit URL + SHA-256 registered by
+// the user via `provider add`.
 package provider
 
 import (
@@ -7,51 +9,38 @@ import (
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 )
 
-const (
-	IDBtbn          = "btbn"
-	IDBnqdzjNonfree = "bnqdzj-nonfree"
-	IDCustom        = "custom"
-)
+const IDCustom = "custom"
 
-// Request selects one release/asset. Empty fields fall back to documented
-// defaults once resolution is implemented.
+// Request selects a custom provider release.
 type Request struct {
 	Provider     string
-	Channel      string // stable | daily
-	Target       string // win64 | linux64
-	Variant      string // gpl | lgpl | nonfree | nonfree-shared
-	Linkage      string // static | shared
+	Channel      string
+	Target       string
+	Variant      string
+	Linkage      string
 	ReleaseTag   string
-	ReleaseLine  string // master | n8.1 | n9.0 ...
-	AllowNonfree bool   // required for nonfree providers/variants (D5)
+	ReleaseLine  string
+	AllowNonfree bool
 }
 
-// Provider exposes one built-in provider's metadata. Resolution is a separate
-// Resolver so metadata stays usable offline (`provider list`).
+// Provider exposes one provider's metadata. Custom providers are the only
+// kind; the registry remains as the offline listing surface used by
+// `provider list`.
 type Provider interface {
 	ID() string
 	Summary() model.ProviderSummary
 }
 
-// Registry holds the built-in providers. It is immutable after construction
-// and safe for concurrent reads.
+// Registry holds registered providers. Built-in providers were removed; the
+// registry is empty unless callers add providers explicitly.
 type Registry struct {
 	order     []string
 	providers map[string]Provider
 }
 
-// NewRegistry returns the built-in provider registry. Listing is offline and
-// keeps the documented order (btbn first, then bnqdzj-nonfree).
+// NewRegistry returns an empty registry.
 func NewRegistry() *Registry {
-	registry := &Registry{providers: map[string]Provider{}}
-	for _, item := range []Provider{
-		summaryProvider{summary: btbnSummary()},
-		summaryProvider{summary: bnqdzjSummary()},
-	} {
-		registry.order = append(registry.order, item.ID())
-		registry.providers[item.ID()] = item
-	}
-	return registry
+	return &Registry{providers: map[string]Provider{}}
 }
 
 // List returns provider summaries in registry order.
@@ -66,49 +55,24 @@ func (r *Registry) List() []model.ProviderSummary {
 	return out
 }
 
-// Get returns a provider by id.
+// Get returns a registered provider by id.
 func (r *Registry) Get(id string) (Provider, error) {
-	if r == nil {
-		return nil, apperrors.New(apperrors.E3001, "provider registry is not configured")
+	if r != nil {
+		if item, ok := r.providers[id]; ok {
+			return item, nil
+		}
 	}
-	item, ok := r.providers[id]
-	if !ok {
-		return nil, apperrors.New(apperrors.E3001, "provider id is not registered").WithDetails(map[string]any{"provider": id})
+	return nil, apperrors.New(apperrors.E3001, "provider id is not registered").
+		WithDetails(map[string]any{"provider": id})
+}
+
+// Add registers a provider (used for custom entries if needed in future).
+func (r *Registry) Add(item Provider) {
+	if r == nil || r.providers == nil {
+		return
 	}
-	return item, nil
-}
-
-func btbnSummary() model.ProviderSummary {
-	return model.ProviderSummary{
-		ID:              IDBtbn,
-		Repository:      "FFmpeg-Builds/FFmpeg-Builds",
-		Channels:        []string{"stable", "daily"},
-		Variants:        []string{"gpl", "lgpl", "gpl-shared", "lgpl-shared"},
-		Linkages:        []string{"static", "shared"},
-		Redistributable: true,
+	if _, exists := r.providers[item.ID()]; !exists {
+		r.order = append(r.order, item.ID())
 	}
-}
-
-func bnqdzjSummary() model.ProviderSummary {
-	return model.ProviderSummary{
-		ID:              IDBnqdzjNonfree,
-		Repository:      "BnqDzj/FFmpeg-Builds-nonfree",
-		Channels:        []string{"daily"},
-		Variants:        []string{"nonfree", "nonfree-shared"},
-		Linkages:        []string{"static", "shared"},
-		Redistributable: false,
-	}
-}
-
-// summaryProvider exposes metadata only; resolution lives in Resolver.
-type summaryProvider struct {
-	summary model.ProviderSummary
-}
-
-func (p summaryProvider) ID() string {
-	return p.summary.ID
-}
-
-func (p summaryProvider) Summary() model.ProviderSummary {
-	return p.summary
+	r.providers[item.ID()] = item
 }

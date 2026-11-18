@@ -19,7 +19,7 @@ import (
 var frozenCommands = []string{
 	"capabilities", "detect", "doctor", "download", "env.rollback", "env.set",
 	"env.status", "env.unset", "install", "journal.list", "journal.rollback",
-	"provider.add", "provider.list", "release.list", "resolve", "uninstall",
+	"provider.add", "provider.list", "resolve", "uninstall",
 	"update", "validate", "version",
 }
 
@@ -36,7 +36,6 @@ var frozenDataSchemas = []string{
 	"onemoreffmpeg.journal-list/v1",
 	"onemoreffmpeg.provider-add/v1",
 	"onemoreffmpeg.provider-list/v1",
-	"onemoreffmpeg.release-catalog/v1",
 	"onemoreffmpeg.release/v1",
 	"onemoreffmpeg.uninstall/v1",
 	"onemoreffmpeg.update/v1",

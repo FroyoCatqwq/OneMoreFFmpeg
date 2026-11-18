@@ -1,8 +1,8 @@
 # v1.1.1（2026-11-18）
 
 > Bugfix 版本：修复 v1.1.0 自更新可靠性、进度语义、缓存正确性与全盘扫描权限问题。
-> CLI 外部契约保持 19 命令 / 18 个 `/v1` schema。
-> 产物：Windows x64 / Linux x64 二进制、RHEL 9+ x86_64 RPM、`SHA256SUMS.txt`、build provenance；Scoop bucket 同步更新到 v1.1.1。
+> CLI 外部契约调整为 18 命令 / 17 个 `/v1` schema（移除了 `release list` 与 `release-catalog` schema）。
+> 产物：Windows x64 / Linux x64 二进制、`SHA256SUMS.txt`、build provenance（不提供 Scoop/dnf/RPM 包）。
 
 ## 修复要点
 
@@ -24,16 +24,6 @@
 更新器通过 GitHub Release asset 的 SHA-256 digest 校验下载内容完整性；这**不等同于完整的发布者身份验证**（attestation 的 repository/workflow identity 验证尚未在更新器内实现）。需要强身份保证的用户可用 `gh attestation verify` 独立校验 Release 产物。
 
 ## 安装
-
-```powershell
-scoop bucket add omf https://github.com/FroyoCatqwq/OneMoreFFmpeg-bucket
-scoop install one-more-ffmpeg
-scoop update one-more-ffmpeg
-```
-
-```bash
-sudo dnf install -y https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/download/v1.1.1/one-more-ffmpeg-1.1.1-1.el9.x86_64.rpm
-```
 
 完整说明见 [`安装指南`](../guides/INSTALL.md)；变更见 [`CHANGELOG.md`](CHANGELOG.md)。
 

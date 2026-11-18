@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -32,12 +31,6 @@ func phase4Home(t *testing.T) string {
 	return home
 }
 
-func writeGitHubConfig(t *testing.T, home, apiURL string) {
-	t.Helper()
-	body := fmt.Sprintf("schema = %q\n\n[network]\ntimeout = \"5s\"\ngithub_api = %q\n", "onemoreffmpeg.config/v1", apiURL)
-	require.NoError(t, os.WriteFile(filepath.Join(home, "config.toml"), []byte(body), 0o644))
-}
-
 func runJSON(t *testing.T, args ...string) (int, map[string]any, string) {
 	t.Helper()
 	opts, stdout, _ := testOptions(args...)
@@ -45,49 +38,6 @@ func runJSON(t *testing.T, args ...string) (int, map[string]any, string) {
 	var object map[string]any
 	require.NoError(t, json.Unmarshal(stdout.Bytes(), &object), stdout.String())
 	return code, object, stdout.String()
-}
-
-func githubFixture(t *testing.T) *httptest.Server {
-	t.Helper()
-	stable := map[string]any{
-		"id":           441698707,
-		"tag_name":     "latest",
-		"published_at": "2026-11-11T13:00:32Z",
-		"assets": []map[string]any{
-			{
-				"name":                 phase4AssetName,
-				"browser_download_url": "https://example.invalid/" + phase4AssetName,
-				"digest":               "sha256:" + phase4SHA,
-				"size":                 1024,
-			},
-		},
-	}
-	nonfree := map[string]any{
-		"id":           99,
-		"tag_name":     "autobuild-2026-11-11-12-39",
-		"published_at": "2026-11-11T12:39:00Z",
-		"assets": []map[string]any{
-			{
-				"name":                 "ffmpeg-N-128756-gd0b9c63c9f-win64-nonfree.zip",
-				"browser_download_url": "https://example.invalid/nonfree.zip",
-				"digest":               "sha256:" + strings.Repeat("b", 64),
-				"size":                 1024,
-			},
-		},
-	}
-	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set("Content-Type", "application/json")
-		switch {
-		case strings.HasSuffix(request.URL.Path, "/releases/latest"):
-			_ = json.NewEncoder(writer).Encode(stable)
-		case strings.HasSuffix(request.URL.Path, "/releases"):
-			_ = json.NewEncoder(writer).Encode([]map[string]any{nonfree})
-		default:
-			http.NotFound(writer, request)
-		}
-	}))
-	t.Cleanup(server.Close)
-	return server
 }
 
 func TestProviderAddAndList(t *testing.T) {
@@ -105,8 +55,8 @@ func TestProviderAddAndList(t *testing.T) {
 	code, object, raw = runJSON(t, "provider", "list", "--json")
 	require.Equal(t, 0, code, raw)
 	providers := object["data"].(map[string]any)["providers"].([]any)
-	require.Len(t, providers, 3)
-	require.Equal(t, "my-ffmpeg", providers[2].(map[string]any)["id"])
+	require.Len(t, providers, 1)
+	require.Equal(t, "my-ffmpeg", providers[0].(map[string]any)["id"])
 
 	code, object, _ = runJSON(t, "provider", "add", "--id", "my-ffmpeg",
 		"--url", "https://example.invalid/other.zip", "--sha256", sha, "--json")
@@ -117,41 +67,6 @@ func TestProviderAddAndList(t *testing.T) {
 		"--url", "https://example.invalid/other.zip", "--sha256", sha, "--dry-run", "--json")
 	require.Equal(t, 0, code)
 	require.Equal(t, "dry-run", object["data"].(map[string]any)["status"])
-}
-
-func TestResolveAgainstFakeGitHub(t *testing.T) {
-	home := phase4Home(t)
-	server := githubFixture(t)
-	writeGitHubConfig(t, home, server.URL)
-
-	code, object, raw := runJSON(t, "resolve", "--provider", "btbn", "--channel", "stable", "--target", "win64", "--json")
-	require.Equal(t, 0, code, raw)
-	data := object["data"].(map[string]any)
-	require.Equal(t, "latest", data["release_tag"])
-	require.Equal(t, "441698707", data["release_id"])
-	require.Equal(t, phase4AssetName, data["asset_name"])
-	require.Equal(t, phase4SHA, data["asset_sha256"])
-	require.Equal(t, "gpl", data["license_hint"])
-	require.Equal(t, true, data["redistributable"])
-}
-
-func TestResolveNonfreeRequiresAllowFlag(t *testing.T) {
-	home := phase4Home(t)
-	server := githubFixture(t)
-	writeGitHubConfig(t, home, server.URL)
-
-	code, object, _ := runJSON(t, "resolve", "--provider", "bnqdzj-nonfree", "--channel", "daily", "--variant", "nonfree", "--target", "win64", "--json")
-	require.Equal(t, 2, code)
-	require.Equal(t, "OMF-E7001", object["code"])
-
-	code, object, raw := runJSON(t, "resolve", "--provider", "bnqdzj-nonfree", "--channel", "daily",
-		"--variant", "nonfree", "--target", "win64", "--allow-nonfree", "--json")
-	require.Equal(t, 0, code, raw)
-	data := object["data"].(map[string]any)
-	require.Equal(t, false, data["redistributable"])
-	warnings := data["warnings"].([]any)
-	require.Len(t, warnings, 1)
-	require.Equal(t, "OMF-W1006", warnings[0].(map[string]any)["code"])
 }
 
 func TestDownloadOfflineRelease(t *testing.T) {

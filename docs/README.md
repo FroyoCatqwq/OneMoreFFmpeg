@@ -10,7 +10,7 @@
 
 | 文档 | 用途 |
 |---|---|
-| [`guides/INSTALL.md`](guides/INSTALL.md) | 安装：Scoop bucket / RHEL 9+ dnf RPM / 手动二进制与校验 |
+| [`guides/INSTALL.md`](guides/INSTALL.md) | 安装：手动二进制下载与 SHA-256 校验（无包管理器） |
 | [`guides/HOWTO.md`](guides/HOWTO.md) | 新手上手：下载、首次安装、开新终端、`ffmpeg` 可用、排错 |
 | [`guides/USAGE.md`](guides/USAGE.md) | 详细教程：provider、release、install、env、journal 的完整流程 |
 | [`guides/INTEGRATION.md`](guides/INTEGRATION.md) | 外部项目如何调用 CLI（Python / PowerShell 示例） |
@@ -30,7 +30,7 @@
 | [`reference/ENVIRONMENT.md`](reference/ENVIRONMENT.md) / [`PLATFORM_ENVIRONMENT.md`](reference/PLATFORM_ENVIRONMENT.md) | PATH / 环境变量 / current / journal 的跨平台细则 |
 | [`reference/SYSTEM_REQUIREMENTS.md`](reference/SYSTEM_REQUIREMENTS.md) | 系统要求、权限与提权、事务锁 |
 | [`reference/VERSIONING.md`](reference/VERSIONING.md) | SemVer 版本与发布规范 |
-| [`reference/schemas/`](reference/schemas/README.md) | 18 个 `/v1` data schema 的 golden 示例 |
+| [`reference/schemas/`](reference/schemas/README.md) | 17 个 `/v1` data schema 的 golden 示例 |
 | [`reference/man/one-more-ffmpeg.1`](reference/man/one-more-ffmpeg.1) | Linux man 页 |
 
 ## 3. 开发与决策（development/）
@@ -57,7 +57,7 @@
 | 内置来源 | BtbN + BnqDzj nonfree；支持自定义 URL（强制 SHA-256 校验） |
 | channel | `stable` / `daily`，解析为 release tag + asset SHA-256 |
 | 能力命令 | 13 个 FFmpeg 参数 / 能力入口 |
-| 对外契约 | 19 命令 / 18 个 `/v1` data schema / 退出码 0/1/2/130，`internal/contracts/freeze_test.go` 守护 |
+| 对外契约 | 18 命令 / 17 个 `/v1` data schema / 退出码 0/1/2/130，`internal/contracts/freeze_test.go` 守护 |
 | 外部集成 | 只调用 CLI 可执行文件；不提供 Go API / 插件 / JSON-RPC / C ABI |
 | 明确不做 | 包管理器识别（第三方 FFmpeg）、GUI/TUI、FFmpeg 自构建、私有制品库、后台自动更新服务（用户主动 `update` 已支持） |
 | 许可证 | GPL-3.0-only；nonfree FFmpeg 元数据可公开，二进制不可随公开 Release 分发 |

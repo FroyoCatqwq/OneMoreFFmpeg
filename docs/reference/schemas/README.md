@@ -43,7 +43,6 @@
 - [`examples/journal-list.example.json`](examples/journal-list.example.json)
 - [`examples/journal-action.example.json`](examples/journal-action.example.json)
 - [`examples/capability-list.example.json`](examples/capability-list.example.json)
-- [`examples/release-catalog.example.json`](examples/release-catalog.example.json)
 
 18 个 `data.schema` 现在**每个都有对应样例**，`internal/contracts` 的
 `TestValidateExamples` 会逐个核对，缺一份即失败。

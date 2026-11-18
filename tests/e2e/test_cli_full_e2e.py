@@ -51,7 +51,6 @@ def test_all_help_under_json_is_refused_as_error_envelope(cli):
         ("provider", "--json"),      # parent group, no subcommand
         ("env", "--json"),
         ("journal", "--json"),
-        ("release", "--json"),
         ("--json", "--help"),
         ("version", "--json", "--help"),
     ):
@@ -211,22 +210,22 @@ def test_provider_add_apply(cli):
 def test_download_rejects_offline_release_with_provider_flag(cli, tmp_path: Path):
     release = tmp_path / "release.json"
     release.write_text(json.dumps({
-        "schema": "onemoreffmpeg.release/v1", "provider": "btbn",
-        "repository": "FFmpeg-Builds/FFmpeg-Builds", "channel": "stable",
+        "schema": "onemoreffmpeg.release/v1", "provider": "custom",
+        "repository": "custom", "channel": "stable",
         "release_tag": "latest", "release_id": "1", "published_at": "2026-01-01T00:00:00Z",
         "asset_name": "x.zip", "asset_url": "https://example.invalid/x.zip",
         "asset_sha256": "a" * 64, "variant": "gpl", "linkage": "static",
         "target": "win64", "license_hint": "gpl", "redistributable": True,
     }), encoding="utf-8")
-    result = cli.run("download", "--release", str(release), "--provider", "btbn", "--json")
+    result = cli.run("download", "--release", str(release), "--provider", "custom", "--json")
     assert_error(result, "OMF-E1001", 1)
 
 
 def test_install_rejects_short_sha(cli, tmp_path: Path):
     release = tmp_path / "release.json"
     release.write_text(json.dumps({
-        "schema": "onemoreffmpeg.release/v1", "provider": "btbn",
-        "repository": "FFmpeg-Builds/FFmpeg-Builds", "channel": "stable",
+        "schema": "onemoreffmpeg.release/v1", "provider": "custom",
+        "repository": "custom", "channel": "stable",
         "release_tag": "latest", "release_id": "1", "published_at": "2026-01-01T00:00:00Z",
         "asset_name": "x.zip", "asset_url": "https://example.invalid/x.zip",
         "asset_sha256": "abcd", "variant": "gpl", "linkage": "static",

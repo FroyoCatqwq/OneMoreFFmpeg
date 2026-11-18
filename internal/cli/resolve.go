@@ -3,28 +3,22 @@ package cli
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	urfave "github.com/urfave/cli/v3"
 
-	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/config"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/provider"
-	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/provider/github"
 )
 
 func providerFlags() []urfave.Flag {
 	return []urfave.Flag{
-		&urfave.StringFlag{Name: "provider", Value: provider.IDBtbn, Usage: "provider id"},
-		&urfave.StringFlag{Name: "channel", Value: provider.ChannelDaily, Usage: "stable|daily"},
+		&urfave.StringFlag{Name: "provider", Usage: "custom provider id (add one with `provider add`)"},
 		&urfave.StringFlag{Name: "target", Usage: "win64|linux64 (default: current platform)"},
-		&urfave.StringFlag{Name: "variant", Value: "gpl", Usage: "gpl|lgpl|nonfree|nonfree-shared"},
+		&urfave.StringFlag{Name: "variant", Value: "gpl", Usage: "gpl|lgpl|nonfree"},
 		&urfave.StringFlag{Name: "linkage", Value: "static", Usage: "static|shared"},
-		&urfave.StringFlag{Name: "release-line", Usage: "master|n8.1|n9.0"},
-		&urfave.StringFlag{Name: "release-tag", Usage: "explicit release tag"},
 		&urfave.BoolFlag{Name: "allow-nonfree", Usage: "accept nonfree binaries (local use only)"},
 	}
 }
@@ -32,12 +26,10 @@ func providerFlags() []urfave.Flag {
 func requestFromFlags(cmd *urfave.Command) provider.Request {
 	return provider.Request{
 		Provider:     cmd.String("provider"),
-		Channel:      cmd.String("channel"),
+		Channel:      provider.ChannelDaily,
 		Target:       cmd.String("target"),
 		Variant:      cmd.String("variant"),
 		Linkage:      cmd.String("linkage"),
-		ReleaseLine:  cmd.String("release-line"),
-		ReleaseTag:   cmd.String("release-tag"),
 		AllowNonfree: cmd.Bool("allow-nonfree"),
 	}
 }
@@ -69,48 +61,21 @@ func resolveRelease(ctx context.Context, cmd *urfave.Command) (model.Release, er
 	if err != nil {
 		return model.Release{}, err
 	}
-	registry := provider.NewRegistry()
-	_, builtinErr := registry.Get(request.Provider)
-	builtin := builtinErr == nil
-	custom := []provider.Custom{}
-	if !builtin {
-		custom, err = loadCustomProvidersStrict()
-		if err != nil {
-			return model.Release{}, err
-		}
-		if _, found := provider.FindCustom(custom, request.Provider); !found {
-			return model.Release{}, apperrors.New(apperrors.E3001, "provider id is not registered").WithDetails(map[string]any{"provider": request.Provider})
-		}
+	custom, err := loadCustomProvidersStrict()
+	if err != nil {
+		return model.Release{}, err
 	}
-
+	if _, found := provider.FindCustom(custom, request.Provider); !found {
+		return model.Release{}, apperrors.New(apperrors.E3001, "provider id is not registered").
+			WithDetails(map[string]any{"provider": request.Provider})
+	}
 	cfg := configFrom(ctx)
 	resolver := &provider.Resolver{Now: time.Now}
 	if timeout, err := time.ParseDuration(cfg.Network.Timeout); err == nil {
 		resolver.Timeout = timeout
 	}
 	resolver.MaxRedirects = cfg.Download.MaxRedirects
-	if builtin {
-		client, err := newGitHubClient(cfg)
-		if err != nil {
-			return model.Release{}, err
-		}
-		resolver.Client = client
-	}
-	return resolver.Resolve(ctx, registry, request, custom)
-}
-
-func newGitHubClient(cfg config.Config) (*github.Client, error) {
-	client, err := github.NewClient(cfg.Network.GitHubAPI, os.Getenv("GITHUB_TOKEN"))
-	if err != nil {
-		return nil, err
-	}
-	client.MaxAttempts = cfg.Network.MaxAttempts
-	client.MaxRedirects = cfg.Download.MaxRedirects
-	if timeout, err := time.ParseDuration(cfg.Network.Timeout); err == nil {
-		client.Timeout = timeout
-	}
-	client.RebuildHTTPClient()
-	return client, nil
+	return resolver.Resolve(ctx, nil, request, custom)
 }
 
 func formatWarnings(release model.Release) string {

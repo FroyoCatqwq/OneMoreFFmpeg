@@ -22,7 +22,6 @@ const (
 	JournalListSchema    = "onemoreffmpeg.journal-list/v1"
 	JournalActionSchema  = "onemoreffmpeg.journal-action/v1"
 	CapabilityListSchema = "onemoreffmpeg.capability-list/v1"
-	ReleaseCatalogSchema = "onemoreffmpeg.release-catalog/v1"
 	UpdateSchema         = "onemoreffmpeg.update/v1"
 )
 
@@ -43,7 +42,6 @@ var KnownDataSchemas = map[string]struct{}{
 	JournalListSchema:    {},
 	JournalActionSchema:  {},
 	CapabilityListSchema: {},
-	ReleaseCatalogSchema: {},
 	UpdateSchema:         {},
 }
 

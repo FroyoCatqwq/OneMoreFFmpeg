@@ -5,7 +5,7 @@
 
 ## [1.1.1] — 2026-11-18
 
-v1.1.0 bugfix：聚焦自更新可靠性、进度语义与缓存正确性。CLI 契约保持 19 命令 / 18 schema 不变。
+v1.1.0 bugfix：聚焦自更新可靠性、进度语义与缓存正确性。本版同时移除了内置 provider 与 Scoop/dnf 支持，CLI 契约调整为 18 命令 / 17 schema。
 
 ### Fixed
 - **自更新回滚**：失败时不再忽略恢复错误；`errors.Join` 同时报告"新程序安装失败"与"旧程序恢复失败"，保留唯一可恢复备份及其路径；新增 staged/verified/backup_created/replaced/committed 阶段 journal 与 `Recover()` 崩溃恢复；保留原可执行文件权限；备份清理失败记录诊断。
@@ -24,7 +24,7 @@ v1.1.0 bugfix：聚焦自更新可靠性、进度语义与缓存正确性。CLI 
 首个 MINOR 版本：新增自更新与下载进度条两个功能，并保持 CLI 契约稳定扩充。
 
 ### Added
-- **`update` 命令（自更新）**：默认 dry-run 检查 GitHub Releases 最新稳定版，`--apply` 下载并校验 SHA-256 后原子替换当前可执行文件；Windows 采用旧文件改名策略，失败自动回滚。新增 `onemoreffmpeg.update/v1` schema（契约扩为 19 命令 / 18 schema）。
+- **`update` 命令（自更新）**：默认 dry-run 检查 GitHub Releases 最新稳定版，`--apply` 下载并校验 SHA-256 后原子替换当前可执行文件；Windows 采用旧文件改名策略，失败自动回滚。新增 `onemoreffmpeg.update/v1` schema。
 - **下载进度条**：TTY 显示进度条+百分比+ETA；CI/重定向输出阶段日志（无动画字符）；`--json` 仅 stdout JSON；进度走 stderr 不污染数据。
 - **日志框架接入业务层**：`log/slog` + `lmittmann/tint`，install/download/capabilities 等通过 `logging.FromContext(ctx)` 输出调试日志，`--log-level` / `--quiet` 控制。
 - **独立 `internal/output` 层**：CLI 与下载层不再直接使用 JSON/表格/进度第三方库（encoding/json/v2、go-pretty、tidwall/pretty 封装在 output 包内）。
@@ -57,7 +57,6 @@ Bugfix 版本。全量审查每个包与每份文档后修复确认的缺陷。
 
 ### Fixed
 - `--max-bytes` CLI flag 加上与 config 一致的 8 GiB 上限，防止 flag 绕过配置硬限制。
-- `release list/install --days/--count` 非法（非正）值改为显式错误，不再静默改默认值。
 - `doctor --strict` 在 human 模式的错误里输出失败检查项，不再丢失诊断信息。
 - checksums 资产按文档优先 `checksums.sha256` → `*checksums*.sha256` → `*.sha256` 查找，不再只认精确文件名。
 - GitHub `ListReleases(nil, ...)` 在满页时不再 panic；`Retry-After` 超大整数不再溢出绕过 60s 上限；officialVersions 重定向限制 10 次。
@@ -66,7 +65,6 @@ Bugfix 版本。全量审查每个包与每份文档后修复确认的缺陷。
 - 文档修正：journal schema 字段、shell rc 托管块标记、删除 data-root 的影响、变量覆盖语义、锁错误码 E6009、latest pin 表述、Go 工具链 1.27.x 等。
 
 ### Added
-- 新增 `test_real_network_e2e.py`（marker `OMF_E2E_NETWORK=1`）：真实 ffmpeg.org releases 页与 BtbN GitHub API 的 release list/resolve 测试，本地实测 3/3 通过。
 
 ## [1.0.1] — 2026-11-17
 

@@ -31,7 +31,7 @@ $env:OMF_BINARY = "C:\path\one-more-ffmpeg.exe"; ./call_omf.ps1
    消费者按 `code` 分支，不要解析人类文本。完整注册表见 [`docs/ERROR_CODES.md`](../../docs/reference/ERROR_CODES.md)。
 4. **schema 主版本冻结**：当前所有 `data.schema` 均为 `/v1`。主版本变化即破坏性变更（见 [`docs/VERSIONING.md`](../../docs/reference/VERSIONING.md)）；
    `internal/contracts/freeze_test.go` 会在 CI 中拒绝命令集/schema 集/退出码的静默改动。
-5. **只读 vs 写入**：`detect` / `validate` / `capabilities` / `doctor` / `env status` / `journal list` / `release list` 只读；
+5. **只读 vs 写入**：`detect` / `validate` / `capabilities` / `doctor` / `env status` / `journal list`  只读；
    `install` / `uninstall` / `env set|unset|rollback` / `journal rollback` / `provider add` 默认 dry-run，需 `--apply`。
 6. **doctor 默认退出 0**：即使 `healthy=false` 也退出 0，必须读 `data.healthy`；需要非零退出时用 `doctor --strict`。
 

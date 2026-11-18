@@ -28,7 +28,6 @@
 ```text
 one-more-ffmpeg-vX.Y.Z-windows-amd64.exe
 one-more-ffmpeg-vX.Y.Z-linux-amd64
-one-more-ffmpeg-X.Y.Z-1.el9.x86_64.rpm       # RHEL 9+ (x86_64)
 SHA256SUMS.txt
 ```
 

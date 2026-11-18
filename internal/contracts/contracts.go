@@ -39,7 +39,6 @@ var knownCommands = map[string]struct{}{
 	"uninstall":        {},
 	"journal.list":     {},
 	"journal.rollback": {},
-	"release.list":     {},
 	"update":           {},
 }
 
@@ -64,7 +63,6 @@ var CommandDataSchemas = map[string][]string{
 	"uninstall":        {model.UninstallSchema},
 	"journal.list":     {model.JournalListSchema},
 	"journal.rollback": {model.JournalActionSchema},
-	"release.list":     {model.ReleaseCatalogSchema},
 	"update":           {model.UpdateSchema},
 }
 
@@ -257,9 +255,7 @@ func validateDataFields(schema string, data map[string]any) error {
 		if err := json.Unmarshal(raw, &list); err != nil {
 			return apperrors.New(apperrors.E7003, "provider list is malformed").WithCause(err.Error())
 		}
-		if len(list.Providers) == 0 {
-			return apperrors.New(apperrors.E7003, "provider list must contain at least one provider")
-		}
+		// An empty list is valid now that no built-in providers ship.
 		for _, provider := range list.Providers {
 			if provider.ID == "" || provider.Repository == "" {
 				return apperrors.New(apperrors.E7003, "provider id and repository are required")
@@ -297,8 +293,6 @@ func validateDataFields(schema string, data map[string]any) error {
 		return validateInstall(raw)
 	case model.CapabilityListSchema:
 		return validateCapabilityList(raw)
-	case model.ReleaseCatalogSchema:
-		return validateReleaseCatalog(raw)
 	case model.VersionSchema:
 		return validateVersionData(raw)
 	case model.DetectSchema:
@@ -413,22 +407,6 @@ func validateJournalAction(raw []byte) error {
 	var data model.JournalActionData
 	if err := json.Unmarshal(raw, &data); err != nil || data.Schema != model.JournalActionSchema || data.JournalID == "" || data.Action == "" {
 		return apperrors.New(apperrors.E7003, "journal action is malformed")
-	}
-	return nil
-}
-
-func validateReleaseCatalog(raw []byte) error {
-	var data model.ReleaseCatalogData
-	if err := json.Unmarshal(raw, &data); err != nil {
-		return apperrors.New(apperrors.E7003, "release catalog is malformed").WithCause(err.Error())
-	}
-	if data.Provider == "" || (data.Channel != "stable" && data.Channel != "daily") || data.Source == "" {
-		return apperrors.New(apperrors.E7003, "release catalog field is required")
-	}
-	for _, entry := range data.Entries {
-		if entry.Version == "" || entry.ReleaseTag == "" || entry.AssetName == "" || !isHTTPS(entry.AssetURL) {
-			return apperrors.New(apperrors.E7003, "release catalog entry is malformed").WithDetails(map[string]any{"version": entry.Version})
-		}
 	}
 	return nil
 }

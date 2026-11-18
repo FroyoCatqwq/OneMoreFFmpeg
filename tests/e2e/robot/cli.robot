@@ -15,7 +15,7 @@ Version Returns JSON
 Provider List Is Offline
     ${result}=    Run Process    ${CLI}    provider    list    --json
     Should Be Equal As Integers    ${result.rc}    0
-    Should Contain    ${result.stdout}    "btbn"
+    Should Contain    ${result.stdout}    "provider"
 
 Doctor Returns Report
     ${result}=    Run Process    ${CLI}    doctor    --json

@@ -234,8 +234,7 @@ func validateCustom(entry Custom, existing []Custom) error {
 	if !customIDPattern.MatchString(id) {
 		return apperrors.New(apperrors.E7005, "provider id is invalid").WithDetails(map[string]any{"id": entry.ID})
 	}
-	switch id {
-	case IDBtbn, IDBnqdzjNonfree, IDCustom:
+	if id == IDCustom {
 		return apperrors.New(apperrors.E7005, "provider id is reserved").WithDetails(map[string]any{"id": id})
 	}
 	for _, current := range existing {

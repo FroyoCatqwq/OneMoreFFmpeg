@@ -285,13 +285,9 @@ func TestProviderListJSON(t *testing.T) {
 
 	providers, ok := data["providers"].([]any)
 	require.True(t, ok)
-	require.Len(t, providers, 2)
-	first := providers[0].(map[string]any)
-	require.Equal(t, "btbn", first["id"])
-	require.Equal(t, true, first["redistributable"])
-	second := providers[1].(map[string]any)
-	require.Equal(t, "bnqdzj-nonfree", second["id"])
-	require.Equal(t, false, second["redistributable"])
+	// Built-in providers were removed; only user-supplied custom providers
+	// appear here, so a fresh install has none.
+	require.Empty(t, providers)
 }
 
 func TestProviderUnknownSubcommand(t *testing.T) {

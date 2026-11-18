@@ -41,12 +41,16 @@ alias omf=./one-more-ffmpeg-v1.1.1-linux-amd64
 
 # 1) 确认能跑
 omf version
-# 期望：OneMoreFFmpeg 1.1.0 (...) linux/amd64 ...
+# 期望：OneMoreFFmpeg 1.1.1 (...) linux/amd64 ...
 
-# 2) 安装（默认 btbn 的 daily GPL 版）。会联网下载，几十 MB，请耐心等待，不要 Ctrl+C！
-omf install --apply
+# 2) 注册你自己的 FFmpeg 下载地址（URL + SHA-256），然后下载安装。
+#    项目没有内置 provider；所有来源都由你自己登记。
+omf provider add --id my-ffmpeg --url https://example.invalid/ffmpeg.zip --sha256 <64位SHA256> --apply
+omf resolve --provider my-ffmpeg --json > release.json
+omf download --release release.json --apply
+omf install --release release.json --apply
 # 期望最后几行：
-#   root: /home/you/.local/share/onemoreffmpeg/apps/btbn/...
+#   root: /home/you/.local/share/onemoreffmpeg/apps/my-ffmpeg/...
 #   current: symlink          <-- 看到 current 不是 missing 就对了
 #   installation: inst-...
 
@@ -111,7 +115,6 @@ ffmpeg -version                              # 新窗口里验证
 | `uninstall --apply` | 把某版本移入 quarantine（可恢复） | 是（默认 dry-run） |
 | `journal list` / `journal rollback --apply` | 看流水 / 回滚 | rollback 是 |
 | `provider list` / `provider add --apply` | 看 / 添加 provider | add 是（默认 dry-run） |
-| `release list` / `release install --apply` | 看官方版本 / 安装指定版本 | install 是（默认 dry-run） |
 | `capabilities --dir <root>` / `--only <kind>` | 检查 FFmpeg 能力（默认走缓存） | 否（只读，写缓存文件） |
 | `update` / `update --apply` | 检查新版 / 自更新本程序 | apply 是（默认 dry-run） |
 
@@ -168,24 +171,32 @@ omf install --channel stable --apply --force  # 再干净地装一次
 
 | 报错 | 含义 | 怎么办 |
 |---|---|---|
-| `OMF-E3001: provider id is not registered` | provider 名字写错/没写值 | 用 `omf provider list` 里的**完整 id**：`btbn` 或 `bnqdzj-nonfree`。`--provider` 后面必须跟值。 |
-| `OMF-E7001: provider does not offer the requested variant` | 该 provider 没有你要的 variant | nonfree provider 只提供 nonfree：加 `--variant nonfree --allow-nonfree`。 |
+| `OMF-E3001: provider id is not registered` | provider 未登记 | 先用 `provider add --id ... --url ... --sha256 ... --apply` 注册，再用 `omf provider list` 确认 ID。 |
+| `OMF-E7001: unsupported variant` | variant 不支持 | 用 `gpl` / `lgpl` / `nonfree`；nonfree 需加 `--allow-nonfree`。 |
 | `OMF-E6003: system scope requires elevation` | 用了 `--system` 但未提权 | 普通用户别用 `--system`；确需全局安装请用 sudo/管理员运行。`--authorize-system` 只能用于 dry-run 预览，不能替代提权。 |
 | `OMF-E6009: data root is locked` | 另一个 install/env 正在跑 | 等它结束再试。 |
 | `doctor healthy=false` | 有检查项没过 | 看具体哪行 false，对照 §5。 |
 
-### provider / variant 怎么选
+### provider 怎么选
+
+项目**没有内置 provider**（不再有 btbn / bnqdzj-nonfree，也没有 ffmpeg.org 版本目录）。所有 FFmpeg 来源都由一个自定义 URL + SHA-256 定义：
 
 ```bash
+# 1. 登记（一次即可）
+omf provider add --id my-ffmpeg --url https://example.invalid/ffmpeg.zip --sha256 <64位SHA256> --apply
 omf provider list
-# btbn            -> GPL/LGPL，stable + daily（默认，推荐新手）
-# bnqdzj-nonfree  -> nonfree，daily（含额外编码器，仅本地使用）
+
+# 2. 解析成 pin → 下载 → 安装
+omf resolve --provider my-ffmpeg --json > release.json
+omf download --release release.json --apply
+omf install --release release.json --apply
+
+# nonfree 变体需显式同意（仅本地使用，不可再分发）
+omf provider add --id my-nonfree --url https://example.invalid/ffmpeg-nonfree.zip --sha256 <64位SHA256> --apply
+omf resolve --provider my-nonfree --variant nonfree --allow-nonfree --json > release.json
 ```
 
-- 新手默认即可：`omf install --apply`（= btbn + daily + gpl）。
-- 要稳定版：`omf install --channel stable --apply`。
-- 要 nonfree：`omf install --provider bnqdzj-nonfree --variant nonfree --allow-nonfree --apply`。
-- 看有哪些版本：`omf release list --channel stable`；装指定版本：`omf release install --channel stable --version 9.0.2 --apply`。
+没有 `release list` / `release install`：版本选择由你提供的 URL 决定。
 
 ---
 
@@ -196,7 +207,7 @@ omf provider list
 omf install --channel stable --apply
 
 # 卸载某个版本（移入 quarantine，不是真删，可恢复）
-omf uninstall --root /home/you/.local/share/onemoreffmpeg/apps/btbn/latest/<sha> --apply
+omf uninstall --root /home/you/.local/share/onemoreffmpeg/apps/my-ffmpeg/latest/<sha> --apply
 
 # 看历史事务
 omf journal list
@@ -242,7 +253,6 @@ omf update --apply    # 下载新版、校验 SHA-256、原子替换当前程序
 omf update --json     # 机器可读输出；外部程序据此决定是否提示用户
 ```
 
-- 用 Scoop 安装的用户也可以用 `scoop update one-more-ffmpeg`，两者等价；
 - 替换程序时若失败会自动回滚到旧版，不会把工具弄坏；
 - Windows 上正在运行的程序不能直接覆盖，`--apply` 会用"旧文件改名 → 新文件就位"策略完成。
 

@@ -53,7 +53,7 @@ func TestCustomFileRejectsUnknownKeys(t *testing.T) {
 }
 
 func TestAddCustomRejectsReservedAndDuplicateIDs(t *testing.T) {
-	for _, id := range []string{"btbn", "bnqdzj-nonfree", "custom", "Bad_ID"} {
+	for _, id := range []string{"custom", "Bad_ID"} {
 		entry := validCustom()
 		entry.ID = id
 		_, err := provider.AddCustom(nil, entry)

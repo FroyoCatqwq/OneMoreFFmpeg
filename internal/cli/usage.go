@@ -18,25 +18,13 @@ DISCOVERY
   --only values: muxers, demuxers, devices, decoders, encoders, filters,
                  pixel_formats, channel_layouts, sample_formats
 
-RELEASE CATALOG
-  release list --channel stable --json
-      Stable versions come from https://ffmpeg.org/download.html#releases.
-      A line such as 9.0 is displayed as its newest patch (for example 9.0.2);
-      the downloadable asset is resolved from the provider release URL.
-  release list --channel daily --days 7 --count 3 --json
-      Daily/snapshot builds default to the last 7 days; --days changes the
-      lookback and --count limits how many snapshots are displayed.
-  release install --channel stable --version 9.0.2 --apply
-  release install --channel daily --snapshot autobuild-YYYY-MM-DD-HH-MM --apply
-      The newest displayed version is used when --version/--snapshot is omitted.
-      All installs are dry-run unless --apply is given.
-  release install --provider bnqdzj-nonfree --allow-nonfree --apply
-      nonfree providers require explicit consent.
-
-PROVIDERS / DOWNLOAD / INSTALL
-  provider list --json                    built-in and custom providers
+CUSTOM PROVIDERS / DOWNLOAD / INSTALL
+  provider list --json                    registered custom providers
   provider add --id my --url https://.../ffmpeg.zip --sha256 <64hex> --apply
-  resolve --provider btbn --channel stable --target win64 --json > release.json
+      OneMoreFFmpeg ships NO built-in providers: every source is an explicit
+      URL + SHA-256 that you register yourself. There is no release catalog.
+  resolve --provider my --target win64 --json > release.json
+      Pins the custom URL (optionally verifies a checksums file).
   download --release release.json --json
   install --release release.json --json   preview (no writes)
   install --release release.json --apply --emit-trio-lock --json
@@ -75,7 +63,7 @@ SAFETY
     or ~/.local/share/onemoreffmpeg (Linux).
 
 FULL DOCUMENTATION
-  docs/guides/INSTALL.md                  installation (Scoop / dnf / binary)
+  docs/guides/INSTALL.md                  installation (manual binary + checksum)
   docs/guides/HOWTO.md                    beginner guide (start here)
   docs/guides/USAGE.md                    tutorial
   docs/reference/man/one-more-ffmpeg.1    man page: man ./docs/reference/man/one-more-ffmpeg.1

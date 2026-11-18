@@ -9,10 +9,9 @@ GitHub Actions 提供质量门禁与 tag 发布流水线。产物见 [Releases](
 
 > **仅 v1.1.1 受支持**：旧版本（v1.0.x 及更早）不再维护，请始终使用当前版本；仓库内 `docs/releases/` 的旧版说明仅作历史记录。
 
-🟢 **第一次用？先看 [`安装指南`](docs/guides/INSTALL.md)（Scoop / dnf / 手动二进制）与 [`新手上手指南`](docs/guides/HOWTO.md)。黄金顺序：`install --apply` → `env set --apply` → 开新终端 → `ffmpeg` 可用。**
+🟢 **第一次用？先看 [`安装指南`](docs/guides/INSTALL.md)（手动二进制 + 校验）与 [`新手上手指南`](docs/guides/HOWTO.md)。黄金顺序：注册 `provider add` → `download/install --apply` → `env set --apply` → 开新终端 → `ffmpeg` 可用。**
 
-Windows：`scoop bucket add omf https://github.com/FroyoCatqwq/OneMoreFFmpeg-bucket` → `scoop install one-more-ffmpeg`。
-RHEL 9+：`sudo dnf install -y https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases/download/v1.1.1/one-more-ffmpeg-1.1.1-1.el9.x86_64.rpm`。
+安装：从 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases) 下载对应平台二进制并校验 SHA-256（本工具不提供 Scoop/dnf/RPM 包）。
 
 ---
 
@@ -27,14 +26,14 @@ RHEL 9+：`sudo dnf install -y https://github.com/FroyoCatqwq/OneMoreFFmpeg/rele
 
 已实现：发现（PATH / 环境变量 / 指定目录 / 常见目录 / 显式 `--scan` 全盘扫描）、三件套校验、13 项能力检查（带缓存）、
 BtbN + BnqDzj + 自定义 URL（`--url` / `provider add`）、稳定版 / 每日构建 / release pin、下载（SHA-256 校验）、
-安装（安全解压、版本化目录、`current`、journal）、`uninstall`、`env status|set|unset|rollback`、`release list|install`、
-`journal list|rollback`、`doctor`，共 19 个冻结命令（含 v1.1 新增的 `update`）。写入类命令默认 dry-run，需 `--apply`；`download` 与能力缓存会立即写文件。
+安装（安全解压、版本化目录、`current`、journal）、`uninstall`、`env status|set|unset|rollback`、
+`journal list|rollback`、`doctor`，共 18 个冻结命令（含 v1.1 新增的 `update`；已移除 `release list|install`）。写入类命令默认 dry-run，需 `--apply`；`download` 与能力缓存会立即写文件。
 
 明确不做：包管理器识别（Scoop/winget/apt 管理第三方 FFmpeg）、Go API / 插件 / JSON-RPC / C ABI、GUI/TUI、FFmpeg 自构建、私有制品库、**后台自动更新 / 静默替换 / 常驻更新服务**（v1.1 起已支持用户主动执行的 `update` 检查与 `update --apply` 自更新，二者不等同）。
 
 对外契约只有 **CLI 参数 + stdout JSON（或文件产物）+ stderr 日志 + 退出码**：
 
-- [`CLI_SCHEMA.md`](docs/reference/CLI_SCHEMA.md) — 唯一契约：JSON v1，19 命令 / 18 个 `/v1` schema，`freeze_test.go` 守护；
+- [`CLI_SCHEMA.md`](docs/reference/CLI_SCHEMA.md) — 唯一契约：JSON v1，18 命令 / 17 个 `/v1` schema，`freeze_test.go` 守护；无内置 provider，只支持自定义 URL；
 - [`ERROR_CODES.md`](docs/reference/ERROR_CODES.md) — 错误码 / 警告码 / 退出码（0/1/2/130）注册表；
 - 字段示例见 [`reference/schemas/`](docs/reference/schemas/README.md)。
 

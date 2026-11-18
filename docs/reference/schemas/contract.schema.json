@@ -4,159 +4,1000 @@
   "title": "OneMoreFFmpeg CLI JSON contract v1 (envelope + data schemas)",
   "description": "Machine-readable shape of onemoreffmpeg.result/v1 and onemoreffmpeg.error/v1 and the 17 frozen /v1 data schemas. Golden examples under examples/ must validate against this schema. Field-level semantics still live in CLI_SCHEMA.md; this schema locks structure and types only.",
   "oneOf": [
-    { "$ref": "#/$defs/result" },
-    { "$ref": "#/$defs/error" }
+    {
+      "$ref": "#/$defs/result"
+    },
+    {
+      "$ref": "#/$defs/error"
+    }
   ],
   "$defs": {
     "warning": {
       "type": "object",
-      "required": ["code", "message"],
+      "required": [
+        "code",
+        "message"
+      ],
       "properties": {
-        "code": { "type": "string", "pattern": "^OMF-W[0-9]{4}$" },
-        "message": { "type": "string" },
-        "details": { "type": "object" }
+        "code": {
+          "type": "string",
+          "pattern": "^OMF-W[0-9]{4}$"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "object"
+        }
       }
     },
-    "stringMap": { "type": "object", "additionalProperties": { "type": "string" } },
+    "stringMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
     "result": {
       "type": "object",
-      "required": ["schema", "ok", "command", "data"],
+      "required": [
+        "schema",
+        "ok",
+        "command",
+        "data"
+      ],
       "properties": {
-        "schema": { "const": "onemoreffmpeg.result/v1" },
-        "ok": { "const": true },
-        "command": { "type": "string", "minLength": 1 },
-        "data": { "type": "object", "required": ["schema"], "properties": { "schema": { "type": "string", "pattern": "^onemoreffmpeg\\.[a-z-]+/v1$" } } }
+        "schema": {
+          "const": "onemoreffmpeg.result/v1"
+        },
+        "ok": {
+          "const": true
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "data": {
+          "type": "object",
+          "required": [
+            "schema"
+          ],
+          "properties": {
+            "schema": {
+              "type": "string",
+              "pattern": "^onemoreffmpeg\\.[a-z-]+/v1$"
+            }
+          }
+        }
       },
       "allOf": [
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.version/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/version" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.detect/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/detect" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.validate/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/validate" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.capabilities/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/capabilities" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.capability-list/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/capabilityList" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.provider-list/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/providerList" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.provider-add/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/providerAdd" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.release/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/release" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.release-catalog/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/releaseCatalog" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.artifact/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/artifact" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.install/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/install" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.uninstall/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/uninstall" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.env-status/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/envStatus" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.env-set/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/envSet" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.doctor/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/doctor" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.journal-list/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/journalList" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.journal-action/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/journalAction" } } } },
-        { "if": { "properties": { "data": { "properties": { "schema": { "const": "onemoreffmpeg.update/v1" } } } } }, "then": { "properties": { "data": { "$ref": "#/$defs/update" } } } }
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.version/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/version"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.detect/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/detect"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.validate/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/validate"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.capabilities/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/capabilities"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.capability-list/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/capabilityList"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.provider-list/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/providerList"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.provider-add/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/providerAdd"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.release/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/release"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.artifact/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/artifact"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.install/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/install"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.uninstall/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/uninstall"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.env-status/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/envStatus"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.env-set/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/envSet"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.doctor/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/doctor"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.journal-list/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/journalList"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.journal-action/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/journalAction"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "schema": {
+                    "const": "onemoreffmpeg.update/v1"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/update"
+              }
+            }
+          }
+        }
       ]
     },
     "error": {
       "type": "object",
-      "required": ["schema", "ok", "code", "message", "details"],
+      "required": [
+        "schema",
+        "ok",
+        "code",
+        "message",
+        "details"
+      ],
       "properties": {
-        "schema": { "const": "onemoreffmpeg.error/v1" },
-        "ok": { "const": false },
-        "code": { "type": "string", "pattern": "^OMF-[EW][0-9]{4}$" },
-        "message": { "type": "string", "minLength": 1 },
-        "details": { "type": "object" },
-        "cause": { "type": "string" }
+        "schema": {
+          "const": "onemoreffmpeg.error/v1"
+        },
+        "ok": {
+          "const": false
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^OMF-[EW][0-9]{4}$"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "details": {
+          "type": "object"
+        },
+        "cause": {
+          "type": "string"
+        }
       }
     },
     "version": {
       "type": "object",
-      "required": ["schema", "name", "version", "go_version", "os", "arch"],
-      "properties": { "schema": { "const": "onemoreffmpeg.version/v1" }, "name": { "type": "string" }, "version": { "type": "string" }, "go_version": { "type": "string" }, "git_commit": { "type": "string" }, "build_time": { "type": "string" }, "os": { "type": "string" }, "arch": { "type": "string" } }
+      "required": [
+        "schema",
+        "name",
+        "version",
+        "go_version",
+        "os",
+        "arch"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.version/v1"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "go_version": {
+          "type": "string"
+        },
+        "git_commit": {
+          "type": "string"
+        },
+        "build_time": {
+          "type": "string"
+        },
+        "os": {
+          "type": "string"
+        },
+        "arch": {
+          "type": "string"
+        }
+      }
     },
     "detect": {
       "type": "object",
-      "required": ["schema", "installations"],
-      "properties": { "schema": { "const": "onemoreffmpeg.detect/v1" }, "installations": { "type": "array" }, "errors": { "type": "array" } }
+      "required": [
+        "schema",
+        "installations"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.detect/v1"
+        },
+        "installations": {
+          "type": "array"
+        },
+        "errors": {
+          "type": "array"
+        }
+      }
     },
     "validate": {
       "type": "object",
-      "required": ["schema", "installation_id", "status"],
-      "properties": { "schema": { "const": "onemoreffmpeg.validate/v1" }, "installation_id": { "type": "string" }, "status": { "type": "string" }, "checks": { "type": "array" }, "warnings": { "type": "array" } }
+      "required": [
+        "schema",
+        "installation_id",
+        "status"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.validate/v1"
+        },
+        "installation_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "checks": {
+          "type": "array"
+        },
+        "warnings": {
+          "type": "array"
+        }
+      }
     },
     "capabilities": {
       "type": "object",
-      "required": ["schema", "installation_id", "fingerprint", "commands", "version", "license"],
-      "properties": { "schema": { "const": "onemoreffmpeg.capabilities/v1" }, "installation_id": { "type": "string" }, "fingerprint": { "type": "string" }, "commands": { "type": "object" }, "version": { "type": "object" }, "license": { "type": "object" }, "muxers": { "type": "array" }, "demuxers": { "type": "array" }, "devices": { "type": "array" }, "decoders": { "type": "array" }, "encoders": { "type": "array" }, "filters": { "type": "array" }, "pixel_formats": { "type": "array" }, "channel_layouts": { "type": "array" }, "sample_formats": { "type": "array" }, "help": { "type": "object" }, "warnings": { "type": "array" } }
+      "required": [
+        "schema",
+        "installation_id",
+        "fingerprint",
+        "commands",
+        "version",
+        "license"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.capabilities/v1"
+        },
+        "installation_id": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "commands": {
+          "type": "object"
+        },
+        "version": {
+          "type": "object"
+        },
+        "license": {
+          "type": "object"
+        },
+        "muxers": {
+          "type": "array"
+        },
+        "demuxers": {
+          "type": "array"
+        },
+        "devices": {
+          "type": "array"
+        },
+        "decoders": {
+          "type": "array"
+        },
+        "encoders": {
+          "type": "array"
+        },
+        "filters": {
+          "type": "array"
+        },
+        "pixel_formats": {
+          "type": "array"
+        },
+        "channel_layouts": {
+          "type": "array"
+        },
+        "sample_formats": {
+          "type": "array"
+        },
+        "help": {
+          "type": "object"
+        },
+        "warnings": {
+          "type": "array"
+        }
+      }
     },
     "capabilityList": {
       "type": "object",
-      "required": ["schema", "kind", "entries"],
-      "properties": { "schema": { "const": "onemoreffmpeg.capability-list/v1" }, "installation_id": { "type": "string" }, "fingerprint": { "type": "string" }, "kind": { "type": "string" }, "entries": { "type": "array" }, "command": { "type": "string" }, "warnings": { "type": "array" } }
+      "required": [
+        "schema",
+        "kind",
+        "entries"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.capability-list/v1"
+        },
+        "installation_id": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "entries": {
+          "type": "array"
+        },
+        "command": {
+          "type": "string"
+        },
+        "warnings": {
+          "type": "array"
+        }
+      }
     },
     "providerList": {
       "type": "object",
-      "required": ["schema", "providers"],
-      "properties": { "schema": { "const": "onemoreffmpeg.provider-list/v1" }, "providers": { "type": "array" } }
+      "required": [
+        "schema",
+        "providers"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.provider-list/v1"
+        },
+        "providers": {
+          "type": "array"
+        }
+      }
     },
     "providerAdd": {
       "type": "object",
-      "required": ["schema", "id", "status"],
-      "properties": { "schema": { "const": "onemoreffmpeg.provider-add/v1" }, "id": { "type": "string" }, "url": { "type": "string" }, "sha256": { "type": "string" }, "status": { "type": "string" } }
+      "required": [
+        "schema",
+        "id",
+        "status"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.provider-add/v1"
+        },
+        "id": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
     },
     "release": {
       "type": "object",
-      "required": ["schema", "provider", "channel", "release_tag", "asset_name", "asset_sha256"],
-      "properties": { "schema": { "const": "onemoreffmpeg.release/v1" }, "provider": { "type": "string" }, "repository": { "type": "string" }, "channel": { "type": "string" }, "release_tag": { "type": "string" }, "release_id": { "type": "string" }, "published_at": { "type": "string" }, "asset_name": { "type": "string" }, "asset_url": { "type": "string" }, "asset_sha256": { "type": "string" }, "variant": { "type": "string" }, "linkage": { "type": "string" }, "license_hint": { "type": "string" } }
-    },
-    "releaseCatalog": {
-      "type": "object",
-      "required": ["schema", "provider", "channel", "entries"],
-      "properties": { "schema": { "const": "onemoreffmpeg.release-catalog/v1" }, "provider": { "type": "string" }, "channel": { "type": "string" }, "days": { "type": "integer" }, "count": { "type": "integer" }, "source": { "type": "string" }, "entries": { "type": "array" } }
+      "required": [
+        "schema",
+        "provider",
+        "channel",
+        "release_tag",
+        "asset_name",
+        "asset_sha256"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.release/v1"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "repository": {
+          "type": "string"
+        },
+        "channel": {
+          "type": "string"
+        },
+        "release_tag": {
+          "type": "string"
+        },
+        "release_id": {
+          "type": "string"
+        },
+        "published_at": {
+          "type": "string"
+        },
+        "asset_name": {
+          "type": "string"
+        },
+        "asset_url": {
+          "type": "string"
+        },
+        "asset_sha256": {
+          "type": "string"
+        },
+        "variant": {
+          "type": "string"
+        },
+        "linkage": {
+          "type": "string"
+        },
+        "license_hint": {
+          "type": "string"
+        }
+      }
     },
     "artifact": {
       "type": "object",
-      "required": ["schema", "artifact_id", "asset_name", "asset_sha256", "verified"],
-      "properties": { "schema": { "const": "onemoreffmpeg.artifact/v1" }, "artifact_id": { "type": "string" }, "provider": { "type": "string" }, "release_tag": { "type": "string" }, "asset_name": { "type": "string" }, "asset_sha256": { "type": "string" }, "local_path": { "type": "string" }, "verified": { "type": "boolean" } }
+      "required": [
+        "schema",
+        "artifact_id",
+        "asset_name",
+        "asset_sha256",
+        "verified"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.artifact/v1"
+        },
+        "artifact_id": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "release_tag": {
+          "type": "string"
+        },
+        "asset_name": {
+          "type": "string"
+        },
+        "asset_sha256": {
+          "type": "string"
+        },
+        "local_path": {
+          "type": "string"
+        },
+        "verified": {
+          "type": "boolean"
+        }
+      }
     },
     "install": {
       "type": "object",
-      "required": ["schema", "installation_id", "root_dir"],
-      "properties": { "schema": { "const": "onemoreffmpeg.install/v1" }, "installation_id": { "type": "string" }, "root_dir": { "type": "string" }, "current_pointer": { "type": "string" }, "provider": { "type": "string" }, "release_tag": { "type": "string" }, "asset_sha256": { "type": "string" }, "dry_run": { "type": "boolean" }, "applied": { "type": "boolean" } }
+      "required": [
+        "schema",
+        "installation_id",
+        "root_dir"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.install/v1"
+        },
+        "installation_id": {
+          "type": "string"
+        },
+        "root_dir": {
+          "type": "string"
+        },
+        "current_pointer": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "release_tag": {
+          "type": "string"
+        },
+        "asset_sha256": {
+          "type": "string"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "applied": {
+          "type": "boolean"
+        }
+      }
     },
     "uninstall": {
       "type": "object",
-      "required": ["schema", "root_dir", "dry_run", "applied"],
-      "properties": { "schema": { "const": "onemoreffmpeg.uninstall/v1" }, "root_dir": { "type": "string" }, "dry_run": { "type": "boolean" }, "applied": { "type": "boolean" }, "journal_id": { "type": "string" } }
+      "required": [
+        "schema",
+        "root_dir",
+        "dry_run",
+        "applied"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.uninstall/v1"
+        },
+        "root_dir": {
+          "type": "string"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "applied": {
+          "type": "boolean"
+        },
+        "journal_id": {
+          "type": "string"
+        }
+      }
     },
     "envStatus": {
       "type": "object",
-      "required": ["schema", "current_type"],
-      "properties": { "schema": { "const": "onemoreffmpeg.env-status/v1" }, "current_type": { "type": "string" }, "current_target": { "type": "string" }, "path_contains_current": { "type": "boolean" }, "resolved_ffmpeg": { "type": "string" }, "variables": { "type": "object" }, "warnings": { "type": "array" } }
+      "required": [
+        "schema",
+        "current_type"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.env-status/v1"
+        },
+        "current_type": {
+          "type": "string"
+        },
+        "current_target": {
+          "type": "string"
+        },
+        "path_contains_current": {
+          "type": "boolean"
+        },
+        "resolved_ffmpeg": {
+          "type": "string"
+        },
+        "variables": {
+          "type": "object"
+        },
+        "warnings": {
+          "type": "array"
+        }
+      }
     },
     "envSet": {
       "type": "object",
-      "required": ["schema", "dry_run", "applied"],
-      "properties": { "schema": { "const": "onemoreffmpeg.env-set/v1" }, "dry_run": { "type": "boolean" }, "applied": { "type": "boolean" }, "operations": { "type": "array" }, "journal_id": { "type": "string" }, "rollback_supported": { "type": "boolean" }, "warnings": { "type": "array" } }
+      "required": [
+        "schema",
+        "dry_run",
+        "applied"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.env-set/v1"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "applied": {
+          "type": "boolean"
+        },
+        "operations": {
+          "type": "array"
+        },
+        "journal_id": {
+          "type": "string"
+        },
+        "rollback_supported": {
+          "type": "boolean"
+        },
+        "warnings": {
+          "type": "array"
+        }
+      }
     },
     "doctor": {
       "type": "object",
-      "required": ["schema", "healthy", "checks"],
-      "properties": { "schema": { "const": "onemoreffmpeg.doctor/v1" }, "healthy": { "type": "boolean" }, "checks": { "type": "array", "items": { "type": "object", "required": ["name", "ok", "detail"], "properties": { "name": { "type": "string" }, "ok": { "type": "boolean" }, "detail": { "type": "string" } } } }, "warnings": { "type": "array", "items": { "$ref": "#/$defs/warning" } }, "journal_pending": { "type": "array" } }
+      "required": [
+        "schema",
+        "healthy",
+        "checks"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.doctor/v1"
+        },
+        "healthy": {
+          "type": "boolean"
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "ok",
+              "detail"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "ok": {
+                "type": "boolean"
+              },
+              "detail": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/warning"
+          }
+        },
+        "journal_pending": {
+          "type": "array"
+        }
+      }
     },
     "journalList": {
       "type": "object",
-      "required": ["schema", "records"],
-      "properties": { "schema": { "const": "onemoreffmpeg.journal-list/v1" }, "records": { "type": "array" }, "pending": { "type": "array" } }
+      "required": [
+        "schema",
+        "records"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.journal-list/v1"
+        },
+        "records": {
+          "type": "array"
+        },
+        "pending": {
+          "type": "array"
+        }
+      }
     },
     "journalAction": {
       "type": "object",
-      "required": ["schema", "journal_id", "action"],
-      "properties": { "schema": { "const": "onemoreffmpeg.journal-action/v1" }, "journal_id": { "type": "string" }, "action": { "type": "string" }, "applied": { "type": "boolean" }, "detail": { "type": "string" } }
+      "required": [
+        "schema",
+        "journal_id",
+        "action"
+      ],
+      "properties": {
+        "schema": {
+          "const": "onemoreffmpeg.journal-action/v1"
+        },
+        "journal_id": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "applied": {
+          "type": "boolean"
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
     },
     "update": {
       "type": "object",
-      "required": ["schema", "current_version", "latest_version", "update_available", "applied"],
+      "required": [
+        "schema",
+        "current_version",
+        "latest_version",
+        "update_available",
+        "applied"
+      ],
       "properties": {
-        "schema": { "const": "onemoreffmpeg.update/v1" },
-        "current_version": { "type": "string" },
-        "latest_version": { "type": "string" },
-        "update_available": { "type": "boolean" },
-        "asset_name": { "type": "string" },
-        "release_url": { "type": "string" },
-        "applied": { "type": "boolean" },
-        "operations": { "type": "array", "items": { "type": "string" } }
+        "schema": {
+          "const": "onemoreffmpeg.update/v1"
+        },
+        "current_version": {
+          "type": "string"
+        },
+        "latest_version": {
+          "type": "string"
+        },
+        "update_available": {
+          "type": "boolean"
+        },
+        "asset_name": {
+          "type": "string"
+        },
+        "release_url": {
+          "type": "string"
+        },
+        "applied": {
+          "type": "boolean"
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     }
   }

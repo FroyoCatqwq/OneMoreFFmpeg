@@ -3,13 +3,11 @@ package provider
 import (
 	"context"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
-	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/provider/github"
 )
 
 const (
@@ -17,16 +15,16 @@ const (
 	ChannelDaily  = "daily"
 
 	defaultChecksumsLimit = 4 << 20
-	checksumsAssetName    = "checksums.sha256"
 )
 
 // ChecksumsFetcher downloads a small checksums file. Tests inject a fake.
 type ChecksumsFetcher func(ctx context.Context, rawURL string) ([]byte, error)
 
-// Resolver turns a Request into a fully pinned Release. It never downloads the
-// asset itself; that is the download package's job.
+// Resolver turns a Request into a fully pinned Release from a custom provider.
+// It never downloads the asset itself; that is the download package's job.
+// OneMoreFFmpeg has no built-in download sources: the only supported provider
+// is a user-supplied URL + SHA-256 added with `provider add`.
 type Resolver struct {
-	Client       *github.Client
 	Fetch        ChecksumsFetcher
 	Now          func() time.Time
 	Timeout      time.Duration
@@ -48,19 +46,21 @@ func DefaultTarget() (string, error) {
 	}
 }
 
-// NormalizeRequest applies the documented defaults (target/variant/linkage)
-// and validates mutually exclusive options.
+// NormalizeRequest applies defaults and validates mutually exclusive options.
+// Custom providers only support the daily channel and reject release-line/tag
+// selectors (enforced in resolveCustom).
 func NormalizeRequest(req Request) (Request, error) {
-	if strings.TrimSpace(req.Provider) == "" {
-		req.Provider = IDBtbn
-	}
 	req.Provider = strings.ToLower(strings.TrimSpace(req.Provider))
+	if req.Provider == "" {
+		return Request{}, apperrors.New(apperrors.E7001, "provider id is required; add one with `provider add`")
+	}
 	if strings.TrimSpace(req.Channel) == "" {
 		req.Channel = ChannelDaily
 	}
 	req.Channel = strings.ToLower(strings.TrimSpace(req.Channel))
-	if req.Channel != ChannelStable && req.Channel != ChannelDaily {
-		return Request{}, apperrors.New(apperrors.E3004, "unsupported channel").WithDetails(map[string]any{"channel": req.Channel})
+	if req.Channel != ChannelDaily {
+		return Request{}, apperrors.New(apperrors.E3004, "custom providers only support the daily channel").
+			WithDetails(map[string]any{"channel": req.Channel})
 	}
 	if strings.TrimSpace(req.Target) == "" {
 		target, err := DefaultTarget()
@@ -73,172 +73,28 @@ func NormalizeRequest(req Request) (Request, error) {
 	if req.Target != "win64" && req.Target != "linux64" {
 		return Request{}, apperrors.New(apperrors.E3003, "unsupported target").WithDetails(map[string]any{"target": req.Target})
 	}
-	req.Variant, req.Linkage = normalizeVariant(req.Variant, req.Linkage)
-	switch req.Variant {
-	case "gpl", "lgpl", "nonfree":
-	default:
+	req.Variant = strings.ToLower(strings.TrimSpace(req.Variant))
+	if req.Variant == "" {
+		req.Variant = "gpl"
+	}
+	req.Linkage = strings.ToLower(strings.TrimSpace(req.Linkage))
+	if req.Linkage == "" {
+		req.Linkage = "static"
+	}
+	if req.Variant != "gpl" && req.Variant != "lgpl" && req.Variant != "nonfree" {
 		return Request{}, apperrors.New(apperrors.E7001, "unsupported variant").WithDetails(map[string]any{"variant": req.Variant})
 	}
-	switch req.Linkage {
-	case "static", "shared":
-	default:
+	if req.Linkage != "static" && req.Linkage != "shared" {
 		return Request{}, apperrors.New(apperrors.E7001, "unsupported linkage").WithDetails(map[string]any{"linkage": req.Linkage})
 	}
 	req.ReleaseTag = strings.TrimSpace(req.ReleaseTag)
 	req.ReleaseLine = strings.ToLower(strings.TrimSpace(req.ReleaseLine))
-	if req.ReleaseTag != "" && req.ReleaseLine != "" {
-		return Request{}, apperrors.New(apperrors.E7001, "--release-tag cannot be combined with --release-line")
-	}
-	if req.ReleaseLine != "" && req.ReleaseLine != "master" && !stableLinePattern.MatchString(req.ReleaseLine) {
-		return Request{}, apperrors.New(apperrors.E7001, "--release-line must be master or nX.Y").WithDetails(map[string]any{"release_line": req.ReleaseLine})
-	}
-	if req.ReleaseLine == "master" && req.Channel == ChannelStable {
-		return Request{}, apperrors.New(apperrors.E7001, "master line is only available on the daily channel")
-	}
-	if req.ReleaseLine != "" && req.ReleaseLine != "master" && req.Channel == ChannelDaily {
-		return Request{}, apperrors.New(apperrors.E7001, "stable release lines are only available on the stable channel").WithDetails(map[string]any{"release_line": req.ReleaseLine})
-	}
-	if req.Channel == ChannelDaily && strings.EqualFold(req.ReleaseTag, "latest") {
-		return Request{}, apperrors.New(apperrors.E7001, "daily channel requires a concrete release tag")
+	if req.ReleaseTag != "" || req.ReleaseLine != "" {
+		return Request{}, apperrors.New(apperrors.E7001, "custom providers do not accept --release-tag or --release-line")
 	}
 	return req, nil
 }
 
-// Resolve resolves one release for req. Custom providers are looked up in the
-// user registry first; built-ins use the GitHub client.
-func (r *Resolver) Resolve(ctx context.Context, registry *Registry, req Request, custom []Custom) (model.Release, error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	normalized, err := NormalizeRequest(req)
-	if err != nil {
-		return model.Release{}, err
-	}
-	req = normalized
-
-	var result model.Release
-	if entry, ok := FindCustom(custom, req.Provider); ok {
-		result, err = r.resolveCustom(ctx, req, entry)
-	} else {
-		if registry == nil {
-			return model.Release{}, apperrors.New(apperrors.E3001, "provider registry is not configured").WithDetails(map[string]any{"provider": req.Provider})
-		}
-		item, lookupErr := registry.Get(req.Provider)
-		if lookupErr != nil {
-			return model.Release{}, lookupErr
-		}
-		result, err = r.resolveGitHub(ctx, req, item.Summary())
-	}
-	if err != nil {
-		return model.Release{}, err
-	}
-	return result, nil
-}
-
-func (r *Resolver) resolveGitHub(ctx context.Context, req Request, summary model.ProviderSummary) (model.Release, error) {
-	if !supportsVariant(summary, req.Variant, req.Linkage) {
-		return model.Release{}, apperrors.New(apperrors.E7001, "provider does not offer the requested variant").WithDetails(map[string]any{
-			"provider": summary.ID,
-			"variant":  req.Variant,
-			"linkage":  req.Linkage,
-		})
-	}
-	if !contains(summary.Channels, req.Channel) {
-		return model.Release{}, apperrors.New(apperrors.E3004, "provider does not support the requested channel").WithDetails(map[string]any{
-			"provider": summary.ID,
-			"channel":  req.Channel,
-		})
-	}
-	if r.Client == nil {
-		return model.Release{}, apperrors.New(apperrors.E3007, "github client is not configured")
-	}
-	owner, repo, ok := strings.Cut(summary.Repository, "/")
-	if !ok || owner == "" || repo == "" {
-		return model.Release{}, apperrors.New(apperrors.E3007, "provider repository is invalid").WithDetails(map[string]any{"repository": summary.Repository})
-	}
-
-	release, err := r.pickRelease(ctx, req, owner, repo)
-	if err != nil {
-		return model.Release{}, err
-	}
-	if release.PublishedAt.IsZero() {
-		return model.Release{}, apperrors.New(apperrors.E3007, "github release has no published_at").WithDetails(map[string]any{"tag": release.TagName})
-	}
-	asset, _, err := selectAsset(release.Assets, assetQuery{
-		Channel:     req.Channel,
-		Target:      req.Target,
-		Variant:     req.Variant,
-		Linkage:     req.Linkage,
-		ReleaseLine: req.ReleaseLine,
-	})
-	if err != nil {
-		return model.Release{}, err
-	}
-	if !isStrictHTTPSURL(asset.BrowserDownloadURL) {
-		return model.Release{}, apperrors.New(apperrors.E3007, "github asset url must be https").WithDetails(map[string]any{
-			"asset": asset.Name,
-			"url":   asset.BrowserDownloadURL,
-		})
-	}
-	warnings, err := CheckNonfreeConsent(summary, req.Variant, req.AllowNonfree)
-	if err != nil {
-		return model.Release{}, err
-	}
-
-	assetSHA, checksumsURL, checksumsSHA, err := r.resolveChecksums(ctx, release, asset)
-	if err != nil {
-		return model.Release{}, err
-	}
-
-	pinnedAt := r.now().UTC().Format(time.RFC3339)
-	licenseHint := licenseHintFor(summary.ID, req.Variant)
-	return model.Release{
-		Schema:          model.ReleaseSchema,
-		Provider:        summary.ID,
-		Repository:      summary.Repository,
-		Channel:         req.Channel,
-		ReleaseTag:      release.TagName,
-		ReleaseID:       strconv.FormatInt(release.ID, 10),
-		PublishedAt:     release.PublishedAt.UTC().Format(time.RFC3339),
-		PinnedAt:        pinnedAt,
-		AssetName:       asset.Name,
-		AssetURL:        asset.BrowserDownloadURL,
-		AssetSHA256:     assetSHA,
-		ChecksumsURL:    checksumsURL,
-		ChecksumsSHA256: checksumsSHA,
-		Variant:         req.Variant,
-		Linkage:         req.Linkage,
-		Target:          req.Target,
-		LicenseHint:     licenseHint,
-		Redistributable: summary.Redistributable,
-		Warnings:        warnings,
-	}, nil
-}
-
-func (r *Resolver) pickRelease(ctx context.Context, req Request, owner, repo string) (github.Release, error) {
-	if req.ReleaseTag != "" {
-		return r.Client.ReleaseByTag(ctx, owner, repo, req.ReleaseTag)
-	}
-	if req.Channel == ChannelStable {
-		return r.Client.LatestRelease(ctx, owner, repo)
-	}
-	releases, err := r.Client.ListReleases(ctx, owner, repo, 100)
-	if err != nil {
-		return github.Release{}, err
-	}
-	for _, release := range releases {
-		if release.Draft || release.Prerelease {
-			continue
-		}
-		if strings.HasPrefix(strings.ToLower(release.TagName), "autobuild-") {
-			return release, nil
-		}
-	}
-	return github.Release{}, apperrors.New(apperrors.E3002, "no daily autobuild release found").WithDetails(map[string]any{"repository": owner + "/" + repo})
-}
-
-// resolveChecksums prefers the GitHub asset digest and falls back to the
-// release's checksums.sha256. Returning no hash at all is OMF-E3005.
 func (r *Resolver) now() time.Time {
 	if r != nil && r.Now != nil {
 		return r.Now()
@@ -246,37 +102,41 @@ func (r *Resolver) now() time.Time {
 	return time.Now()
 }
 
-func licenseHintFor(providerID, variant string) string {
-	if providerID == IDBnqdzjNonfree {
-		return "nonfree"
+func (r *Resolver) fetch(ctx context.Context, rawURL string) ([]byte, error) {
+	if r != nil && r.Fetch != nil {
+		return r.Fetch(ctx, rawURL)
 	}
-	switch variant {
-	case "lgpl":
-		return "lgpl"
-	case "nonfree":
-		return "nonfree"
-	case "gpl":
-		return "gpl"
-	default:
-		return "custom"
-	}
-}
-
-func contains(values []string, wanted string) bool {
-	for _, value := range values {
-		if value == wanted {
-			return true
+	body, err := fetchURL(ctx, rawURL, r.maxRedirects())
+	if err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, apperrors.New(apperrors.E9004, "context canceled").WithCause(ctxErr.Error())
 		}
 	}
-	return false
+	return body, err
 }
 
-func supportsVariant(summary model.ProviderSummary, variant, linkage string) bool {
-	if contains(summary.Variants, variant) {
-		return true
+func (r *Resolver) maxRedirects() int {
+	if r != nil && r.MaxRedirects > 0 {
+		return r.MaxRedirects
 	}
-	return linkage == "shared" && contains(summary.Variants, variant+"-shared")
+	return 5
 }
 
-// isStrictHTTPSURL enforces the https-only rule for GitHub-provided asset and
-// checksums URLs. Custom providers are validated the same way at add time.
+// Resolve resolves one release from a registered custom provider. The
+// registry argument is retained for API compatibility but is unused: there
+// are no built-in providers.
+func (r *Resolver) Resolve(ctx context.Context, _ *Registry, req Request, custom []Custom) (model.Release, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	normalized, err := NormalizeRequest(req)
+	if err != nil {
+		return model.Release{}, err
+	}
+	entry, ok := FindCustom(custom, normalized.Provider)
+	if !ok {
+		return model.Release{}, apperrors.New(apperrors.E3001, "provider id is not registered").
+			WithDetails(map[string]any{"provider": normalized.Provider})
+	}
+	return r.resolveCustom(ctx, normalized, entry)
+}
