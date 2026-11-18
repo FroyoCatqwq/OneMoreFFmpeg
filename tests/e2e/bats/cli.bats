@@ -14,7 +14,7 @@ setup() {
 @test "provider list works offline" {
   run "$OMF_BINARY" provider list --json
   [ "$status" -eq 0 ]
-  [[ "$output" == *'"btbn"'* ]]
+  [[ "$output" == *'onemoreffmpeg.provider-list/v1'* ]]
 }
 
 @test "doctor always returns a report" {
