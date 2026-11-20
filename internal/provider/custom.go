@@ -27,13 +27,17 @@ var (
 	licenseHints    = map[string]bool{"gpl": true, "lgpl": true, "nonfree": true, "custom": true}
 )
 
-// Custom is one user-registered direct asset provider.
+// Custom is one user-registered provider. Mode "direct" (default) pins a
+// single archive URL + SHA-256. Mode "directory" stores a base URL whose
+// artifacts follow the custom-URL naming convention (plain static hosting).
 type Custom struct {
 	ID           string `toml:"id" json:"id"`
 	URL          string `toml:"url" json:"url"`
-	SHA256       string `toml:"sha256" json:"sha256"`
+	SHA256       string `toml:"sha256,omitempty" json:"sha256,omitempty"`
 	ChecksumsURL string `toml:"checksums_url,omitempty" json:"checksums_url,omitempty"`
 	LicenseHint  string `toml:"license_hint,omitempty" json:"license_hint,omitempty"`
+	Mode         string `toml:"mode,omitempty" json:"mode,omitempty"` // direct | directory
+	Name         string `toml:"name,omitempty" json:"name,omitempty"` // software name in file names (e.g. ffmpeg)
 }
 
 type customFile struct {
@@ -245,13 +249,32 @@ func validateCustom(entry Custom, existing []Custom) error {
 	if !isCustomURLAllowed(entry.URL) {
 		return apperrors.New(apperrors.E3008, "custom provider url must be http(s)").WithDetails(map[string]any{"url": entry.URL})
 	}
-	if !sha256Hex.MatchString(entry.SHA256) {
-		return apperrors.New(apperrors.E3009, "custom provider requires a sha256 pin").WithDetails(map[string]any{"id": id})
+	mode := entry.Mode
+	if mode == "" {
+		mode = "direct"
 	}
-	if name := assetNameFromURL(entry.URL); name == "" {
-		return apperrors.New(apperrors.E3008, "custom provider url has no usable file name").WithDetails(map[string]any{"url": entry.URL})
-	} else if !hasArchiveExtension(name) {
-		return apperrors.New(apperrors.E3008, "custom provider url must point to a zip/tar.xz/tar.gz/tar.zst archive").WithDetails(map[string]any{"url": entry.URL})
+	switch mode {
+	case "directory":
+		// Directory mode: URL is a base (may have no file name or be any
+		// directory); artifacts are derived by the naming convention.
+		if entry.Name == "" {
+			return apperrors.New(apperrors.E7005, "directory provider requires --name").WithDetails(map[string]any{"id": id})
+		}
+		if hasArchiveExtension(assetNameFromURL(entry.URL)) {
+			return apperrors.New(apperrors.E3008, "directory provider url must not point to an archive").WithDetails(map[string]any{"url": entry.URL})
+		}
+		// No SHA-256 pin here: digest comes from checksum.sha256 at resolve.
+	case "direct":
+		if !sha256Hex.MatchString(entry.SHA256) {
+			return apperrors.New(apperrors.E3009, "custom provider requires a sha256 pin").WithDetails(map[string]any{"id": id})
+		}
+		if name := assetNameFromURL(entry.URL); name == "" {
+			return apperrors.New(apperrors.E3008, "custom provider url has no usable file name").WithDetails(map[string]any{"url": entry.URL})
+		} else if !hasArchiveExtension(name) {
+			return apperrors.New(apperrors.E3008, "custom provider url must point to a zip/tar.xz/tar.gz/tar.zst archive").WithDetails(map[string]any{"url": entry.URL})
+		}
+	default:
+		return apperrors.New(apperrors.E7005, "provider mode must be direct or directory")
 	}
 	if entry.ChecksumsURL != "" && !isCustomURLAllowed(entry.ChecksumsURL) {
 		return apperrors.New(apperrors.E3008, "custom checksums url must be http(s)").WithDetails(map[string]any{"url": entry.ChecksumsURL})

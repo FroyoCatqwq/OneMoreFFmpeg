@@ -82,17 +82,33 @@ func resolveRelease(ctx context.Context, cmd *urfave.Command) (model.Release, er
 		}
 		return (&official.Resolver{HTTPClient: hc, Now: time.Now}).Resolve(ctx, officialReq)
 	}
-	request, err := provider.NormalizeRequest(raw)
-	if err != nil {
-		return model.Release{}, err
-	}
 	custom, err := loadCustomProvidersStrict()
 	if err != nil {
 		return model.Release{}, err
 	}
-	if _, found := provider.FindCustom(custom, request.Provider); !found {
+	providerID := strings.ToLower(strings.TrimSpace(raw.Provider))
+	entry, found := provider.FindCustom(custom, providerID)
+	if !found {
 		return model.Release{}, apperrors.New(apperrors.E3001, "provider id is not registered").
-			WithDetails(map[string]any{"provider": request.Provider})
+			WithDetails(map[string]any{"provider": providerID})
+	}
+	if strings.EqualFold(entry.Mode, "directory") {
+		request, err := provider.NormalizeRequestDirectory(raw)
+		if err != nil {
+			return model.Release{}, err
+		}
+		var timeout time.Duration
+		if parsed, err := time.ParseDuration(cfg.Network.Timeout); err == nil {
+			timeout = parsed
+		}
+		return provider.ResolveDirectory(ctx, entry, request, entry.URL, provider.DirectoryOptions{
+			MaxRedirects: cfg.Download.MaxRedirects, CAPath: cfg.Network.CAPath,
+			Timeout: timeout, Now: time.Now,
+		})
+	}
+	request, err := provider.NormalizeRequest(raw)
+	if err != nil {
+		return model.Release{}, err
 	}
 	resolver := &provider.Resolver{Now: time.Now}
 	if timeout, err := time.ParseDuration(cfg.Network.Timeout); err == nil {

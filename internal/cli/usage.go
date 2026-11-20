@@ -21,7 +21,10 @@ DISCOVERY
 PROVIDERS / DOWNLOAD / INSTALL
   provider list --json                    built-in official + your custom providers
   provider add --id my --url https://.../ffmpeg.zip --sha256 <64hex> --apply
-      Optional: register your own URL + SHA-256 source.
+      Direct mode (default): one archive URL + SHA-256 pin.
+  provider add --id mydir --mode directory --name ffmpeg --url https://host/ffmpeg --apply
+      Directory mode: plain static hosting; resolves latest.txt or --release-line
+      and builds file names + checksum.sha256 by the documented convention.
   resolve --json > release.json           default: official FFmpeg-Builds latest
       --provider official (default) uses https://github.com/FFmpeg-Builds/FFmpeg-Builds
       latest release; defaults: gpl, static, master snapshot, x86_64 only.

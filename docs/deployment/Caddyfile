@@ -1,0 +1,8 @@
+{
+    auto_https off
+}
+
+:18082 {
+    root * /srv/omf-customurl/caddy
+    file_server
+}

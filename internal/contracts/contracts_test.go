@@ -268,7 +268,7 @@ func TestValidateExampleRejectsContractHoles(t *testing.T) {
 		func(data map[string]any) {
 			data["warnings"] = []any{map[string]any{"code": "OMF-W9999", "message": "x"}}
 		},
-		func(data map[string]any) { data["checksums_url"] = "https://example.com/checksums.sha256" },
+		func(data map[string]any) { data["checksums_sha256"] = strings.Repeat("a", 64) }, // sha256 without url is invalid
 	}
 	for index, mutate := range cases {
 		data := validRelease()

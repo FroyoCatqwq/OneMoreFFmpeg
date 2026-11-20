@@ -3,6 +3,21 @@
 本项目遵循 [Semantic Versioning 2.0.0](../reference/VERSIONING.md)。格式基于 [Keep a Changelog](https://keepachangelog.com/)。
 本文件列出 v1.1.2-pre1 之后的变更；更早版本仅以 `docs/releases/release-v*.md` 历史记录形式保留。
 
+## [1.1.2-pre4] — 2026-11-20
+
+新功能：自定义 URL 目录模式（静态文件托管，不锁死版本）。
+
+### Added
+- `internal/customurl`：`naming`（7 字段文件名解析/生成/枚举校验）、`checksum`（checksum.sha256 推导+严格解析）、`latest`（纯文本 latest.txt）、`urlpolicy`（TLS≥1.2、可选 CA、重定向链防降级）。
+- `provider add --mode directory --name <软件名>`：URL 指向目录（无需文件名），resolve 时读 latest.txt / `--release-line`，按命名规则生成资产名与同目录 checksum.sha256。
+- 三款服务器官方最小配置与来源说明：`docs/deployment/`（httpd 2.4.71 / nginx 1.30.7 / Caddy 2.11.9，均官方最新版实测）。
+- 规范文档：[`CUSTOM_URL_SPEC.md`](../reference/CUSTOM_URL_SPEC.md)。
+
+### Changed
+- 契约放宽：`release` 允许单独 `checksums_url`（checksum.sha256 不做自身校验）。
+- config 新增 `[network] ca_path`（可选私有 CA）。
+- 明确不支持 7z（Go 标准库无原生支持、无稳定依赖）、不做 SSRF 过滤。
+
 ## [1.1.2-pre3] — 2026-11-21
 
 新功能：默认 FFmpeg-Builds 官方 latest 快照 provider。

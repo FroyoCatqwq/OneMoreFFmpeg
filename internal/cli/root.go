@@ -211,7 +211,8 @@ var takesValue = map[string]bool{
 	"--linkage": true,
 	"--release": true, "--artifact": true, "--root": true, "--journal": true,
 	"--id": true, "--url": true, "--sha256": true, "--checksums-url": true,
-	"--license-hint": true, "--max-bytes": true, "--only": true, "--release-line": true,
+	"--license-hint": true, "--mode": true, "--name": true,
+	"--max-bytes": true, "--only": true, "--release-line": true,
 	"--installation-id": true, "--help-topic": true, "--cache-dir": true,
 }
 

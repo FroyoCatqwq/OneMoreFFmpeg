@@ -49,6 +49,19 @@ func DefaultTarget() (string, error) {
 // NormalizeRequest applies defaults and validates mutually exclusive options.
 // Custom providers only support the daily channel and reject release-line/tag
 // selectors (enforced in resolveCustom).
+// NormalizeRequestDirectory is NormalizeRequest for directory-mode providers,
+// which accept --release-line (a stable version or snapshot build id).
+func NormalizeRequestDirectory(req Request) (Request, error) {
+	allowLine := req.ReleaseLine
+	req.ReleaseLine = ""
+	normalized, err := NormalizeRequest(req)
+	if err != nil {
+		return Request{}, err
+	}
+	normalized.ReleaseLine = strings.ToLower(strings.TrimSpace(allowLine))
+	return normalized, nil
+}
+
 func NormalizeRequest(req Request) (Request, error) {
 	req.Provider = strings.ToLower(strings.TrimSpace(req.Provider))
 	if req.Provider == "" {

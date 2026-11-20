@@ -1,6 +1,6 @@
 # Provider、来源与 Release Pin
 
-> 状态：v1.1.2-pre3 现行；CLI 外部契约冻结（18 命令 / 17 个 `/v1` schema）
+> 状态：v1.1.2-pre4 现行；CLI 外部契约冻结（18 命令 / 17 个 `/v1` schema）
 > 默认 provider：**official**（FFmpeg-Builds 官方 latest 快照）；可选：用户自定义 URL。
 > 解析细则：[`PROVIDER_RESOLVER.md`](PROVIDER_RESOLVER.md)；CLI 输出见 [`CLI_SCHEMA.md`](CLI_SCHEMA.md)
 

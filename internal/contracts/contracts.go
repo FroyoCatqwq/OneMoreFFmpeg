@@ -638,8 +638,11 @@ func validateRelease(raw []byte) error {
 	if release.ChecksumsSHA256 != "" && !sha256Pattern.MatchString(release.ChecksumsSHA256) {
 		return apperrors.New(apperrors.E7003, "release checksums_sha256 must be lowercase hex")
 	}
-	if (release.ChecksumsURL == "") != (release.ChecksumsSHA256 == "") {
-		return apperrors.New(apperrors.E7003, "release checksums_url and checksums_sha256 must be paired")
+	// checksums_sha256 is an optional self-check of the checksums file; the
+	// custom-URL convention explicitly does NOT self-check checksum.sha256, so
+	// checksums_url may appear alone. The reverse (sha256 without URL) is invalid.
+	if release.ChecksumsSHA256 != "" && release.ChecksumsURL == "" {
+		return apperrors.New(apperrors.E7003, "release checksums_sha256 requires checksums_url")
 	}
 	return nil
 }

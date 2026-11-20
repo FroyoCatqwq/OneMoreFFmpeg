@@ -1,6 +1,6 @@
 # Provider 解析细则
 
-> 状态：v1.1.2-pre3 现行；默认 **official**（FFmpeg-Builds latest 快照）+ 可选自定义 URL provider。
+> 状态：v1.1.2-pre4 现行；默认 **official**（FFmpeg-Builds latest 快照）+ 可选自定义 URL provider。
 > CLI 输出见 [`CLI_SCHEMA.md`](CLI_SCHEMA.md)；错误码见 [`ERROR_CODES.md`](ERROR_CODES.md)
 
 ---
@@ -47,7 +47,7 @@
 ## 6. 与旧版的区别
 
 - 旧的 btbn / bnqdzj-nonfree 内置 provider、ffmpeg.org 官网版本列表与 `release list`/`release install` 命令已移除；
-- v1.1.2-pre3 新增的 **official** provider 是直接按 FFmpeg-Builds 官方推荐的 `latest` release 解析资产，**不是**恢复旧的内置来源或版本目录；
+- v1.1.2-pre4 新增的 **official** provider 是直接按 FFmpeg-Builds 官方推荐的 `latest` release 解析资产，**不是**恢复旧的内置来源或版本目录；
 - `--release-line` 仅用于 official 选择 line（默认 `master`；`n*` 稳定版暂不支持），`--release-tag`/`--snapshot` 未恢复。
 
 详见 [`PROVIDERS.md`](PROVIDERS.md) 的当前来源模型。

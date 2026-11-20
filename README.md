@@ -4,10 +4,10 @@
 
 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg> · 许可证：GPL-3.0-only
 
-**状态：v1.1.2-pre3** — Phase 1–7 全部完成，CLI 外部契约冻结；全项目审计后 bugfix；Windows + Linux + Docker 全新环境 `go test` / e2e 全绿，
+**状态：v1.1.2-pre4** — Phase 1–7 全部完成，CLI 外部契约冻结；全项目审计后 bugfix；Windows + Linux + Docker 全新环境 `go test` / e2e 全绿，
 GitHub Actions 提供质量门禁与 tag 发布流水线。产物见 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases)。
 
-> **仅 v1.1.2-pre3 受支持**：旧版本（v1.0.x 及更早）不再维护，请始终使用当前版本；仓库内 `docs/releases/` 的旧版说明仅作历史记录。
+> **仅 v1.1.2-pre4 受支持**：旧版本（v1.0.x 及更早）不再维护，请始终使用当前版本；仓库内 `docs/releases/` 的旧版说明仅作历史记录。
 
 🟢 **第一次用？先看 [`新手上手指南`](docs/guides/HOWTO.md)。黄金顺序：`resolve`（默认官方 latest）→ `download/install --apply` → `env set --apply` → 开新终端 → `ffmpeg` 可用。**
 
@@ -58,7 +58,7 @@ GitHub Actions 提供质量门禁与 tag 发布流水线。产物见 [Releases](
 - 上手：[`HOWTO.md`](docs/guides/HOWTO.md) · [`USAGE.md`](docs/guides/USAGE.md) · [`MIGRATION.md`](docs/guides/MIGRATION.md)
 - 契约：[`CLI_SCHEMA.md`](docs/reference/CLI_SCHEMA.md) · [`ERROR_CODES.md`](docs/reference/ERROR_CODES.md) · [`CAPABILITIES.md`](docs/reference/CAPABILITIES.md)
 - 开发：[`ARCHITECTURE.md`](docs/development/ARCHITECTURE.md) · [`E2E_TESTING.md`](docs/development/E2E_TESTING.md) · [`development/adr/`](docs/development/adr/)
-- 发布：[`CHANGELOG.md`](docs/releases/CHANGELOG.md) · [`release-v1.1.2-pre3.md`](docs/releases/release-v1.1.2-pre3.md)（旧版本 Release 与历史快照已撤回）
+- 发布：[`CHANGELOG.md`](docs/releases/CHANGELOG.md) · [`release-v1.1.2-pre4.md`](docs/releases/release-v1.1.2-pre4.md)（旧版本 Release 与历史快照已撤回）
 
 ## 5. 开发命令
 

@@ -36,6 +36,8 @@ type NetworkConfig struct {
 	Timeout     string `toml:"timeout"`
 	MaxAttempts int    `toml:"max_attempts"`
 	GitHubAPI   string `toml:"github_api"`
+	// CAPath is an optional PEM bundle for a private CA (custom-URL downloads).
+	CAPath string `toml:"ca_path"`
 }
 
 type DownloadConfig struct {

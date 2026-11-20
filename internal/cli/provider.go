@@ -79,6 +79,8 @@ func providerAddCommand() *urfave.Command {
 			&urfave.StringFlag{Name: "sha256", Usage: "asset sha256 pin (64 hex)"},
 			&urfave.StringFlag{Name: "checksums-url", Usage: "optional https checksums url"},
 			&urfave.StringFlag{Name: "license-hint", Usage: "gpl|lgpl|nonfree|custom"},
+			&urfave.StringFlag{Name: "mode", Value: "direct", Usage: "direct (default, --sha256 required) | directory (URL base, checksum.sha256 + naming convention)"},
+			&urfave.StringFlag{Name: "name", Usage: "software name in artifact file names (directory mode, e.g. ffmpeg)"},
 			&urfave.BoolFlag{Name: "apply", Usage: "actually write providers.toml (default is dry-run)"},
 			&urfave.BoolFlag{Name: "dry-run", Usage: "force a preview without writing providers.toml"},
 		},
@@ -92,6 +94,8 @@ func providerAddCommand() *urfave.Command {
 				SHA256:       strings.ToLower(strings.TrimSpace(cmd.String("sha256"))),
 				ChecksumsURL: strings.TrimSpace(cmd.String("checksums-url")),
 				LicenseHint:  strings.ToLower(strings.TrimSpace(cmd.String("license-hint"))),
+				Mode:         strings.ToLower(strings.TrimSpace(cmd.String("mode"))),
+				Name:         strings.ToLower(strings.TrimSpace(cmd.String("name"))),
 			}
 			path, err := paths.ProvidersFile()
 			if err != nil {

@@ -1,6 +1,6 @@
 # 版本与发布规范
 
-> 本项目遵循 [Semantic Versioning 2.0.0](https://semver.org/)；发布 tag 使用 `v` 前缀，例如 `v1.1.2-pre3`。
+> 本项目遵循 [Semantic Versioning 2.0.0](https://semver.org/)；发布 tag 使用 `v` 前缀，例如 `v1.1.2-pre4`。
 
 ## 1. 版本号含义（v1.0 起适用标准 SemVer）
 
@@ -54,4 +54,5 @@ SHA256SUMS.txt
 | v1.1.1 | 2026-11-18 | Bugfix：自更新失败可靠恢复、进度四态语义、缓存统一存储、严格 SemVer 校验（历史版本） |
 | v1.1.2-pre1 | 2026-11-18 | 预发布：全量审查后修复 16+ bug；自定义 URL 支持 http；引入 go-github/testscript；依赖全量更新（历史版本） |
 | v1.1.2-pre2 | 2026-11-20 | 预发布：第二轮细致修复（update --recover 死代码/状态机、fetch panic、下载 symlink、锁一致性等）+ 文档/CI 一致性（历史版本） |
-| v1.1.2-pre3 | 2026-11-21 | 预发布：新增默认 official provider（FFmpeg-Builds latest 快照，gpl/static/x86_64，数据驱动命名规则，README 链接提示）。详见 [`release-v1.1.2-pre3.md`](../releases/release-v1.1.2-pre3.md) |
+| v1.1.2-pre3 | 2026-11-21 | 预发布：新增默认 official provider（FFmpeg-Builds latest 快照，gpl/static/x86_64，数据驱动命名规则，README 链接提示）（历史版本） |
+| v1.1.2-pre4 | 2026-11-20 | 预发布：自定义 URL 目录模式（命名规则/latest.txt/checksum.sha256/TLS 策略），三款官方最新服务器实测。详见 [`release-v1.1.2-pre4.md`](../releases/release-v1.1.2-pre4.md) |
