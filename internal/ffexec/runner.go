@@ -199,7 +199,8 @@ func (r Runner) Run(ctx context.Context, executable string, args ...string) (Res
 	// command itself did not complete successfully. If cmd.Run() returned nil,
 	// the process finished (exit 0) before the context was cancelled; a cancel
 	// arriving between Run() and here must not turn a successful run into a
-	// spurious failure.
+	// spurious failure. When Run() returns an ExitError and ctx was cancelled,
+	// the process was killed by the context -> cancellation is the right code.
 	if err != nil && stderrors.Is(ctx.Err(), context.Canceled) {
 		result.ExitCode = ExitCodeNotStarted
 		return result, apperrors.New(apperrors.E9004, "context canceled")

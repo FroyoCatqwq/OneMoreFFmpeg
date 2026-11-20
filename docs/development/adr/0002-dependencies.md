@@ -1,6 +1,6 @@
 # Go 依赖库评估
 
-> 决策日期：2026-11-10；最近更新：2026-11-19（v1.1.2-pre1）
+> 决策日期：2026-11-10；最近更新：2026-11-20（v1.1.2-pre2）
 > 状态：已接受。§1–§7 是 2026-11-10 的**历史评估快照**（版本表为当时数据，不再更新）；
 > **当前实际依赖以 §8 与 `go.mod` / `THIRD_PARTY_NOTICES.md` 为准**。
 > 适用：OneMoreFFmpeg CLI-first 范围
@@ -260,7 +260,7 @@ Go SDK + 进程插件框架 + gRPC 服务 + 包管理器集成 + GUI/TUI
 已通过官方 README 核实：
 
 ```text
-This library supports TOML v1.1.2-pre1.
+This library supports TOML v1.1.2-pre2.
 Import: github.com/pelletier/go-toml/v2
 License: MIT
 ```
@@ -389,7 +389,7 @@ github.com/ulikunitz/xz
 github.com/sethvargo/go-retry
 ```
 
-历史说明：Phase 0 时仓库只有 `go.mod`；上表是 Phase 1 计划的最小集（13 项）。**v1.1.2-pre1 的实际依赖（16 个直接 + 2 个间接）见 §8。**
+历史说明：Phase 0 时仓库只有 `go.mod`；上表是 Phase 1 计划的最小集（13 项）。**v1.1.2-pre2 的实际依赖（16 个直接 + 2 个间接）见 §8。**
 
 ---
 
@@ -413,15 +413,15 @@ github.com/sethvargo/go-retry
 >
 > 包管理器识别、Go API、JSON-RPC、gRPC、C ABI 插件都明确推迟，不进入当前依赖范围。
 >
-> **注意**：以上是 Phase 1 时的核心库决策；v1.1.2-pre1 追加了 3 个运行时库（flock / go-internal / jsonschema），见 §8。
+> **注意**：以上是 Phase 1 时的核心库决策；v1.1.2-pre2 追加了 3 个运行时库（flock / go-internal / jsonschema），见 §8。
 
 ---
 
-## 8. 当前实际依赖（v1.1.2-pre1，权威）
+## 8. 当前实际依赖（v1.1.2-pre2，权威）
 
 以 `go.mod` 为准；许可证全文见 `THIRD_PARTY_NOTICES.md` 与 `third_party/licenses/`。
 
-### 8.1 直接依赖（19 个）
+### 8.1 直接依赖（17 个）
 
 | 库 | 版本 | 用途 |
 |---|---|---|
@@ -434,15 +434,13 @@ github.com/sethvargo/go-retry
 | `github.com/ulikunitz/xz` | v0.5.17 | xz 解压 |
 | `golang.org/x/sync` | v0.25.0 | `errgroup` 并发 |
 | `golang.org/x/sys` | v0.50.0 | Windows 注册表/ syscall |
-| `golang.org/x/term` | v0.48.0 | 终端宽度 |
-| `golang.org/x/time` | v0.16.0 | 限流 |
 | `github.com/stretchr/testify` | v1.12.1 | 测试断言 |
 | `github.com/gofrs/flock` | v0.13.2 | **v1.0.1 引入**：跨进程 OS 文件锁（替代手写 flock/LockFileEx） |
-| `github.com/rogpeppe/go-internal` | v1.16.0 | **v1.0.1 引入**：`lockedfile` 原子写 journal；**v1.1.2-pre1 引入** `testscript` CLI 脚本测试 |
+| `github.com/rogpeppe/go-internal` | v1.16.0 | **v1.0.1 引入**：`lockedfile` 原子写 journal；**v1.1.2-pre2 引入** `testscript` CLI 脚本测试 |
 | `github.com/santhosh-tekuri/jsonschema/v6` | v6.0.3 | **v1.0.1 引入**：校验 golden examples 与 `contract.schema.json` |
 | `github.com/jedib0t/go-pretty/v6` | v6.9.2 | **v1.1 引入**：表格与下载进度条（封装在 `internal/output`） |
 | `github.com/tidwall/pretty` | v1.3.0 | **v1.1 引入**：JSON 美化（封装在 `internal/output`） |
-| `github.com/google/go-github/v93` | v93.0.0 | **v1.1.2-pre1 引入**：GitHub Releases 查询（自更新 + 未来 FFmpeg 资产获取） |
+| `github.com/google/go-github/v93` | v93.0.0 | **v1.1.2-pre2 引入**：GitHub Releases 查询（自更新 + 未来 FFmpeg 资产获取） |
 | `github.com/maypok86/otter/v2` | v2.4.0 | **v1.1 引入**：内存缓存（封装在 `internal/cache`） |
 | 标准库 `encoding/json/v2` | Go 1.27 内置 | **v1.1 引入**：JSON 编解码（封装在 `internal/output`） |
 
@@ -451,7 +449,8 @@ github.com/sethvargo/go-retry
 ### 8.2 间接依赖
 
 - `github.com/mattn/go-runewidth` v0.0.31、`github.com/rivo/uniseg` v0.4.7、`github.com/clipperhouse/uax29/v2` v2.7.0（go-pretty 依赖）
-- `go.yaml.in/yaml/v3` v3.0.6、`golang.org/x/text` v0.44.0、`github.com/google/go-querystring` v1.2.0、`github.com/dlclark/regexp2` v1.12.0
+- `go.yaml.in/yaml/v3` v3.0.6、`golang.org/x/text` v0.44.0、`golang.org/x/term` v0.48.0、`golang.org/x/tools` v0.52.0
+- `github.com/google/go-querystring` v1.2.0、`github.com/dlclark/regexp2` v1.12.0、`github.com/clipperhouse/uax29/v2` v2.7.0
 
 ### 8.3 开发工具链（不在 go.mod）
 
@@ -465,4 +464,4 @@ github.com/sethvargo/go-retry
 | Phase 1（v0.6.0） | 落地 §5 的 13 项最小集 |
 | v1.0.1 | 新增 `gofrs/flock`、`rogpeppe/go-internal/lockedfile`、`santhosh-tekuri/jsonschema/v6`；引入 golangci-lint v2 + gosec 门禁 |
 | v1.1.0 | 新增 `go-pretty/v6`、`tidwall/pretty`、`maypok86/otter/v2`、标准库 `encoding/json/v2`；输出/缓存分别收敛到 `internal/output`、`internal/cache` |
-| v1.1.2-pre1 | 新增 `google/go-github/v93`（GitHub Releases 查询）与 `go-internal/testscript`（CLI 脚本测试）；移除 `go-retry`；所有依赖更新至最新版 |
+| v1.1.2-pre2 | 新增 `google/go-github/v93`（GitHub Releases 查询）与 `go-internal/testscript`（CLI 脚本测试）；移除 `go-retry`；所有依赖更新至最新版 |

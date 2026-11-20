@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/FroyoCatqwq/OneMoreFFmpeg/schemas/contract-v1.json",
+  "$id": "https://github.com/FroyoCatqwq/OneMoreFFmpeg/blob/main/docs/reference/schemas/contract.schema.json",
   "title": "OneMoreFFmpeg CLI JSON contract v1 (envelope + data schemas)",
   "description": "Machine-readable shape of onemoreffmpeg.result/v1 and onemoreffmpeg.error/v1 and the 17 frozen /v1 data schemas. Golden examples under examples/ must validate against this schema. Field-level semantics still live in CLI_SCHEMA.md; this schema locks structure and types only.",
   "oneOf": [

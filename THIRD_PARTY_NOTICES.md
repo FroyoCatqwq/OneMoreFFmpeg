@@ -1,14 +1,14 @@
 # THIRD_PARTY_NOTICES
 
-> Status: maintained; reviewed alongside v1.1.2-pre1 (2026-11-19)
-> Date: 2026-11-19
+> Status: maintained; reviewed alongside v1.1.2-pre2 (2026-11-20)
+> Date: 2026-11-20
 > Project license: GPL-3.0-only (see root LICENSE)
 
-This file lists Go modules recorded by `go list -m all`. License texts are copied under `third_party/licenses/` where available. v1.1.2-pre1 is the current supported release; keep this list in sync whenever `go.mod` changes. Automated license checking via CI is not implemented yet (tracked separately, not a release blocker for v1.1.2-pre1).
+This file lists Go modules recorded by `go list -m all`. License texts are copied under `third_party/licenses/` where available. v1.1.2-pre2 is the current prerelease; keep this list in sync whenever `go.mod` changes. Automated license checking via CI is not implemented yet (tracked separately, not a release blocker for v1.1.2-pre2).
 
 | Module | Version | Detected license | License text |
 |---|---|---|---|
-| `github.com/dustin/go-humanize` | `v1.1.2-pre1` | MIT | `third_party/licenses/github.com_dustin_go-humanize.txt` |
+| `github.com/dustin/go-humanize` | `v1.1.0` | MIT | `third_party/licenses/github.com_dustin_go-humanize.txt` |
 | `github.com/gofrs/flock` | `v0.13.2` | BSD-3-Clause | `third_party/licenses/github.com_gofrs_flock.txt` |
 | `github.com/jedib0t/go-pretty/v6` | `v6.9.2` | MIT | `third_party/licenses/github.com_jedib0t_go-pretty_v6.txt` |
 | `github.com/klauspost/compress` | `v1.20.4` | BSD-3-Clause | `third_party/licenses/github.com_klauspost_compress.txt` |
@@ -24,11 +24,16 @@ This file lists Go modules recorded by `go list -m all`. License texts are copie
 | `github.com/stretchr/testify` | `v1.12.1` | MIT | `third_party/licenses/github.com_stretchr_testify.txt` |
 | `github.com/ulikunitz/xz` | `v0.5.17` | BSD-3-Clause | `third_party/licenses/github.com_ulikunitz_xz.txt` |
 | `github.com/urfave/cli/v3` | `v3.14.0` | MIT | `third_party/licenses/github.com_urfave_cli_v3.txt` |
-| `go.yaml.in/yaml/v3` | `v3.0.5` | MIT | `third_party/licenses/go.yaml.in_yaml_v3.txt` |
+| `go.yaml.in/yaml/v3` | `v3.0.6` | MIT | `third_party/licenses/go.yaml.in_yaml_v3.txt` |
 | `golang.org/x/sync` | `v0.25.0` | BSD-3-Clause | `third_party/licenses/golang.org_x_sync.txt` |
 | `golang.org/x/sys` | `v0.50.0` | BSD-3-Clause | `third_party/licenses/golang.org_x_sys.txt` |
 | `golang.org/x/term` | `v0.48.0` | BSD-3-Clause | `third_party/licenses/golang.org_x_term.txt` |
-| `golang.org/x/time` | `v0.16.0` | BSD-3-Clause | `third_party/licenses/golang.org_x_time.txt` |
+| `github.com/clipperhouse/uax29/v2` | `v2.7.0` | BSD-3-Clause | `third_party/licenses/github.com_clipperhouse_uax29_v2.txt` |
+| `github.com/dlclark/regexp2` | `v1.12.0` | MIT | `third_party/licenses/github.com_dlclark_regexp2.txt` |
+| `github.com/mattn/go-runewidth` | `v0.0.31` | MIT | `third_party/licenses/github.com_mattn_go-runewidth.txt` |
+| `github.com/rivo/uniseg` | `v0.4.7` | MIT | `third_party/licenses/github.com_rivo_uniseg.txt` |
+| `golang.org/x/text` | `v0.44.0` | BSD-3-Clause | `third_party/licenses/golang.org_x_text.txt` |
+| `golang.org/x/tools` | `v0.52.0` | BSD-3-Clause | `third_party/licenses/golang.org_x_tools.txt` |
 
 Detection is based on the first 20 lines of each upstream license file. It is an engineering aid, not legal advice.
 

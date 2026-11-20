@@ -1,6 +1,6 @@
 # 错误码注册表 v1
 
-> 状态：v1.1.2-pre1 现行，CLI 外部契约已冻结
+> 状态：v1.1.2-pre2 现行，CLI 外部契约已冻结
 > 日期：2026-11-10
 > 适用：CLI stdout JSON、日志 `code` 字段、未来 JSON-RPC `error.code`
 > 原则：稳定、不可复用、不可静默改语义
@@ -73,7 +73,7 @@ OMF-Wxxxx  警告码（不导致命令失败）
 
 | 编号 | 名称 | 说明 | 退出 |
 |---|---|---|---:|
-| `OMF-E1001` | `DIR_MISSING` | 显式目录不存在；也用于 `--in-detail-usage` 与 `--json` 互斥（stdout 只留 JSON） | 1 |
+| `OMF-E1001` | `DIR_MISSING` | 显式目录不存在；也用于参数互斥：`--in-detail-usage`/`--help` 与 `--json`、`update --check` 与 `--apply`、`--recover` 与其它 update flag、`--release` 与 provider resolve flag（stdout 只留 JSON） | 1 |
 | `OMF-E1002` | `BINARY_MISSING` | ffmpeg/ffprobe/ffplay 缺失 | 1 |
 | `OMF-E1003` | `VERSION_MISMATCH` | 三件套版本核心不一致 | 1 |
 | `OMF-E1004` | `INSTALLATION_UNUSABLE` | 安装不可用（缺二进制或校验失败） | 1 |

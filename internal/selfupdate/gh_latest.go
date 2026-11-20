@@ -37,7 +37,12 @@ func (o Options) listReleasesViaGoGitHub(ctx context.Context) ([]releaseInfo, er
 	httpClient := o.HTTPClient
 	if httpClient == nil {
 		httpClient = &http.Client{Timeout: 5 * time.Minute}
+	} else {
+		clone := *httpClient
+		httpClient = &clone
 	}
+	// network.max_attempts must govern the GitHub API too.
+	httpClient = withRetry(httpClient, o.MaxAttempts)
 	opts := []gh.ClientOptionsFunc{gh.WithHTTPClient(httpClient)}
 	// The public API is the go-github default. Only override for a custom base
 	// (e.g. GitHub Enterprise), where WithEnterpriseURLs is the supported way.

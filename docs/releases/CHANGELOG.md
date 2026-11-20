@@ -1,7 +1,23 @@
 # 更新日志
 
 本项目遵循 [Semantic Versioning 2.0.0](../reference/VERSIONING.md)。格式基于 [Keep a Changelog](https://keepachangelog.com/)。
-仅保留当前及上一版本的记录；更早的 Release 与历史快照已撤回。
+本文件列出 v1.1.2-pre1 之后的变更；更早版本仅以 `docs/releases/release-v*.md` 历史记录形式保留。
+
+## [1.1.2-pre2] — 2026-11-20
+
+预发布版本：第二轮细致排查后修复更深层 bug，并补文档/CI 一致性。
+
+### Fixed
+- **自更新崩溃恢复**：`Recover()` 此前是死代码（CLI 无入口），且把 `replaced`（新二进制已就位）误判为需回滚；现接线 `update --recover`，并修正状态机（`replaced` 提交新版本、`backup_created` 才回滚）。错误消息指向恢复命令。
+- **panic**：`fetchURL` 在检查 `url.Parse` 错误前解引用 `parsed`，畸形 URL（控制字符/坏转义）会 panic；现先判错。
+- **TOCTOU**：下载缓存版本目录新增符号链接防护（此前 archive/install/journal 有、download 缺）。
+- **重试配置**：`[network] max_attempts` 通过 retry transport 真正作用于 go-github 自更新查询（此前死配置）。
+- **竞态/隔离**：progress terminal state 读写锁；testscript 隔离 Windows `LOCALAPPDATA`；cache 读写统一使用同一把 `lockedfile` 锁（`<path>.lock`），消除锁不一致。
+- `doctor --help`/内置 usage 修正退出码描述并补 `--strict`；usage 补 `update --recover`。
+
+### Changed
+- CI pin `govulncheck@v1.10.0`（此前 `@latest` 不可复现）。
+- 文档一致性：依赖清单/版本（THIRD_PARTY_NOTICES、ADR-0002）、`channel=daily`、命令数 18、`update.example.json`、schema `$id`、E1001 多语义、E2E 测试描述。
 
 ## [1.1.2-pre1] — 2026-11-18
 

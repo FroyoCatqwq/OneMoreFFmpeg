@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/rogpeppe/go-internal/testscript"
@@ -17,6 +18,12 @@ import (
 func TestMain(m *testing.M) {
 	testscript.Main(m, map[string]func(){
 		"omf": func() {
+			// testscript isolates HOME/USERPROFILE but not LOCALAPPDATA, which
+			// paths.DataRoot prefers on Windows. Redirect it into the script's
+			// work directory so scripts never read/write the host's registry.
+			if work := os.Getenv("WORK"); work != "" {
+				_ = os.Setenv("LOCALAPPDATA", filepath.Join(work, "appdata"))
+			}
 			code := cli.Run(context.Background(), cli.RunOptions{
 				Args:   os.Args, // includes argv[0] ("omf"), matching main.go
 				Stdout: os.Stdout,

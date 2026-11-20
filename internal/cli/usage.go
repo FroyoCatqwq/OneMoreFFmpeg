@@ -38,7 +38,7 @@ ENVIRONMENT / HEALTH
   env unset --apply --json
   env rollback --journal <id> --apply --json
   --release FILE accepts UTF-8/UTF-16 JSON; PowerShell 7: Out-File -Encoding utf8
-  doctor --json                           health report; always exit 0, read healthy
+  doctor [--strict] --json                health report; exit 0 by default, or 1 with --strict when unhealthy
   journal list --json                     all transactions and pending ids
   journal rollback --journal <id> --apply --json
                                           install/uninstall/env rollback (default dry-run)
@@ -46,7 +46,9 @@ ENVIRONMENT / HEALTH
 SELF-UPDATE / OUTPUT
   update --json                           check for a newer CLI (dry-run)
   update --apply --json                   download, verify SHA-256, replace this binary
-      --check and --apply are mutually exclusive; amd64 only; data schema update/v1.
+  update --recover --json                 recover from an update interrupted by a crash
+      --check and --apply are mutually exclusive; --recover cannot combine with either;
+      amd64 only; data schema update/v1.
   --log-level debug|trace                 diagnostics on stderr (trace is more verbose)
   --quiet                                 only errors (overrides --log-level)
   Download/update progress: TTY shows animated bar (ETA), CI/pipes show plain

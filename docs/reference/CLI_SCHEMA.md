@@ -1,6 +1,6 @@
 # CLI JSON 契约 v1
 
-> 状态：v1.1.2-pre1（唯一受支持版本），CLI 外部契约已冻结
+> 状态：v1.1.2-pre2（唯一受支持版本），CLI 外部契约已冻结
 > 适用：当前唯一外部集成方式：调用 `one-more-ffmpeg` 可执行文件
 > 配套：[`ERROR_CODES.md`](ERROR_CODES.md)、[`schemas/`](schemas/README.md)
 
@@ -97,7 +97,7 @@
 | 命令 | 状态 |
 |---|---|
 | `version` / `detect` / `validate` / `capabilities` | 已实现 |
-| `provider list` / `provider add` / `resolve` / `download` | 已实现（v1.1.2-pre1 冻结） |
+| `provider list` / `provider add` / `resolve` / `download` | 已实现（v1.1.2-pre2 冻结） |
 | `install` | 已实现（Phase 5，默认 dry-run） |
 | `env status` / `doctor` | 已实现（只读） |
 | `env set` / `env unset` / `env rollback` | 已实现（默认 dry-run） |
@@ -107,7 +107,7 @@
 | 自定义 provider | 已实现（URL + SHA-256 pin，无内置 provider） |
 | `update` | 已实现（v1.1，默认 dry-run 检查；`--apply` 才自更新） |
 
-19 个命令的 data 表与示例**均已实现**（含 v1.1 的 `update`），并由 `internal/contracts` 做字段级校验；`data.schema` 冻结为 `/v1`，未注册的 schema、主版本升级或命令/data.schema 不匹配会得到 `OMF-E7003`（契约校验由 `internal/contracts` 守护）。
+18 个命令的 data 表与示例**均已实现**（含 v1.1 的 `update`），并由 `internal/contracts` 做字段级校验；`data.schema` 冻结为 `/v1`，未注册的 schema、主版本升级或命令/data.schema 不匹配会得到 `OMF-E7003`（契约校验由 `internal/contracts` 守护）。
 
 ### 4.1 `version`
 
@@ -516,7 +516,7 @@ provider 摘要：
 
 `data` 遵循 `onemoreffmpeg.capability-list/v1`：`kind` / `entries` / `command` / `installation_id` / `fingerprint` / `warnings`。只执行该类别所需的 FFmpeg 命令，不输出其他类别。`--cache-dir` / `--no-cache` / `--refresh` 同样生效：缓存文件为 `list-<kind>-<fingerprint>.json`，写入失败记录 `OMF-W1007`。不支持的 `--only <kind>` 属于非法枚举值，返回 `OMF-E7005`（退出 2），而非 help topic 的 `OMF-E2005`。
 
-### 4.16 `journal list` / `journal rollback`（已实现）
+### 4.15 `journal list` / `journal rollback`（已实现）
 
 - `journal list`：`onemoreffmpeg.journal-list/v1`，输出全部 record 摘要与 pending ID；遇到损坏/不可读记录不再静默跳过，返回 `OMF-E6005`（带 `file` 详情，退出 1）；
 - `journal rollback --journal <id> --apply`：`onemoreffmpeg.journal-action/v1`，支持 `install` / `uninstall` / `env-set` / `env-unset`；默认 dry-run，只返回预览，预览的 `action` 取自记录本身；
@@ -524,7 +524,7 @@ provider 摘要：
 - `env rollback --journal <id>` 只接受 `env-set` / `env-unset` 记录；指向 install/uninstall 记录或已回滚记录返回 `OMF-E7001`，id 非法/缺失返回 `OMF-E6005`；
 - uninstall 先把安装目录移入 `<data-root>/quarantine/<journal-id>/`，回滚时恢复目录与 current。
 
-### 4.17 `update`（v1.1，默认 dry-run）
+### 4.16 `update`（v1.1，默认 dry-run）
 
 `data.schema` = `onemoreffmpeg.update/v1`。查询 GitHub Releases 的最新稳定版，与内建版本比较；默认只检查，`--apply` 才下载并替换当前可执行文件。
 

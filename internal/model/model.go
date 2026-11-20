@@ -54,6 +54,7 @@ type UpdateData struct {
 	AssetName       string   `json:"asset_name,omitempty"`
 	ReleaseURL      string   `json:"release_url,omitempty"`
 	Applied         bool     `json:"applied"`
+	Recovered       string   `json:"recovered,omitempty"`
 	Operations      []string `json:"operations,omitempty"`
 }
 

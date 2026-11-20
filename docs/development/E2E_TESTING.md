@@ -57,14 +57,14 @@ docker compose up --build --abort-on-container-exit --exit-code-from e2e-fresh
 ```
 
 `Dockerfile` 从 `mirror.gcr.io/library/golang:1.27-bookworm` 构建干净容器，安装 uv + Python 3.14，
-从零构建 CLI 并跑 go test + 三个 pytest 文件 + Robot + Bats；不挂载任何宿主数据目录，
+从零构建 CLI 并跑 go test + 四个 pytest 文件 + Robot + Bats；不挂载任何宿主数据目录，
 用于证明仓库在全新环境可独立构建与测试。注意不要在 compose 中把 `/tmp` 挂成 tmpfs（默认 noexec 会让 `go test` 失败）。
 
 ## 5. 覆盖
 
 - version / 错误对象 / 未知命令 / `--in-detail-usage`；
 - 单类能力探测 `--only`；
-- 本地 HTTP 模拟的 stable/daily 版本目录；
+- 本地 HTTP 模拟的自定义 provider 资产（http/https）；
 - uninstall → journal list → journal rollback 恢复安装目录；
 - provider list / provider add dry-run；
 - env status / doctor；

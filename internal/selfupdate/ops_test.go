@@ -40,6 +40,27 @@ func TestRecoverRestoresFromBackup(t *testing.T) {
 	require.Equal(t, "old", string(data))
 }
 
+func TestRecoverReplacedCommitsNewBinary(t *testing.T) {
+	dir := t.TempDir()
+	exe := filepath.Join(dir, "omf")
+	backup := exe + ".old"
+	ops := realFileOps{}
+	// After the irreversible rename the new binary is already in place.
+	require.NoError(t, ops.WriteFile(exe, []byte("new"), 0o755))
+	require.NoError(t, ops.WriteFile(backup, []byte("old"), 0o755))
+	require.NoError(t, writeState(ops, exe, updateState{
+		Version: "1.1.2", Stage: "replaced", Executable: exe, Backup: backup,
+	}))
+	out, err := (Options{Executable: exe, FileOps: ops}).Recover()
+	require.NoError(t, err)
+	require.Equal(t, "committed-replacement", out)
+	data, err := os.ReadFile(exe)
+	require.NoError(t, err)
+	require.Equal(t, "new", string(data), "a completed update must not be rolled back")
+	_, err = os.Stat(backup)
+	require.True(t, os.IsNotExist(err), "backup should be cleaned after commit")
+}
+
 func TestRecoverCleansStaging(t *testing.T) {
 	dir := t.TempDir()
 	exe := filepath.Join(dir, "omf")

@@ -1,6 +1,6 @@
 # 平台环境变量与 current 指针细则
 
-> 状态：v1.1.2-pre1 现行，CLI 外部契约已冻结
+> 状态：v1.1.2-pre2 现行，CLI 外部契约已冻结
 > 日期：2026-11-10
 > 配套：[`ENVIRONMENT.md`](ENVIRONMENT.md)、[`ERROR_CODES.md`](ERROR_CODES.md)、[`CLI_SCHEMA.md`](CLI_SCHEMA.md)
 
@@ -225,8 +225,8 @@ export PATH="..."
   "id": "journal-0123456789abcdef",
   "action": "env-set",
   "status": "committed",
-  "created_at": "2026-11-19T00:00:00Z",
-  "updated_at": "2026-11-19T00:00:00Z",
+  "created_at": "2026-11-20T00:00:00Z",
+  "updated_at": "2026-11-20T00:00:00Z",
   "target": "<data-root>",
   "details": { "scope": "user", "shell_rc_backup": "<data-root>/journal/profile-xxx.bak" }
 }

@@ -23,10 +23,14 @@ func updateCommand(info buildinfo.Info) *urfave.Command {
 		Flags: []urfave.Flag{
 			&urfave.BoolFlag{Name: "check", Usage: "only check for updates without applying (default)"},
 			&urfave.BoolFlag{Name: "apply", Usage: "actually download and install the update"},
+			&urfave.BoolFlag{Name: "recover", Usage: "recover from a self-update interrupted by a crash"},
 		},
 		Action: func(ctx context.Context, cmd *urfave.Command) error {
 			if cmd.Bool("apply") && cmd.Bool("check") {
 				return apperrors.New(apperrors.E1001, "--apply and --check are mutually exclusive")
+			}
+			if cmd.Bool("recover") && (cmd.Bool("apply") || cmd.Bool("check")) {
+				return apperrors.New(apperrors.E1001, "--recover cannot be combined with --apply or --check")
 			}
 			exe, err := os.Executable()
 			if err != nil {
@@ -39,15 +43,21 @@ func updateCommand(info buildinfo.Info) *urfave.Command {
 				GitHubAPI:      cfg.Network.GitHubAPI,
 				MaxAttempts:    cfg.Network.MaxAttempts,
 			}
+			data := model.UpdateData{Schema: model.UpdateSchema, CurrentVersion: info.Version}
+			if cmd.Bool("recover") {
+				disposition, err := opts.Recover()
+				if err != nil {
+					return err
+				}
+				data.Recovered = disposition
+				data.Operations = []string{"recover: " + disposition}
+				return writeResult(cmd, "update", data, fmt.Sprintf("recover: %s\n", disposition))
+			}
 			update, err := opts.Check(ctx)
 			if err != nil {
 				return err
 			}
-			data := model.UpdateData{
-				Schema:          model.UpdateSchema,
-				CurrentVersion:  info.Version,
-				UpdateAvailable: update != nil,
-			}
+			data.UpdateAvailable = update != nil
 			if update != nil {
 				data.LatestVersion = update.Version
 				data.AssetName = update.AssetName

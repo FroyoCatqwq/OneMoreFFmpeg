@@ -106,6 +106,13 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 	}
 
 	targetDir := filepath.Join(d.options.Dir, sha[:16])
+	// Refuse a pre-planted symlink in the download cache: every other module
+	// that writes into data-root (archive/install/journal) checks this, and a
+	// symlinked version dir would let a pin redirect writes outside downloads.
+	if !platform.NoSymlinkComponents(d.options.Dir, targetDir) {
+		return model.Artifact{}, apperrors.New(apperrors.E4005,
+			"download path contains a symbolic link").WithDetails(map[string]any{"dir": targetDir})
+	}
 	_, statErr := os.Stat(targetDir)
 	createdDir := os.IsNotExist(statErr)
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {

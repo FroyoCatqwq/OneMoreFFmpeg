@@ -5,16 +5,14 @@
 package cache
 
 import (
+	"bytes"
 	"encoding/json/v2"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/lock"
 	"github.com/rogpeppe/go-internal/lockedfile"
 )
-
-func lockedFilePath(path string) (func(), error) { return lock.FilePath(path) }
 
 // ReadJSON reads and decodes a JSON file produced by WriteJSON. A missing
 // file is reported with the os.ErrNotExist error so callers can treat it as a
@@ -30,8 +28,10 @@ func ReadJSON(path string, dst any) error {
 	return nil
 }
 
-// WriteJSON atomically writes JSON to path under a sidecar lock in a sibling
-// .locks directory (never inside the cache directory itself).
+// WriteJSON writes JSON to path under the SAME sidecar lock (<path>.lock) used
+// by ReadJSON, so readers and writers across processes exclude each other.
+// lockedfile.Write locks the file for the whole overwrite, eliminating the
+// prior bug where reader and writer used different lock files.
 func WriteJSON(path string, value any, perm os.FileMode) error {
 	raw, err := json.Marshal(value)
 	if err != nil {
@@ -41,32 +41,5 @@ func WriteJSON(path string, value any, perm os.FileMode) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	// Sidecar locks live outside the cache directory so enumerators only see
-	// data files, and are deterministic across processes.
-	lockDir := filepath.Join(filepath.Dir(dir), "."+filepath.Base(dir)+".locks")
-	unlock, err := lockedFilePath(filepath.Join(lockDir, filepath.Base(path)+".lock"))
-	if err != nil {
-		return err
-	}
-	defer unlock()
-
-	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".*.tmp")
-	if err != nil {
-		return err
-	}
-	tmpPath := tmp.Name()
-	discard := func() { _ = tmp.Close(); _ = os.Remove(tmpPath) }
-	if _, err := tmp.Write(raw); err != nil {
-		discard()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		_ = os.Remove(tmpPath)
-		return err
-	}
-	if err := os.Chmod(tmpPath, perm); err != nil {
-		_ = os.Remove(tmpPath)
-		return err
-	}
-	return os.Rename(tmpPath, path)
+	return lockedfile.Write(path, bytes.NewReader(raw), perm)
 }

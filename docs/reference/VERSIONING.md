@@ -52,4 +52,5 @@ SHA256SUMS.txt
 | v1.0.3 | 2026-11-18 | Bugfix：全量审查核心包后修复 4 个潜在 bug（emit-trio-lock reuse、能力缓存 W1001、days 溢出、Linux PATH 大小写）（历史版本） |
 | v1.1.0 | 2026-11-18 | 首个 MINOR：新增 `update` 自更新命令与下载进度条；独立 output/cache 层；slog+tint 日志接入业务层；能力缓存跨进程锁；进度条 TTY/CI/JSON/Pipe 自适应（历史版本） |
 | v1.1.1 | 2026-11-18 | Bugfix：自更新失败可靠恢复、进度四态语义、缓存统一存储、严格 SemVer 校验（历史版本） |
-| v1.1.2-pre1 | 2026-11-18 | 预发布：全量审查后修复 16+ bug；自定义 URL 支持 http；引入 go-github/testscript；依赖全量更新。详见 [`release-v1.1.2-pre1.md`](../releases/release-v1.1.2-pre1.md) |
+| v1.1.2-pre1 | 2026-11-18 | 预发布：全量审查后修复 16+ bug；自定义 URL 支持 http；引入 go-github/testscript；依赖全量更新（历史版本） |
+| v1.1.2-pre2 | 2026-11-20 | 预发布：第二轮细致修复（update --recover 死代码/状态机、fetch panic、ffexec 退出码、下载 symlink、锁一致性等）+ 文档/CI 一致性。详见 [`release-v1.1.2-pre2.md`](../releases/release-v1.1.2-pre2.md) |

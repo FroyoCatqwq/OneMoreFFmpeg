@@ -93,7 +93,19 @@ func (o Options) Recover() (string, error) {
 	case "committed":
 		_ = ops.Remove(statePathFor(o.Executable))
 		return "already-committed", nil
-	case "backup_created", "replaced":
+	case "replaced":
+		// The verified new binary is already in place; a crash here happened
+		// after the irreversible rename. Commit it: drop the old backup and
+		// the state file. Rolling back here would discard a complete update.
+		if state.Backup != "" {
+			if err := ops.Remove(state.Backup); err != nil && !os.IsNotExist(err) {
+				return "", fmt.Errorf("remove stale update backup %s: %w", state.Backup, err)
+			}
+		}
+		_ = ops.Remove(statePathFor(o.Executable))
+		return "committed-replacement", nil
+	case "backup_created":
+		// Old exe was moved aside but the new one was never installed: restore.
 		if state.Backup != "" {
 			if err := ops.Rename(state.Backup, o.Executable); err != nil {
 				return "", fmt.Errorf("recover previous executable from %s: %w", state.Backup, err)

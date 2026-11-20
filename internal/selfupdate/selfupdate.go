@@ -330,7 +330,7 @@ func (o Options) Apply(ctx context.Context, u *Update) error {
 	// only recovery copy, not silently overwritten.
 	if _, err := ops.Stat(backup); err == nil {
 		failProgress(fmt.Errorf("backup already exists: %s", backup))
-		return apperrors.New(apperrors.E5009, "previous update backup still exists; recover it first").
+		return apperrors.New(apperrors.E5009, "previous update backup still exists; run `one-more-ffmpeg update --recover` first").
 			WithDetails(map[string]any{"backup": backup})
 	}
 	if err := ops.Rename(o.Executable, backup); err != nil {

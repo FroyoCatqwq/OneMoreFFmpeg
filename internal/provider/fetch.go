@@ -17,8 +17,13 @@ import (
 // tied to built-in providers.
 func fetchURL(ctx context.Context, rawURL string, maxRedirects int, timeout time.Duration) ([]byte, error) {
 	parsed, err := url.Parse(rawURL)
+	// url.Parse can return (nil, err) on malformed input (control chars, bad
+	// escapes); check err BEFORE dereferencing parsed.
+	if err != nil || parsed == nil || parsed.Host == "" || parsed.User != nil {
+		return nil, apperrors.New(apperrors.E3008, "checksums url is invalid").WithDetails(map[string]any{"url": rawURL})
+	}
 	scheme := strings.ToLower(parsed.Scheme)
-	if err != nil || (scheme != "https" && scheme != "http") || parsed.Host == "" || parsed.User != nil {
+	if scheme != "https" && scheme != "http" {
 		return nil, apperrors.New(apperrors.E3008, "checksums url must be http(s)").WithDetails(map[string]any{"url": rawURL})
 	}
 	if maxRedirects <= 0 {
