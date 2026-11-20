@@ -1,6 +1,6 @@
 # 自定义 URL 产物规范（OneMoreFFmpeg 实现版）
 
-> 适用 v1.1.2-pre4+。基于《自定义 URL 与软件产物规范 v2.0（简化版）》实现。
+> 适用 v1.1.2+。基于《自定义 URL 与软件产物规范 v2.0（简化版）》实现。
 > 目标：普通静态文件服务器即可托管 FFmpeg 产物，**不锁死版本**——通过 `latest.txt` + 命名规则解析最新构建。
 
 ## 1. 两种 provider 模式
@@ -71,7 +71,7 @@ ffmpeg/
 ## 6. 与旧版的区别
 
 - 旧的 btbn / bnqdzj-nonfree 内置 provider、ffmpeg.org 版本目录、`release list/install` 已移除；
-- v1.1.2-pre4 的 `official` provider（FFmpeg-Builds latest）是新增的直接解析，不是恢复旧来源；
+- v1.1.2 的 `official` provider（FFmpeg-Builds latest）是新增的直接解析，不是恢复旧来源；
 - 本规范仅用于**用户自建静态托管**，与 `official` 并存。
 
 服务器配置与来源说明见 [`deployment/README.md`](../deployment/README.md)。

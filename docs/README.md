@@ -1,10 +1,10 @@
 # 文档索引
 
 > OneMoreFFmpeg — 统一管理 FFmpeg 的发现、下载、安装、环境与能力检查的 CLI。
-> 当前版本 **v1.1.2-pre4**（唯一受支持版本）；Phase 1–7 全部完成，CLI 外部契约冻结。
+> 当前版本 **v1.1.2**（唯一受支持版本）；Phase 1–7 全部完成，CLI 外部契约冻结。
 > 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg>
 
-本目录按用途分为四类（guides / reference / development / releases）；仅描述当前 v1.1.2-pre4 的事实。
+本目录按用途分为四类（guides / reference / development / releases）；仅描述当前 v1.1.2 的事实。
 
 ## 1. 上手与使用（guides/）
 
@@ -45,7 +45,7 @@
 ## 4. 发布记录
 
 - [`releases/CHANGELOG.md`](releases/CHANGELOG.md) — 变更记录；
-- [`releases/release-v1.1.2-pre4.md`](releases/release-v1.1.2-pre4.md) — 当前版本发布说明（更早的 Release 与 tag 已撤回）。
+- [`releases/release-v1.1.2.md`](releases/release-v1.1.2.md) — 当前版本发布说明（更早的 Release 与 tag 已撤回）。
 
 ## 5. 决策快照
 
@@ -62,4 +62,4 @@
 | 明确不做 | 包管理器识别（第三方 FFmpeg）、GUI/TUI、FFmpeg 自构建、私有制品库、后台自动更新服务（用户主动 `update` 已支持） |
 | 许可证 | GPL-3.0-only；nonfree FFmpeg 元数据可公开，二进制不可随公开 Release 分发 |
 | 质量门禁 | gofmt / vet / golangci-lint v2（含 gosec）/ test / govulncheck / fuzz + Windows/Linux e2e + Docker 全新环境（见 CI） |
-| 当前基线 | **v1.1.2-pre4**（唯一受支持版本；更早的 Release/tag 与 CI 记录已撤回） |
+| 当前基线 | **v1.1.2**（唯一受支持版本；更早的 Release/tag 与 CI 记录已撤回） |

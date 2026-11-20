@@ -77,9 +77,7 @@ func (r Request) Normalize() (Request, error) {
 	if r.Linkage == "" {
 		r.Linkage = "static"
 	}
-	if r.Line == "" {
-		r.Line = "master"
-	}
+	// Default line is applied in Resolve using rules.SnapshotLine (configurable).
 	if r.Target != "win64" && r.Target != "linux64" {
 		return Request{}, apperrors.New(apperrors.E3003, "official provider supports x86_64 only (win64|linux64)").
 			WithDetails(map[string]any{"target": r.Target})
@@ -105,11 +103,43 @@ type Resolver struct {
 	Now        func() time.Time
 }
 
+// rules returns the effective rules: every non-zero field of the caller's
+// Rules overrides the default. This makes partial overrides (e.g. only
+// APIBase) work, which the previous all-or-nothing Owner check broke.
 func (r *Resolver) rules() Rules {
-	if r != nil && r.Rules.Owner != "" {
-		return r.Rules
+	out := DefaultRules()
+	if r == nil {
+		return out
 	}
-	return DefaultRules()
+	c := r.Rules
+	if c.Owner != "" {
+		out.Owner = c.Owner
+	}
+	if c.Repo != "" {
+		out.Repo = c.Repo
+	}
+	if c.Tag != "" {
+		out.Tag = c.Tag
+	}
+	if c.APIBase != "" {
+		out.APIBase = c.APIBase
+	}
+	if c.AssetTemplate != "" {
+		out.AssetTemplate = c.AssetTemplate
+	}
+	if len(c.TargetDir) > 0 {
+		out.TargetDir = c.TargetDir
+	}
+	if len(c.Extensions) > 0 {
+		out.Extensions = c.Extensions
+	}
+	if c.SnapshotLine != "" {
+		out.SnapshotLine = c.SnapshotLine
+	}
+	if c.StableLinePattern != "" {
+		out.StableLinePattern = c.StableLinePattern
+	}
+	return out
 }
 
 func (r *Resolver) now() time.Time {
@@ -148,6 +178,28 @@ func (r *Resolver) assetName(req Request) (string, error) {
 	return buf.String(), nil
 }
 
+// enterpriseBase strips a trailing /api/v3 so go-github's WithEnterpriseURLs
+// does not append it twice (users commonly configure the full REST base).
+func enterpriseBase(base string) string {
+	b := strings.TrimRight(strings.TrimSpace(base), "/")
+	b = strings.TrimSuffix(b, "/api/v3")
+	return strings.TrimRight(b, "/")
+}
+
+func isLowerHex(s string) bool {
+	if len(s) != 64 {
+		return false
+	}
+	for _, r := range s {
+		digit := r >= '0' && r <= '9'
+		lower := r >= 'a' && r <= 'f'
+		if !digit && !lower {
+			return false
+		}
+	}
+	return true
+}
+
 // Resolve queries the upstream latest release and returns a pinned model.Release.
 func (r *Resolver) Resolve(ctx context.Context, req Request) (model.Release, error) {
 	req, err := req.Normalize()
@@ -155,9 +207,16 @@ func (r *Resolver) Resolve(ctx context.Context, req Request) (model.Release, err
 		return model.Release{}, err
 	}
 	rules := r.rules()
+	if req.Line == "" {
+		req.Line = rules.SnapshotLine // configurable default
+	}
 	// Stable lines are intentionally unsupported (see user requirement).
 	if req.Line != rules.SnapshotLine {
-		stable := regexp.MustCompile(rules.StableLinePattern)
+		stable, compileErr := regexp.Compile(rules.StableLinePattern)
+		if compileErr != nil {
+			return model.Release{}, apperrors.New(apperrors.E7005,
+				"invalid stable-line rule in provider configuration").WithCause(compileErr.Error())
+		}
 		if stable.MatchString(req.Line) {
 			return model.Release{}, apperrors.New(apperrors.E3004,
 				"stable lines are not supported yet (n* asset naming is under review)").
@@ -174,7 +233,8 @@ func (r *Resolver) Resolve(ctx context.Context, req Request) (model.Release, err
 		}
 		opts := []gh.ClientOptionsFunc{gh.WithHTTPClient(hc)}
 		if rules.APIBase != "" && rules.APIBase != "https://api.github.com" {
-			opts = append(opts, gh.WithEnterpriseURLs(rules.APIBase, rules.APIBase))
+			base := enterpriseBase(rules.APIBase)
+			opts = append(opts, gh.WithEnterpriseURLs(base, base))
 		}
 		client, err = gh.NewClient(opts...)
 		if err != nil {
@@ -205,8 +265,8 @@ func (r *Resolver) Resolve(ctx context.Context, req Request) (model.Release, err
 			WithDetails(map[string]any{"asset": name, "release": rules.Tag})
 	}
 	digest := strings.TrimPrefix(chosen.GetDigest(), "sha256:")
-	if len(digest) != 64 {
-		return model.Release{}, apperrors.New(apperrors.E3008, "upstream asset has no sha256 digest").
+	if len(digest) != 64 || !isLowerHex(digest) {
+		return model.Release{}, apperrors.New(apperrors.E3008, "upstream asset has no valid sha256 digest").
 			WithDetails(map[string]any{"asset": name})
 	}
 

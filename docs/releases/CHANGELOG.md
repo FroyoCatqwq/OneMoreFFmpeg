@@ -3,6 +3,19 @@
 本项目遵循 [Semantic Versioning 2.0.0](../reference/VERSIONING.md)。格式基于 [Keep a Changelog](https://keepachangelog.com/)。
 本文件列出 v1.1.2-pre1 之后的变更；更早版本仅以 `docs/releases/release-v*.md` 历史记录形式保留。
 
+## [1.1.2] — 2026-11-21
+
+首个包含自定义 URL 目录模式的稳定版本。
+
+### Fixed
+- `--release-line` 保留大小写（`YYYYMMDDTHHMMSSZ` 时间戳快照可正确解析）。
+- official provider `Rules` 逐字段覆盖生效；`SnapshotLine` 从规则读取；`StableLinePattern` 安全编译；digest 严格 hex 校验。
+- GitHub Enterprise API base 不再二次追加 `/api/v3`。
+- directory 模式 nonfree 需 `--allow-nonfree` 并输出 `W1006`。
+
+### Changed
+- 全量文档更新到 v1.1.2；HOWTO 清除已删除的 `--channel stable`/`release list` 等过时命令。
+
 ## [1.1.2-pre4] — 2026-11-20
 
 新功能：自定义 URL 目录模式（静态文件托管，不锁死版本）。

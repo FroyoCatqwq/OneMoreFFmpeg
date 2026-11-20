@@ -1,10 +1,10 @@
 # THIRD_PARTY_NOTICES
 
-> Status: maintained; reviewed alongside v1.1.2-pre4 (2026-11-21)
+> Status: maintained; reviewed alongside v1.1.2 (2026-11-21)
 > Date: 2026-11-21
 > Project license: GPL-3.0-only (see root LICENSE)
 
-This file lists Go modules recorded by `go list -m all`. License texts are copied under `third_party/licenses/` where available. v1.1.2-pre4 is the current prerelease; keep this list in sync whenever `go.mod` changes. Automated license checking via CI is not implemented yet (tracked separately, not a release blocker for v1.1.2-pre4).
+This file lists Go modules recorded by `go list -m all`. License texts are copied under `third_party/licenses/` where available. v1.1.2 is the current prerelease; keep this list in sync whenever `go.mod` changes. Automated license checking via CI is not implemented yet (tracked separately, not a release blocker for v1.1.2).
 
 | Module | Version | Detected license | License text |
 |---|---|---|---|

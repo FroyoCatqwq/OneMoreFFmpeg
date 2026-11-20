@@ -32,16 +32,16 @@ OneMoreFFmpeg **不是 FFmpeg 本身**，而是一个「FFmpeg 安装管理器�
 
 ## 2. 最短正确流程（Linux）
 
-假设你已经从 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases) 下载了 `one-more-ffmpeg-v1.1.2-pre4-linux-amd64`。下面用 `omf` 代指这个文件。
+假设你已经从 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases) 下载了 `one-more-ffmpeg-v1.1.2-linux-amd64`。下面用 `omf` 代指这个文件。
 
 ```bash
 # 0) 赋予执行权限，改个短名字（可选）
-chmod +x one-more-ffmpeg-v1.1.2-pre4-linux-amd64
-alias omf=./one-more-ffmpeg-v1.1.2-pre4-linux-amd64
+chmod +x one-more-ffmpeg-v1.1.2-linux-amd64
+alias omf=./one-more-ffmpeg-v1.1.2-linux-amd64
 
 # 1) 确认能跑
 omf version
-# 期望：OneMoreFFmpeg 1.1.2-pre4 (...) linux/amd64 ...
+# 期望：OneMoreFFmpeg 1.1.2 (...) linux/amd64 ...
 
 # 2) 解析官方 FFmpeg-Builds 最新快照（默认 gpl/static/x86_64），然后下载安装。
 #    无需注册 provider：official 是内置默认来源。
@@ -73,24 +73,20 @@ omf doctor
 # healthy: true
 ```
 
-想装**稳定版**而不是每日快照？把第 2 步换成：
-
-```bash
-omf install --channel stable --apply
-```
+稳定版（`n*` 资产）目前**暂不支持**（`OMF-E3004`），请使用默认的 master 快照。
 
 ---
 
 ## 3. 最短正确流程（Windows）
 
-下载 `one-more-ffmpeg-v1.1.2-pre4-windows-amd64.exe`，在 PowerShell 里：
+下载 `one-more-ffmpeg-v1.1.2-windows-amd64.exe`，在 PowerShell 里：
 
 ```powershell
 # 改个短名字（可选）
-Rename-Item .\one-more-ffmpeg-v1.1.2-pre4-windows-amd64.exe omf.exe
+Rename-Item .\one-more-ffmpeg-v1.1.2-windows-amd64.exe omf.exe
 
 .\omf.exe version
-.\omf.exe install --channel stable --apply   # 下载并安装，建立 current（junction）
+.\omf.exe resolve --json > release.json && .\omf.exe download --release release.json && .\omf.exe install --release release.json --apply  # 下载安装并建 current
 .\omf.exe env set --apply                    # 写 HKCU 用户环境并广播
 # 关键：【关掉当前 PowerShell，开一个新的】
 ffmpeg -version                              # 新窗口里验证
@@ -146,7 +142,7 @@ ffmpeg -version                              # 新窗口里验证
 **解决**：
 ```bash
 omf doctor                 # 若 current_exists: false，说明没装好
-omf install --channel stable --apply --force   # 重新装一遍，建立 current
+omf resolve --json > release.json && omf download --release release.json && omf install --release release.json --apply  # 重新装
 omf env set --apply        # 确保 PATH 接好
 # 开新终端再试
 ```
@@ -161,7 +157,7 @@ omf env set --apply        # 确保 PATH 接好
 ```bash
 omf journal list                       # 看是哪条
 omf journal rollback --journal <id> --apply   # 回滚它
-omf install --channel stable --apply --force  # 再干净地装一次
+omf install --release release.json --apply --force  # 再干净地装一次
 ```
 
 ---
@@ -205,7 +201,7 @@ omf install --release release.json --apply
 
 ```bash
 # 装新版本会自动把 current 切过去
-omf install --channel stable --apply
+omf resolve --json > release.json && omf download --release release.json && omf install --release release.json --apply
 
 # 卸载某个版本（移入 quarantine，不是真删，可恢复）
 omf uninstall --root /home/you/.local/share/onemoreffmpeg/apps/my-ffmpeg/latest/<sha> --apply
@@ -231,7 +227,7 @@ omf journal list           # 2. 看有没有 pending
 # 3. 有 pending 就回滚掉
 omf journal rollback --journal <id> --apply
 # 4. 干净重装 + 重接环境
-omf install --channel stable --apply --force
+omf install --release release.json --apply --force
 omf env unset --apply
 omf env set --apply
 # 5. 开新终端

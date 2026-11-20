@@ -285,7 +285,7 @@ type Client struct {
 
 - 单元测试使用 `httptest.Server`，默认不联网；
 - 覆盖 200 / 403 rate limit / 429 + `Retry-After` / 5xx / 重定向上限 / 响应超限 / 取消 / 404；
-- 仅允许 https；http 只允许 loopback（测试）；
+- v1.1.2 现行：自定义 URL 允许 http 与 https（自建静态服务器场景，见 `docs/reference/CUSTOM_URL_SPEC.md`）；拒绝 URL 内嵌凭据、禁止 https→http 重定向降级；（此条为历史 ADR 的阶段性决策，已被现行规范取代）
 - 真实网络测试仍留到 `//go:build network`。
 
 ### G7：token 脱敏没有落地（已完成）

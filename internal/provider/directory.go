@@ -62,6 +62,18 @@ func ResolveDirectory(ctx context.Context, entry Custom, req Request, rawURL str
 	if license == "" || license == "custom" {
 		license = strings.ToLower(req.Variant)
 	}
+	// Nonfree always requires explicit consent and emits W1006 at resolve,
+	// matching direct-mode behavior (D5).
+	var warnings []model.Warning
+	if IsNonfreeVariant(req.Variant) || license == "nonfree" {
+		warnings, err = CheckNonfreeConsent(
+			model.ProviderSummary{ID: entry.ID, Repository: "custom", Channels: []string{"daily"},
+				Variants: []string{"gpl", "lgpl", "nonfree"}, Linkages: []string{"static", "shared"}},
+			"nonfree", req.AllowNonfree)
+		if err != nil {
+			return model.Release{}, err
+		}
+	}
 	artifact := naming.Artifact{
 		Name: entry.Name, Version: line, License: license, ReleaseType: releaseType,
 		OS: targetOS(req.Target), Arch: targetArch(req.Target), Linkage: req.Linkage,
@@ -104,7 +116,7 @@ func ResolveDirectory(ctx context.Context, entry Custom, req Request, rawURL str
 		ReleaseTag: line, PublishedAt: now.Format(time.RFC3339), PinnedAt: now.Format(time.RFC3339),
 		AssetName: name, AssetURL: assetURL, AssetSHA256: digest,
 		ChecksumsURL: checksumsURL, Variant: req.Variant, Linkage: req.Linkage, Target: req.Target,
-		LicenseHint: license, Redistributable: license != "nonfree",
+		LicenseHint: license, Redistributable: license != "nonfree", Warnings: warnings,
 	}, nil
 }
 

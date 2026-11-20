@@ -3,6 +3,7 @@ package selfupdate
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	gh "github.com/google/go-github/v93/github"
@@ -47,7 +48,10 @@ func (o Options) listReleasesViaGoGitHub(ctx context.Context) ([]releaseInfo, er
 	// The public API is the go-github default. Only override for a custom base
 	// (e.g. GitHub Enterprise), where WithEnterpriseURLs is the supported way.
 	if base != defaultGitHubAPI {
-		opts = append(opts, gh.WithEnterpriseURLs(base, base))
+		normalized := strings.TrimRight(strings.TrimSpace(base), "/")
+		normalized = strings.TrimSuffix(normalized, "/api/v3")
+		normalized = strings.TrimRight(normalized, "/")
+		opts = append(opts, gh.WithEnterpriseURLs(normalized, normalized))
 	}
 	ghc, err := gh.NewClient(opts...)
 	if err != nil {

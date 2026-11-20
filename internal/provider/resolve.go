@@ -58,7 +58,9 @@ func NormalizeRequestDirectory(req Request) (Request, error) {
 	if err != nil {
 		return Request{}, err
 	}
-	normalized.ReleaseLine = strings.ToLower(strings.TrimSpace(allowLine))
+	// Preserve case: snapshot timestamps use uppercase T/Z (YYYYMMDDTHHMMSSZ),
+	// which naming.Parse/Build require. Lowercasing here broke the CLI entry.
+	normalized.ReleaseLine = strings.TrimSpace(allowLine)
 	return normalized, nil
 }
 
