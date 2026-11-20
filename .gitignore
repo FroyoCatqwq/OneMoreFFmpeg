@@ -17,5 +17,5 @@ Thumbs.db
 .venv-e2e/
 __pycache__/
 .pytest_cache/
-tests/e2e/results/
+test/e2e/results/
 publish/

@@ -7,19 +7,19 @@ OMF_E2E_PYTHON = "3.14"
 
 [tasks."e2e-pytest"]
 description = "Run cross-platform CLI e2e tests with pytest/asyncio"
-run = "uv run --python 3.14 --with-requirements tests/e2e/requirements.txt pytest -n auto --timeout=180 tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py tests/e2e/test_env_real_e2e.py tests/e2e/test_update_e2e.py"
+run = "uv run --python 3.14 --with-requirements test/e2e/requirements.txt pytest -n auto --timeout=180 test/e2e/test_cli_e2e.py test/e2e/test_cli_full_e2e.py test/e2e/test_env_real_e2e.py test/e2e/test_update_e2e.py"
 
 [tasks."e2e-robot"]
 description = "Run Robot Framework smoke suite"
-run = "uv run --python 3.14 --with-requirements tests/e2e/requirements.txt robot --outputdir tests/e2e/results/robot tests/e2e/robot"
+run = "uv run --python 3.14 --with-requirements test/e2e/requirements.txt robot --outputdir test/e2e/results/robot test/e2e/robot"
 
 [tasks."e2e-bats"]
 description = "Run Bats smoke suite (requires bats-core on PATH)"
-run = "bats tests/e2e/bats"
+run = "bats test/e2e/bats"
 
 [tasks."e2e-linux-server"]
 description = "Deploy and run Linux e2e on the configured server"
-run = "uv run --python 3.14 --with-requirements tests/e2e/requirements.txt python tests/e2e/remote_linux.py all"
+run = "uv run --python 3.14 --with-requirements test/e2e/requirements.txt python test/infra/remote_linux.py all"
 
 [tasks."e2e-all"]
 description = "Run the default cross-platform e2e suites (pytest + Robot). Bats needs bats-core and e2e-linux-server needs a configured server; run those separately."

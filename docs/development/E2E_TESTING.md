@@ -13,10 +13,10 @@ pwsh -NoProfile -Command '
   $env:CGO_ENABLED="0"; $env:GOOS="windows"; $env:GOARCH="amd64"
   go build -trimpath -o dist/one-more-ffmpeg-windows-amd64.exe ./cmd/one-more-ffmpeg
   $env:OMF_BINARY = (Resolve-Path "dist/one-more-ffmpeg-windows-amd64.exe").Path
-  uv run --python 3.14 --with-requirements tests/e2e/requirements.txt `
-    pytest -c tests/e2e/pytest.ini -n 2 -q tests/e2e/test_cli_e2e.py tests/e2e/test_cli_full_e2e.py tests/e2e/test_env_real_e2e.py tests/e2e/test_update_e2e.py
-  uv run --python 3.14 --with-requirements tests/e2e/requirements.txt `
-    robot --outputdir tests/e2e/results/robot tests/e2e/robot
+  uv run --python 3.14 --with-requirements test/e2e/requirements.txt `
+    pytest -c test/e2e/pytest.ini -n 2 -q test/e2e/test_cli_e2e.py test/e2e/test_cli_full_e2e.py test/e2e/test_env_real_e2e.py test/e2e/test_update_e2e.py
+  uv run --python 3.14 --with-requirements test/e2e/requirements.txt `
+    robot --outputdir test/e2e/results/robot test/e2e/robot
 '
 ```
 
@@ -24,15 +24,15 @@ pwsh -NoProfile -Command '
 
 ## 2. Linux 服务器
 
-`tests/e2e/remote_linux.py` 从 `OMF_LINUX_SERVER_INFO`（默认仓库同级的 `Linux-Server-Info.txt`）读取连接信息；文件与密码不会上传、不会打印。
+`test/infra/remote_linux.py` 从 `OMF_LINUX_SERVER_INFO`（默认仓库同级的 `Linux-Server-Info.txt`）读取连接信息；文件与密码不会上传、不会打印。
 
 ```powershell
-uv run --python 3.14 --with-requirements tests/e2e/requirements.txt `
-  python tests/e2e/remote_linux.py check
+uv run --python 3.14 --with-requirements test/e2e/requirements.txt `
+  python test/infra/remote_linux.py check
 
 $env:GOOS="linux"; go build -trimpath -o dist/one-more-ffmpeg-linux-amd64 ./cmd/one-more-ffmpeg
-uv run --python 3.14 --with-requirements tests/e2e/requirements.txt `
-  python tests/e2e/remote_linux.py all
+uv run --python 3.14 --with-requirements test/e2e/requirements.txt `
+  python test/infra/remote_linux.py all
 ```
 
 远程流程：SFTP 部署源码与 Linux 二进制到 `/tmp/omf-e2e` → `mise trust` → `go test ./...` → pytest e2e → Robot → Bats。远程使用 mise 提供的 Python 3.14、uv、Go 1.27.x。
