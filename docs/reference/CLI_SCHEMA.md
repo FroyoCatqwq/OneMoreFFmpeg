@@ -1,6 +1,6 @@
 # CLI JSON 契约 v1
 
-> 状态：v1.1.2-pre2（唯一受支持版本），CLI 外部契约已冻结
+> 状态：v1.1.2-pre3（唯一受支持版本），CLI 外部契约已冻结
 > 适用：当前唯一外部集成方式：调用 `one-more-ffmpeg` 可执行文件
 > 配套：[`ERROR_CODES.md`](ERROR_CODES.md)、[`schemas/`](schemas/README.md)
 
@@ -97,7 +97,7 @@
 | 命令 | 状态 |
 |---|---|
 | `version` / `detect` / `validate` / `capabilities` | 已实现 |
-| `provider list` / `provider add` / `resolve` / `download` | 已实现（v1.1.2-pre2 冻结） |
+| `provider list` / `provider add` / `resolve` / `download` | 已实现（v1.1.2-pre3 冻结） |
 | `install` | 已实现（Phase 5，默认 dry-run） |
 | `env status` / `doctor` | 已实现（只读） |
 | `env set` / `env unset` / `env rollback` | 已实现（默认 dry-run） |
@@ -328,7 +328,7 @@ provider 摘要：
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
-| `--provider <ID>` | 无（必填） | 已登记自定义 provider ID |
+| `--provider <ID>` | `official` | `official`（默认，FFmpeg-Builds latest 快照）或已登记自定义 provider ID |
 | `--target <T>` | 当前平台 | `win64` / `linux64`；其他平台 `OMF-E3003` |
 | `--variant <V>` | `gpl` | `gpl` / `lgpl` / `nonfree` |
 | `--linkage <L>` | `static` | `static` / `shared` |

@@ -18,13 +18,16 @@ DISCOVERY
   --only values: muxers, demuxers, devices, decoders, encoders, filters,
                  pixel_formats, channel_layouts, sample_formats
 
-CUSTOM PROVIDERS / DOWNLOAD / INSTALL
-  provider list --json                    registered custom providers
+PROVIDERS / DOWNLOAD / INSTALL
+  provider list --json                    built-in official + your custom providers
   provider add --id my --url https://.../ffmpeg.zip --sha256 <64hex> --apply
-      OneMoreFFmpeg ships NO built-in providers: every source is an explicit
-      URL + SHA-256 that you register yourself. There is no release catalog.
-  resolve --provider my --target win64 --json > release.json
-      Pins the custom URL (optionally verifies a checksums file).
+      Optional: register your own URL + SHA-256 source.
+  resolve --json > release.json           default: official FFmpeg-Builds latest
+      --provider official (default) uses https://github.com/FFmpeg-Builds/FFmpeg-Builds
+      latest release; defaults: gpl, static, master snapshot, x86_64 only.
+      Stable lines (n9.0 ...) are not supported yet. Check the upstream README
+      for OS requirements (a warning with the link is emitted).
+      --provider my resolves a custom URL registered via provider add.
   download --release release.json --json
   install --release release.json --json   preview (no writes)
   install --release release.json --apply --emit-trio-lock --json

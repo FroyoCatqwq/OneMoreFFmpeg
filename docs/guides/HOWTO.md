@@ -9,7 +9,7 @@
 
 OneMoreFFmpeg **不是 FFmpeg 本身**，而是一个「FFmpeg 安装管理器」。它帮你：
 
-1. 从网上**下载** FFmpeg 压缩包并校验；
+1. 从 FFmpeg-Builds 官方 latest（或你自己的 URL）**下载** FFmpeg 压缩包并校验；
 2. **安装**到一个带版本号的目录；
 3. 把 `ffmpeg` / `ffprobe` / `ffplay` 三个命令**接进你的 PATH**；
 4. 以后可以**切换版本、卸载、回滚**。
@@ -32,12 +32,12 @@ OneMoreFFmpeg **不是 FFmpeg 本身**，而是一个「FFmpeg 安装管理器�
 
 ## 2. 最短正确流程（Linux）
 
-假设你已经从 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases) 下载了 `one-more-ffmpeg-v1.1.2-pre2-linux-amd64`。下面用 `omf` 代指这个文件。
+假设你已经从 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases) 下载了 `one-more-ffmpeg-v1.1.2-pre3-linux-amd64`。下面用 `omf` 代指这个文件。
 
 ```bash
 # 0) 赋予执行权限，改个短名字（可选）
-chmod +x one-more-ffmpeg-v1.1.2-pre2-linux-amd64
-alias omf=./one-more-ffmpeg-v1.1.2-pre2-linux-amd64
+chmod +x one-more-ffmpeg-v1.1.2-pre3-linux-amd64
+alias omf=./one-more-ffmpeg-v1.1.2-pre3-linux-amd64
 
 # 1) 确认能跑
 omf version
@@ -84,11 +84,11 @@ omf install --channel stable --apply
 
 ## 3. 最短正确流程（Windows）
 
-下载 `one-more-ffmpeg-v1.1.2-pre2-windows-amd64.exe`，在 PowerShell 里：
+下载 `one-more-ffmpeg-v1.1.2-pre3-windows-amd64.exe`，在 PowerShell 里：
 
 ```powershell
 # 改个短名字（可选）
-Rename-Item .\one-more-ffmpeg-v1.1.2-pre2-windows-amd64.exe omf.exe
+Rename-Item .\one-more-ffmpeg-v1.1.2-pre3-windows-amd64.exe omf.exe
 
 .\omf.exe version
 .\omf.exe install --channel stable --apply   # 下载并安装，建立 current（junction）

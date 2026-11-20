@@ -55,8 +55,9 @@ func TestProviderAddAndList(t *testing.T) {
 	code, object, raw = runJSON(t, "provider", "list", "--json")
 	require.Equal(t, 0, code, raw)
 	providers := object["data"].(map[string]any)["providers"].([]any)
-	require.Len(t, providers, 1)
-	require.Equal(t, "my-ffmpeg", providers[0].(map[string]any)["id"])
+	require.Len(t, providers, 2)
+	require.Equal(t, "official", providers[0].(map[string]any)["id"])
+	require.Equal(t, "my-ffmpeg", providers[1].(map[string]any)["id"])
 
 	code, object, _ = runJSON(t, "provider", "add", "--id", "my-ffmpeg",
 		"--url", "https://example.invalid/other.zip", "--sha256", sha, "--json")

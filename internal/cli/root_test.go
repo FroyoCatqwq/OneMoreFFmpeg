@@ -285,9 +285,10 @@ func TestProviderListJSON(t *testing.T) {
 
 	providers, ok := data["providers"].([]any)
 	require.True(t, ok)
-	// Built-in providers were removed; only user-supplied custom providers
-	// appear here, so a fresh install has none.
-	require.Empty(t, providers)
+	// The official FFmpeg-Builds provider is available by default; custom
+	// providers can be added on top.
+	require.Len(t, providers, 1)
+	require.Equal(t, "official", providers[0].(map[string]any)["id"])
 }
 
 func TestProviderUnknownSubcommand(t *testing.T) {

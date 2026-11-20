@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -11,15 +12,17 @@ import (
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/provider"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/provider/official"
 )
 
 func providerFlags() []urfave.Flag {
 	return []urfave.Flag{
-		&urfave.StringFlag{Name: "provider", Usage: "custom provider id (add one with `provider add`)"},
+		&urfave.StringFlag{Name: "provider", Usage: "provider id: official (default, FFmpeg-Builds latest) or a custom id from `provider add`"},
 		&urfave.StringFlag{Name: "target", Usage: "win64|linux64 (default: current platform)"},
 		&urfave.StringFlag{Name: "variant", Value: "gpl", Usage: "gpl|lgpl|nonfree"},
 		&urfave.StringFlag{Name: "linkage", Value: "static", Usage: "static|shared"},
 		&urfave.BoolFlag{Name: "allow-nonfree", Usage: "accept nonfree binaries (local use only)"},
+		&urfave.StringFlag{Name: "release-line", Usage: "official release line: master (default); n* stable lines are not supported yet"},
 	}
 }
 
@@ -31,6 +34,7 @@ func requestFromFlags(cmd *urfave.Command) provider.Request {
 		Variant:      cmd.String("variant"),
 		Linkage:      cmd.String("linkage"),
 		AllowNonfree: cmd.Bool("allow-nonfree"),
+		ReleaseLine:  cmd.String("release-line"),
 	}
 }
 
@@ -57,7 +61,28 @@ func resolveCommand() *urfave.Command {
 }
 
 func resolveRelease(ctx context.Context, cmd *urfave.Command) (model.Release, error) {
-	request, err := provider.NormalizeRequest(requestFromFlags(cmd))
+	raw := requestFromFlags(cmd)
+	cfg := configFrom(ctx)
+	// The official FFmpeg-Builds provider is the default recommendation. It
+	// resolves assets from GitHub Releases with configurable naming rules.
+	// Check BEFORE NormalizeRequest, which requires a non-empty custom id.
+	if raw.Provider == official.ProviderID || raw.Provider == "" {
+		officialReq := official.Request{
+			Target: raw.Target, Variant: raw.Variant, Linkage: raw.Linkage,
+			Line: raw.ReleaseLine, // empty => master snapshot
+		}
+		hc := &http.Client{}
+		if timeout, err := time.ParseDuration(cfg.Network.Timeout); err == nil {
+			hc.Timeout = timeout
+		}
+		if cfg.Network.GitHubAPI != "" {
+			rules := official.DefaultRules()
+			rules.APIBase = cfg.Network.GitHubAPI
+			return (&official.Resolver{Rules: rules, HTTPClient: hc, Now: time.Now}).Resolve(ctx, officialReq)
+		}
+		return (&official.Resolver{HTTPClient: hc, Now: time.Now}).Resolve(ctx, officialReq)
+	}
+	request, err := provider.NormalizeRequest(raw)
 	if err != nil {
 		return model.Release{}, err
 	}
@@ -69,7 +94,6 @@ func resolveRelease(ctx context.Context, cmd *urfave.Command) (model.Release, er
 		return model.Release{}, apperrors.New(apperrors.E3001, "provider id is not registered").
 			WithDetails(map[string]any{"provider": request.Provider})
 	}
-	cfg := configFrom(ctx)
 	resolver := &provider.Resolver{Now: time.Now}
 	if timeout, err := time.ParseDuration(cfg.Network.Timeout); err == nil {
 		resolver.Timeout = timeout

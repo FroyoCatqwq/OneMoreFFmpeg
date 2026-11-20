@@ -11,6 +11,7 @@ import (
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/paths"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/provider"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/provider/official"
 )
 
 func providerCommand() *urfave.Command {
@@ -41,7 +42,12 @@ func providerListCommand() *urfave.Command {
 			if err := rejectExtraArgs(cmd); err != nil {
 				return err
 			}
-			list := provider.NewRegistry().List()
+			rules := official.DefaultRules()
+			list := []model.ProviderSummary{{
+				ID: official.ProviderID, Repository: rules.Owner + "/" + rules.Repo,
+				Channels: []string{"daily"}, Variants: []string{"gpl", "lgpl", "nonfree"},
+				Linkages: []string{"static", "shared"}, Redistributable: true,
+			}}
 			custom, err := loadCustomProviders()
 			if err != nil {
 				return err

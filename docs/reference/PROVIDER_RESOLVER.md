@@ -1,6 +1,6 @@
 # Provider 解析细则
 
-> 状态：v1.1.2-pre2 现行；只支持**自定义 URL provider**（无内置 provider、无 ffmpeg.org 版本目录）
+> 状态：v1.1.2-pre3 现行；默认 **official**（FFmpeg-Builds latest 快照）+ 可选自定义 URL provider。
 > CLI 输出见 [`CLI_SCHEMA.md`](CLI_SCHEMA.md)；错误码见 [`ERROR_CODES.md`](ERROR_CODES.md)
 
 ---

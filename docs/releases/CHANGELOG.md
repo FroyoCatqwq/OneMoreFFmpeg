@@ -3,6 +3,20 @@
 本项目遵循 [Semantic Versioning 2.0.0](../reference/VERSIONING.md)。格式基于 [Keep a Changelog](https://keepachangelog.com/)。
 本文件列出 v1.1.2-pre1 之后的变更；更早版本仅以 `docs/releases/release-v*.md` 历史记录形式保留。
 
+## [1.1.2-pre3] — 2026-11-21
+
+新功能：默认 FFmpeg-Builds 官方 latest 快照 provider。
+
+### Added
+- **official provider（默认）**：`resolve` 不带 `--provider` 时查询 FFmpeg-Builds/FFmpeg-Builds 的 `latest` release，按可配置命名规则选资产。默认 `master` 快照 / `gpl` / `static` / x86_64（win64、linux64）。
+- 命名规则数据驱动：集中在 `internal/provider/official` 的 `Rules` 结构（Owner/Repo/Tag/AssetTemplate/TargetDir/Extensions/SnapshotLine/StableLinePattern），上游改名只需改数据不改逻辑。
+- 系统要求提示：resolve 结果给出上游 README 链接（不解析 README 内容，避免上游改版导致解析失败）。
+- `provider list` 显示内置 official + 自定义 provider。
+
+### Changed
+- 稳定版（`n*`）明确拒绝（`OMF-E3004`），待其命名规则确定后再支持；非 x86_64 架构拒绝（`OMF-E3003`）。
+- 自定义 URL provider 保留为可选补充（支持 http/https）。
+
 ## [1.1.2-pre2] — 2026-11-20
 
 预发布版本：第二轮细致排查后修复更深层 bug，并补文档/CI 一致性。

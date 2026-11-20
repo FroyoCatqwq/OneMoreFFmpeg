@@ -1,6 +1,6 @@
 # CLI JSON 示例
 
-> 状态：v1.1.2-pre2 契约冻结基准。命令集、`data.schema` 集与退出码映射由
+> 状态：v1.1.2-pre3 契约冻结基准。命令集、`data.schema` 集与退出码映射由
 > `internal/contracts/freeze_test.go` 守护。
 > 配套：[`../CLI_SCHEMA.md`](../CLI_SCHEMA.md)、[`../ERROR_CODES.md`](../ERROR_CODES.md)、
 > [`contract.schema.json`](contract.schema.json)（机器可读 JSON Schema）

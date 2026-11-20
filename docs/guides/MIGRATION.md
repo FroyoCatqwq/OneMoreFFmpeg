@@ -1,6 +1,6 @@
 # 迁移与回滚指南
 
-OneMoreFFmpeg v1.1.2-pre2 为唯一受支持版本，CLI 外部契约已冻结：人类输出可调整，但 `--json` 契约、错误码、数据目录布局与 journal schema 按 [`VERSIONING.md`](../reference/VERSIONING.md) 管理。
+OneMoreFFmpeg v1.1.2-pre3 为唯一受支持版本，CLI 外部契约已冻结：人类输出可调整，但 `--json` 契约、错误码、数据目录布局与 journal schema 按 [`VERSIONING.md`](../reference/VERSIONING.md) 管理。
 本指南汇总版本间需要注意的迁移点与「环境搞乱后」的恢复流程。
 
 ## 1. 数据目录布局
@@ -16,7 +16,7 @@ data-root 解析优先级：`ONE_MORE_FFMPEG_HOME`（须绝对路径）→ Windo
 └─ config.toml
 ```
 
-布局在 v0.6–v1.1.2-pre2 保持一致；遇到不认识的字段，CLI 按严格模式处理配置（未知字段会报错），请按 [`config.example.toml`](../../config.example.toml) 对照。
+布局在 v0.6–v1.1.2-pre3 保持一致；遇到不认识的字段，CLI 按严格模式处理配置（未知字段会报错），请按 [`config.example.toml`](../../config.example.toml) 对照。
 
 ## 2. 配置迁移
 

@@ -1,6 +1,6 @@
 # 环境变量与 PATH 管理
 
-> 状态：v1.1.2-pre2 现行，CLI 外部契约已冻结
+> 状态：v1.1.2-pre3 现行，CLI 外部契约已冻结
 > 原则：默认只读、显式写入、先备份后修改、可回滚
 > 当前不做包管理器识别与包管理器共存逻辑
 
@@ -218,8 +218,8 @@ Windows 注册表、UAC、`REG_EXPAND_SZ`、`WM_SETTINGCHANGE`、junction / poin
   "id": "journal-0123456789abcdef",
   "action": "env-set",
   "status": "committed",
-  "created_at": "2026-11-20T00:00:00Z",
-  "updated_at": "2026-11-20T00:00:00Z",
+  "created_at": "2026-11-21T00:00:00Z",
+  "updated_at": "2026-11-21T00:00:00Z",
   "target": "<data-root>",
   "details": {
     "scope": "user",

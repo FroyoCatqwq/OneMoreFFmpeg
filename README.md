@@ -4,12 +4,14 @@
 
 仓库：<https://github.com/FroyoCatqwq/OneMoreFFmpeg> · 许可证：GPL-3.0-only
 
-**状态：v1.1.2-pre2** — Phase 1–7 全部完成，CLI 外部契约冻结；全项目审计后 bugfix；Windows + Linux + Docker 全新环境 `go test` / e2e 全绿，
+**状态：v1.1.2-pre3** — Phase 1–7 全部完成，CLI 外部契约冻结；全项目审计后 bugfix；Windows + Linux + Docker 全新环境 `go test` / e2e 全绿，
 GitHub Actions 提供质量门禁与 tag 发布流水线。产物见 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases)。
 
-> **仅 v1.1.2-pre2 受支持**：旧版本（v1.0.x 及更早）不再维护，请始终使用当前版本；仓库内 `docs/releases/` 的旧版说明仅作历史记录。
+> **仅 v1.1.2-pre3 受支持**：旧版本（v1.0.x 及更早）不再维护，请始终使用当前版本；仓库内 `docs/releases/` 的旧版说明仅作历史记录。
 
-🟢 **第一次用？先看 [`安装指南`](docs/guides/INSTALL.md)（手动二进制 + 校验）与 [`新手上手指南`](docs/guides/HOWTO.md)。黄金顺序：注册 `provider add` → `download/install --apply` → `env set --apply` → 开新终端 → `ffmpeg` 可用。**
+🟢 **第一次用？先看 [`新手上手指南`](docs/guides/HOWTO.md)。黄金顺序：`resolve`（默认官方 latest）→ `download/install --apply` → `env set --apply` → 开新终端 → `ffmpeg` 可用。**
+
+默认下载 [FFmpeg-Builds](https://github.com/FFmpeg-Builds/FFmpeg-Builds) 的 **master 最新快照 / gpl / static / x86_64**；稳定版（n*）暂不支持；系统要求请查看[上游 README](https://github.com/FFmpeg-Builds/FFmpeg-Builds#readme)。
 
 安装：从 [Releases](https://github.com/FroyoCatqwq/OneMoreFFmpeg/releases) 下载对应平台二进制并校验 SHA-256（本工具不提供 Scoop/dnf/RPM 包）。
 
@@ -17,7 +19,7 @@ GitHub Actions 提供质量门禁与 tag 发布流水线。产物见 [Releases](
 
 ## 1. 它解决什么
 
-机器上有哪些 `ffmpeg`/`ffprobe`/`ffplay`、来自哪里、能否用、支持哪些能力；如何从自定义 URL 下载并校验 FFmpeg，
+机器上有哪些 `ffmpeg`/`ffprobe`/`ffplay`、来自哪里、能否用、支持哪些能力；如何从 FFmpeg-Builds 官方最新快照（或你自己的 URL）下载并校验 FFmpeg，
 如何安装、切换、回滚、配置 PATH；以及让下游项目（LiveArchiveEncoder 等）通过**调用本 CLI 可执行文件**使用这些能力。
 
 一句话：**OneMoreFFmpeg 管“FFmpeg 从哪里来、装到哪里、怎么验证、怎么被发现、支持什么能力”。不提供 Go SDK 或插件接口。**
@@ -56,7 +58,7 @@ GitHub Actions 提供质量门禁与 tag 发布流水线。产物见 [Releases](
 - 上手：[`HOWTO.md`](docs/guides/HOWTO.md) · [`USAGE.md`](docs/guides/USAGE.md) · [`MIGRATION.md`](docs/guides/MIGRATION.md)
 - 契约：[`CLI_SCHEMA.md`](docs/reference/CLI_SCHEMA.md) · [`ERROR_CODES.md`](docs/reference/ERROR_CODES.md) · [`CAPABILITIES.md`](docs/reference/CAPABILITIES.md)
 - 开发：[`ARCHITECTURE.md`](docs/development/ARCHITECTURE.md) · [`E2E_TESTING.md`](docs/development/E2E_TESTING.md) · [`development/adr/`](docs/development/adr/)
-- 发布：[`CHANGELOG.md`](docs/releases/CHANGELOG.md) · [`release-v1.1.2-pre2.md`](docs/releases/release-v1.1.2-pre2.md)（旧版本 Release 与历史快照已撤回）
+- 发布：[`CHANGELOG.md`](docs/releases/CHANGELOG.md) · [`release-v1.1.2-pre3.md`](docs/releases/release-v1.1.2-pre3.md)（旧版本 Release 与历史快照已撤回）
 
 ## 5. 开发命令
 
