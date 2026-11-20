@@ -58,4 +58,4 @@ one-more-ffmpeg update --apply    # 下载校验后替换自身
 
 ## 下一步
 
-安装完成后按 [`新手上手指南`](HOWTO.md) 操作：先用 `provider add` 注册自己的 FFmpeg URL + SHA-256，再 `download --apply` → `install --apply` → `env set --apply` → 开新终端 → `ffmpeg` 可用。
+安装完成后按 [`新手上手指南`](HOWTO.md) 操作：`resolve`（默认官方 latest 快照）→ `download` → `install --apply` → `env set --apply` → 开新终端 → `ffmpeg` 可用。

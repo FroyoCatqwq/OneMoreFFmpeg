@@ -67,7 +67,7 @@ GPL-3.0-only 只覆盖 OneMoreFFmpeg 自己的代码与文档，不自动覆盖�
 - 不把 FFmpeg 二进制提交到 Git；
 - 不把 nonfree 资产上传为公开 CI artifact；
 - `install.json` 继续记录 `redistributable` 与 `license_hint`；
-- Phase 1 已生成 `THIRD_PARTY_NOTICES` 与依赖许可证清单，v1.0.2 维持更新（见 §7 当前状态）。
+- Phase 1 已生成 `THIRD_PARTY_NOTICES` 与依赖许可证清单，v1.1.2-pre3 维持更新（见 §7 当前状态）。
 
 ---
 
@@ -131,4 +131,4 @@ Phase 1 阶段要求的检查项及当前状态：
 >
 > 根目录 `LICENSE` 已存在。
 >
-> 第三方依赖许可证清单与 `THIRD_PARTY_NOTICES` 已完成并随 v1.0.2 更新；自动化许可证 CI 检查仍未接入（独立待办，非发布阻断）。许可证选择本身不再有阻塞项。
+> 第三方依赖许可证清单与 `THIRD_PARTY_NOTICES` 已完成并随 v1.1.2-pre3 更新；自动化许可证 CI 检查仍未接入（独立待办，非发布阻断）。许可证选择本身不再有阻塞项。

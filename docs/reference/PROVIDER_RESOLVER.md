@@ -44,13 +44,10 @@
 - 资产名经 `safeAssetName` 校验（无路径分隔符、无 `..`）；
 - 所有路径写入受 `internal/lock` 的 OS 级跨进程锁保护。
 
-## 6. 已移除的能力
+## 6. 与旧版的区别
 
-以下曾属于 v1.0.x 的内置来源能力，现已全部移除：
-
-- btbn / bnqdzj-nonfree 内置 provider 与 GitHub release 目录；
-- ffmpeg.org 官网版本列表（`release list --channel stable`）；
-- daily/stable 双通道与 `--release-line` / `--release-tag` / `--snapshot`；
-- `release list` / `release install` 命令。
+- 旧的 btbn / bnqdzj-nonfree 内置 provider、ffmpeg.org 官网版本列表与 `release list`/`release install` 命令已移除；
+- v1.1.2-pre3 新增的 **official** provider 是直接按 FFmpeg-Builds 官方推荐的 `latest` release 解析资产，**不是**恢复旧的内置来源或版本目录；
+- `--release-line` 仅用于 official 选择 line（默认 `master`；`n*` 稳定版暂不支持），`--release-tag`/`--snapshot` 未恢复。
 
 详见 [`PROVIDERS.md`](PROVIDERS.md) 的当前来源模型。

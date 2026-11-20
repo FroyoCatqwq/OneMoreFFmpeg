@@ -41,16 +41,15 @@ alias omf=./one-more-ffmpeg-v1.1.2-pre3-linux-amd64
 
 # 1) 确认能跑
 omf version
-# 期望：OneMoreFFmpeg 1.1.1 (...) linux/amd64 ...
+# 期望：OneMoreFFmpeg 1.1.2-pre3 (...) linux/amd64 ...
 
-# 2) 注册你自己的 FFmpeg 下载地址（URL + SHA-256），然后下载安装。
-#    项目没有内置 provider；所有来源都由你自己登记。
-omf provider add --id my-ffmpeg --url https://example.invalid/ffmpeg.zip --sha256 <64位SHA256> --apply
-omf resolve --provider my-ffmpeg --json > release.json
-omf download --release release.json --apply
+# 2) 解析官方 FFmpeg-Builds 最新快照（默认 gpl/static/x86_64），然后下载安装。
+#    无需注册 provider：official 是内置默认来源。
+omf resolve --json > release.json
+omf download --release release.json
 omf install --release release.json --apply
 # 期望最后几行：
-#   root: /home/you/.local/share/onemoreffmpeg/apps/my-ffmpeg/...
+#   root: /home/you/.local/share/onemoreffmpeg/apps/official/...
 #   current: symlink          <-- 看到 current 不是 missing 就对了
 #   installation: inst-...
 
@@ -171,7 +170,7 @@ omf install --channel stable --apply --force  # 再干净地装一次
 
 | 报错 | 含义 | 怎么办 |
 |---|---|---|
-| `OMF-E3001: provider id is not registered` | provider 未登记 | 先用 `provider add --id ... --url ... --sha256 ... --apply` 注册，再用 `omf provider list` 确认 ID。 |
+| `OMF-E3001: provider id is not registered` | 自定义 provider 未登记 | 默认用 official（无需登记）；若用自定义，先 `provider add --id ... --url ... --sha256 ... --apply`。 |
 | `OMF-E7001: unsupported variant` | variant 不支持 | 用 `gpl` / `lgpl` / `nonfree`；nonfree 需加 `--allow-nonfree`。 |
 | `OMF-E6003: system scope requires elevation` | 用了 `--system` 但未提权 | 普通用户别用 `--system`；确需全局安装请用 sudo/管理员运行。`--authorize-system` 只能用于 dry-run 预览，不能替代提权。 |
 | `OMF-E6009: data root is locked` | 另一个 install/env 正在跑 | 等它结束再试。 |
@@ -179,24 +178,26 @@ omf install --channel stable --apply --force  # 再干净地装一次
 
 ### provider 怎么选
 
-项目**没有内置 provider**（不再有 btbn / bnqdzj-nonfree，也没有 ffmpeg.org 版本目录）。所有 FFmpeg 来源都由一个自定义 URL + SHA-256 定义：
+默认使用内置 **official** provider（FFmpeg-Builds 官方 latest 快照），无需注册：
 
 ```bash
-# 1. 登记（一次即可）
-omf provider add --id my-ffmpeg --url https://example.invalid/ffmpeg.zip --sha256 <64位SHA256> --apply
-omf provider list
-
-# 2. 解析成 pin → 下载 → 安装
-omf resolve --provider my-ffmpeg --json > release.json
-omf download --release release.json --apply
+omf resolve --json > release.json                 # 默认 gpl/static/x86_64 master 快照
+omf resolve --target linux64 --json > release.json # 明确平台
+omf download --release release.json
 omf install --release release.json --apply
-
-# nonfree 变体需显式同意（仅本地使用，不可再分发）
-omf provider add --id my-nonfree --url https://example.invalid/ffmpeg-nonfree.zip --sha256 <64位SHA256> --apply
-omf resolve --provider my-nonfree --variant nonfree --allow-nonfree --json > release.json
 ```
 
-没有 `release list` / `release install`：版本选择由你提供的 URL 决定。
+- 稳定版（`n9.0` 等）暂不支持（`OMF-E3004`）；非 x86_64 架构不支持（`OMF-E3003`）；
+- 系统要求请查看上游 README（resolve 的 warning 会给出链接）。
+
+也可以用你自己的 URL（支持 http/https，适合自建服务器）：
+
+```bash
+omf provider add --id my-ffmpeg --url https://example.invalid/ffmpeg.zip --sha256 <64位SHA256> --apply
+omf resolve --provider my-ffmpeg --json > release.json
+omf download --release release.json
+omf install --release release.json --apply
+```
 
 ---
 
@@ -266,4 +267,4 @@ omf update --json     # 机器可读输出；外部程序据此决定是否提�
 - 全部错误码：[`ERROR_CODES.md`](../reference/ERROR_CODES.md)
 - 命令契约：[`CLI_SCHEMA.md`](../reference/CLI_SCHEMA.md)
 
-记住那条黄金顺序就不会迷路：**`install --apply` → `env set --apply` → 开新终端 → `ffmpeg`**。
+记住那条黄金顺序就不会迷路：**`resolve` → `download` → `install --apply` → `env set --apply` → 开新终端 → `ffmpeg`**。

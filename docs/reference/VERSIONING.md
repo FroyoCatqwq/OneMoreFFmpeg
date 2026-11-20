@@ -1,6 +1,6 @@
 # 版本与发布规范
 
-> 本项目遵循 [Semantic Versioning 2.0.0](https://semver.org/)；发布 tag 使用 `v` 前缀，例如 `v1.1.1`。
+> 本项目遵循 [Semantic Versioning 2.0.0](https://semver.org/)；发布 tag 使用 `v` 前缀，例如 `v1.1.2-pre3`。
 
 ## 1. 版本号含义（v1.0 起适用标准 SemVer）
 

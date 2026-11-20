@@ -104,7 +104,8 @@
 | `uninstall` | 已实现（默认 dry-run，隔离到 quarantine，可回滚） |
 | `journal list` / `journal rollback` | 已实现（rollback 默认 dry-run） |
 | `capabilities --only <kind>` | 已实现（单命令、单列表输出） |
-| 自定义 provider | 已实现（URL + SHA-256 pin，无内置 provider） |
+| official provider（默认） | 已实现（FFmpeg-Builds latest 快照，gpl/static/x86_64） |
+| 自定义 provider | 已实现（URL + SHA-256 pin，可选） |
 | `update` | 已实现（v1.1，默认 dry-run 检查；`--apply` 才自更新） |
 
 18 个命令的 data 表与示例**均已实现**（含 v1.1 的 `update`），并由 `internal/contracts` 做字段级校验；`data.schema` 冻结为 `/v1`，未注册的 schema、主版本升级或命令/data.schema 不匹配会得到 `OMF-E7003`（契约校验由 `internal/contracts` 守护）。
@@ -272,7 +273,7 @@ one-more-ffmpeg capabilities --installation-id <ID>
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `providers` | array | 用户登记的自定义 provider，按 `providers.toml` 顺序；无内置 provider，初始为空数组 |
+| `providers` | array | 内置 `official` 在前，后接用户登记的自定义 provider（按 `providers.toml` 顺序） |
 
 provider 摘要：
 
@@ -324,7 +325,7 @@ provider 摘要：
 
 ### 4.7 `resolve`（已实现，仅自定义 provider）
 
-`data.schema` = `onemoreffmpeg.release/v1`。项目**没有内置 provider 或版本目录**：只有一个自定义 URL + SHA-256。解析时用登记的 `asset_url` 与 `asset_sha256` 产出 pin，channel 固定 `daily`。
+`data.schema` = `onemoreffmpeg.release/v1`。默认 `official` provider 查询 FFmpeg-Builds `latest` release（master 快照/gpl/static/x86_64）；自定义 provider 用登记的 `asset_url` 与 `asset_sha256` 产出 pin。channel 固定 `daily`。稳定版（`n*`）与非 x86_64 不支持。
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
@@ -526,7 +527,7 @@ provider 摘要：
 
 ### 4.16 `update`（v1.1，默认 dry-run）
 
-`data.schema` = `onemoreffmpeg.update/v1`。查询 GitHub Releases 的最新稳定版，与内建版本比较；默认只检查，`--apply` 才下载并替换当前可执行文件。
+`data.schema` = `onemoreffmpeg.update/v1`。查询 OneMoreFFmpeg 自身 GitHub Releases 的最新版，与内建版本比较；默认只检查，`--apply` 才下载并替换当前可执行文件（`update --recover` 用于崩溃恢复）。
 
 | 字段 | 类型 | 说明 |
 |---|---|---|

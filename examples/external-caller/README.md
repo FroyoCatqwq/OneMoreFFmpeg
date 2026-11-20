@@ -1,4 +1,4 @@
-# 外部调用示例（v1.0.2 冻结契约）
+# 外部调用示例（v1.1.2-pre3 冻结契约）
 
 下游项目（如 **LiveArchiveEncoder / LiveArchiveEncoder-VideoDamage**）通过**调用 CLI 可执行文件**使用 OneMoreFFmpeg，
 而不是 import Go 包或链接 Go runtime。本目录给出两种语言的最小可运行示例：

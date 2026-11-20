@@ -27,9 +27,9 @@ GitHub Actions 提供质量门禁与 tag 发布流水线。产物见 [Releases](
 ## 2. 能力与边界
 
 已实现：发现（PATH / 环境变量 / 指定目录 / 常见目录 / 显式 `--scan` 全盘扫描）、三件套校验、13 项能力检查（带缓存）、
-仅自定义 URL（`provider add --url --sha256`）、下载（SHA-256 校验）、
+默认 FFmpeg-Builds 官方 latest 快照 + 可选自定义 URL、下载（SHA-256 校验）、
 安装（安全解压、版本化目录、`current`、journal）、`uninstall`、`env status|set|unset|rollback`、
-`journal list|rollback`、`doctor`，共 18 个冻结命令（含 v1.1 新增的 `update`；已移除 `release list|install`）。写入类命令默认 dry-run，需 `--apply`；`download` 与能力缓存会立即写文件。
+`journal list|rollback`、`doctor`，共 18 个冻结命令（含 v1.1 新增的 `update`）。写入类命令默认 dry-run，需 `--apply`；`download` 与能力缓存会立即写文件。
 
 明确不做：包管理器识别（Scoop/winget/apt 管理第三方 FFmpeg）、Go API / 插件 / JSON-RPC / C ABI、GUI/TUI、FFmpeg 自构建、私有制品库、**后台自动更新 / 静默替换 / 常驻更新服务**（v1.1 起已支持用户主动执行的 `update` 检查与 `update --apply` 自更新，二者不等同）。
 
@@ -47,7 +47,7 @@ GitHub Actions 提供质量门禁与 tag 发布流水线。产物见 [Releases](
 | 平台 | Windows x64 + Linux x86_64 |
 | CLI | `one-more-ffmpeg`（不提供 `omf` 内置别名；HOWTO 中 `omf` 是用户自定义 alias） |
 | 组件 | `urfave/cli/v3`、`pelletier/go-toml/v2`（TOML 1.1）、`log/slog` + `lmittmann/tint` |
-| 安装源 | 仅自定义 URL（http/https）+ SHA-256 pin；nonfree 仅本地使用，二进制不进公开 Release |
+| 安装源 | 默认 official（FFmpeg-Builds latest，gpl/static/x86_64）+ 可选自定义 URL（http/https）；nonfree 仅本地使用 |
 | 外部集成 | 只调用 CLI 可执行文件，见 [`集成指南`](docs/guides/INTEGRATION.md) |
 | 版本规范 | SemVer；schema/错误码/目录布局显式版本化，见 [`VERSIONING.md`](docs/reference/VERSIONING.md) |
 

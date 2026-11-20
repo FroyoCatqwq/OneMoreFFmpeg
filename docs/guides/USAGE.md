@@ -48,7 +48,7 @@
 .\one-more-ffmpeg-v1.1.2-pre3-windows-amd64.exe provider list --json
 ```
 
-没有 `release list` / `release install`：版本与资产完全由你提供的 URL 决定。nonfree 变体需 `--allow-nonfree`，且只能本地使用、不可再分发。
+自定义来源的版本与资产完全由你提供的 URL 决定。nonfree 变体需 `--allow-nonfree`，且只能本地使用、不可再分发。
 
 ## 4. 解析、下载、安装
 
