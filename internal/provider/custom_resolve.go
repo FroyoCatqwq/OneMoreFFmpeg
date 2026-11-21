@@ -48,7 +48,7 @@ func (r *Resolver) resolveCustom(ctx context.Context, req Request, entry Custom)
 	}
 	pinnedAt := r.now().UTC().Format(time.RFC3339)
 	sha := strings.ToLower(strings.TrimSpace(entry.SHA256))
-	if !sha256Hex.MatchString(sha) {
+	if !checksum.IsLowerHex64(sha) {
 		return model.Release{}, apperrors.New(apperrors.E3009, "custom provider requires a sha256 pin").WithDetails(map[string]any{"id": entry.ID})
 	}
 

@@ -8,7 +8,7 @@
 ### PR-1 `fa7c06b` — 共享 checksum 原语与死代码清理
 
 **改动清单**
-- 新增 `internal/checksum/primitives.go`：`SumHex` / `IsLowerHex64` / `IsHex64` / `TrimDigestPrefix`
+- 新增 `internal/checksum/primitives.go`：`SumHex` / `IsLowerHex64` / `IsHex64`（`TrimDigestPrefix` 因无调用方在 PR-3 删除）
 - 替换本地重复实现：`ffexec`、`capabilities`、`detect` 的 `sha256Hex`；`official`、`customurl/checksum` 的 `isLowerHex`；`selfupdate` 的 `isHex64`
 - 删除无引用的 `internal/deps` 占位包
 - 删除 `selfupdate.Options.Now` 死注入
@@ -56,9 +56,24 @@
 
 ## 尚未处理（Phase 1 显式跳过，需在后续 Phase 评估）
 
-- `cache.Store`（otter + 磁盘持久化）仍无生产调用。用户曾明确要求引入并使用 otter，直接删除会与该要求冲突；应在 Phase 1/2 以"真正接入 capabilities 缓存"或"独立提案删除"二选一决定。
-- `model.KnownDataSchemas` / `contracts.CommandDataSchemas` 仍为导出可变 map；当前生产代码只读，测试只读，未发现真实写入风险；改为函数会扩大测试改动面，留待 Phase 4/6 与契约 freeze 一起评估。
-- Windows 8.3 短名测试断言失败（5 个）仍未修，属测试假设问题，留 Phase 6 跨平台回归前处理。
+### PR-3 — otter 真正接入 + 全局 map 函数化 + checksum 彻底收口（按用户四项要求）
+
+**改动清单**
+1. **otter 真正使用**：`internal/cache.Store` 加上 otter 的 `ExpiryCreating` TTL（修复内存层绕过过期的缺陷）；`internal/capabilities` 新增 `memory_cache.go`，把 otter L1 真正接入 `Collect`/`CollectList`（key 含 cachePath+文件身份+fingerprint+installationID+topic/kind），磁盘仍为权威 L2，`--no-cache` 不分配缓存、不解析 data-root。此前 `cache.Store` 只有测试调用的问题已消除。
+2. **全局 map 函数化**：`model.KnownDataSchemas` → `func KnownDataSchemas() map[string]struct{}`（返回副本）+ `IsKnownDataSchema` 热路径；`contracts.CommandDataSchemas` → `func CommandDataSchemas() map[string][]string`（深拷贝内部 slices）；`knownCommands` 改为从 `commandDataSchemas` 派生，**消除双真相源**；新增防御性副本测试 `registry_immutability_test.go`。
+3. **checksum 彻底收口**：`download`/`provider`/`provider/custom`/`custom_resolve`/`contracts` 的 64-hex regexp 全部替换为 `checksum.IsLowerHex64`；`checksum` 包内部 `isLowerHex` 也委托给共享原语；`install.checksumOfString` 委托 `checksum.SumHex`；删除无调用方的 `TrimDigestPrefix`。
+4. **死注入清理**：删除 `download.Options.Now`（与 PR-1 删除 `selfupdate.Options.Now` 一致，审计确认无使用）。
+
+**依赖图变化（相关边）**
+
+| 边 | As-Is | To-Be |
+|---|---|---|
+| `capabilities → cache`（otter Store） | 无 | 新增（L1 真正接入） |
+| `contracts → checksum` | 无 | 新增（hex 校验收敛） |
+| `provider → checksum` | 无 | 新增（custom.go 校验收敛） |
+| `cache → checksum` | 无 | 保持不新增（缓存键哈希与摘要验证语义不同，伪重复不抽取） |
+
+**验证**：gofmt / vet / go test ./... / golangci-lint 0 issues；契约 freeze（Frozen/Golden/Validate/JSON Schema）全部 PASS；`go list ./...` 无循环依赖。
 
 ## Phase 1 退出条件核对
 
@@ -66,3 +81,5 @@
 - [x] JSON golden / schema freeze 不变（全部 PASS）
 - [x] 重复提取均有真实调用点证据
 - [x] 未扩大外部 API 面（`LinkKind` 为 platform 内部行为描述类型，供 install 边界使用；`model` 新增均为纯数据函数）
+- [x] otter 有真实生产调用（capabilities L1）
+- [x] 可变全局 map 全部函数化并有防御性副本测试

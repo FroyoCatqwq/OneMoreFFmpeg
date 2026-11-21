@@ -3,7 +3,6 @@ package checksum
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"strings"
 )
 
 // SumHex returns the lowercase hex-encoded SHA-256 of data.
@@ -44,10 +43,4 @@ func IsHex64(s string) bool {
 		}
 	}
 	return true
-}
-
-// TrimDigestPrefix removes an optional "sha256:" prefix (case-insensitive)
-// and trims surrounding whitespace. It does not validate the remaining value.
-func TrimDigestPrefix(s string) string {
-	return strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(s), "sha256:"))
 }

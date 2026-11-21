@@ -2,8 +2,6 @@ package install
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"io"
 	"os"
 	"path/filepath"
@@ -55,8 +53,7 @@ func installationIDFor(binaries model.InstallBinaries) string {
 }
 
 func checksumOfString(value string) string {
-	sum := sha256.Sum256([]byte(value))
-	return hex.EncodeToString(sum[:])
+	return checksum.SumHex([]byte(value))
 }
 
 func checksumFile(ctx context.Context, path string) (string, error) {

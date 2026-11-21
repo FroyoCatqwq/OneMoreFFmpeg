@@ -27,9 +27,10 @@ func TestValidateCommandDataRejectsUnknownCommand(t *testing.T) {
 }
 
 func TestCommandDataSchemasCoverAllFrozenCommands(t *testing.T) {
-	require.Len(t, contracts.CommandDataSchemas, 18)
+	registry := contracts.CommandDataSchemas()
+	require.Len(t, registry, 18)
 	for _, schema := range []string{model.CapabilitiesSchema, model.CapabilityListSchema} {
-		require.Contains(t, contracts.CommandDataSchemas["capabilities"], schema)
+		require.Contains(t, registry["capabilities"], schema)
 	}
 }
 

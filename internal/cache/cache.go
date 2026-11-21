@@ -39,7 +39,14 @@ func New[K comparable, V any](opts Options) (*Store[K, V], error) {
 	if opts.MaxSize <= 0 {
 		opts.MaxSize = 512
 	}
-	mem, err := otter.New[K, V](&otter.Options[K, V]{MaximumSize: opts.MaxSize})
+	cacheOpts := &otter.Options[K, V]{MaximumSize: opts.MaxSize}
+	// Apply the same freshness window to the in-memory tier. Without this, a
+	// long-lived process could serve a stale L1 value after the on-disk entry
+	// would already have expired.
+	if opts.TTL > 0 {
+		cacheOpts.ExpiryCalculator = otter.ExpiryCreating[K, V](opts.TTL)
+	}
+	mem, err := otter.New[K, V](cacheOpts)
 	if err != nil {
 		return nil, err
 	}

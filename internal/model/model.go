@@ -25,24 +25,34 @@ const (
 	UpdateSchema         = "onemoreffmpeg.update/v1"
 )
 
-var KnownDataSchemas = map[string]struct{}{
-	VersionSchema:        {},
-	DetectSchema:         {},
-	ValidateSchema:       {},
-	CapabilitiesSchema:   {},
-	ProviderListSchema:   {},
-	ProviderAddSchema:    {},
-	ReleaseSchema:        {},
-	ArtifactSchema:       {},
-	InstallSchema:        {},
-	EnvStatusSchema:      {},
-	EnvSetSchema:         {},
-	DoctorSchema:         {},
-	UninstallSchema:      {},
-	JournalListSchema:    {},
-	JournalActionSchema:  {},
-	CapabilityListSchema: {},
-	UpdateSchema:         {},
+// knownDataSchemaOrder is the authoritative registry of data schemas. It is
+// private and immutable; accessors below hand out defensive copies so callers
+// cannot mutate the contract registry.
+var knownDataSchemaOrder = [...]string{
+	VersionSchema, DetectSchema, ValidateSchema, CapabilitiesSchema,
+	ProviderListSchema, ProviderAddSchema, ReleaseSchema, ArtifactSchema,
+	InstallSchema, EnvStatusSchema, EnvSetSchema, DoctorSchema,
+	UninstallSchema, JournalListSchema, JournalActionSchema,
+	CapabilityListSchema, UpdateSchema,
+}
+
+// KnownDataSchemas returns a fresh copy of the registered data schema set.
+func KnownDataSchemas() map[string]struct{} {
+	out := make(map[string]struct{}, len(knownDataSchemaOrder))
+	for _, s := range knownDataSchemaOrder {
+		out[s] = struct{}{}
+	}
+	return out
+}
+
+// IsKnownDataSchema is the allocation-free hot-path check for schema validity.
+func IsKnownDataSchema(s string) bool {
+	for _, known := range knownDataSchemaOrder {
+		if known == s {
+			return true
+		}
+	}
+	return false
 }
 
 // UpdateData is the result payload for `update --json`.

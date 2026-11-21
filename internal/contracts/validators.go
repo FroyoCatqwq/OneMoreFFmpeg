@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/checksum"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 )
@@ -46,7 +47,7 @@ func validateDataFields(schema string, data map[string]any) error {
 		default:
 			return apperrors.New(apperrors.E7003, "provider add status must be added or dry-run")
 		}
-		if added.SHA256 != "" && !sha256Pattern.MatchString(added.SHA256) {
+		if added.SHA256 != "" && !checksum.IsLowerHex64(added.SHA256) {
 			return apperrors.New(apperrors.E7003, "provider add sha256 must be lowercase hex")
 		}
 	case model.ReleaseSchema:
@@ -217,7 +218,7 @@ func validateInstall(raw []byte) error {
 	default:
 		return apperrors.New(apperrors.E7003, "install current_pointer is invalid")
 	}
-	if !sha256Pattern.MatchString(data.AssetSHA256) {
+	if !checksum.IsLowerHex64(data.AssetSHA256) {
 		return apperrors.New(apperrors.E7003, "install asset_sha256 must be lowercase hex")
 	}
 	dryRun, found := rawField(raw, "dry_run")
@@ -234,10 +235,10 @@ func validateInstall(raw []byte) error {
 		return apperrors.New(apperrors.E7003, "install journal_id is required when applied")
 	}
 	if !isDryRun {
-		if !sha256Pattern.MatchString(data.Binaries.FFmpegSHA256) || !sha256Pattern.MatchString(data.Binaries.FFprobeSHA256) {
+		if !checksum.IsLowerHex64(data.Binaries.FFmpegSHA256) || !checksum.IsLowerHex64(data.Binaries.FFprobeSHA256) {
 			return apperrors.New(apperrors.E7003, "install binary hashes must be lowercase hex")
 		}
-		if data.Binaries.FFplaySHA256 != "" && !sha256Pattern.MatchString(data.Binaries.FFplaySHA256) {
+		if data.Binaries.FFplaySHA256 != "" && !checksum.IsLowerHex64(data.Binaries.FFplaySHA256) {
 			return apperrors.New(apperrors.E7003, "install ffplay hash must be lowercase hex")
 		}
 	}
@@ -307,7 +308,7 @@ func validateCapabilities(data map[string]any) error {
 			return apperrors.New(apperrors.E7003, "capabilities field missing").WithDetails(map[string]any{"field": field})
 		}
 	}
-	if fingerprint, ok := data["fingerprint"].(string); !ok || !sha256Pattern.MatchString(fingerprint) {
+	if fingerprint, ok := data["fingerprint"].(string); !ok || !checksum.IsLowerHex64(fingerprint) {
 		return apperrors.New(apperrors.E7003, "capabilities.fingerprint must be lowercase hex sha256")
 	}
 	for _, field := range []string{"version", "license", "help"} {
@@ -371,7 +372,7 @@ func validateRelease(raw []byte) error {
 	if !isHTTPS(release.AssetURL) {
 		return apperrors.New(apperrors.E7003, "release asset_url must be http(s)")
 	}
-	if !sha256Pattern.MatchString(release.AssetSHA256) {
+	if !checksum.IsLowerHex64(release.AssetSHA256) {
 		return apperrors.New(apperrors.E7003, "release asset_sha256 must be lowercase hex")
 	}
 	if !safeAssetName(release.AssetName) {
@@ -401,7 +402,7 @@ func validateRelease(raw []byte) error {
 	if release.ChecksumsURL != "" && !isHTTPS(release.ChecksumsURL) {
 		return apperrors.New(apperrors.E7003, "release checksums_url must be http(s)")
 	}
-	if release.ChecksumsSHA256 != "" && !sha256Pattern.MatchString(release.ChecksumsSHA256) {
+	if release.ChecksumsSHA256 != "" && !checksum.IsLowerHex64(release.ChecksumsSHA256) {
 		return apperrors.New(apperrors.E7003, "release checksums_sha256 must be lowercase hex")
 	}
 	// checksums_sha256 is an optional self-check of the checksums file; the
@@ -431,7 +432,7 @@ func validateArtifact(raw []byte, data map[string]any) error {
 			return apperrors.New(apperrors.E7003, "artifact field is required").WithDetails(map[string]any{"field": field})
 		}
 	}
-	if !sha256Pattern.MatchString(artifact.AssetSHA256) {
+	if !checksum.IsLowerHex64(artifact.AssetSHA256) {
 		return apperrors.New(apperrors.E7003, "artifact asset_sha256 must be lowercase hex")
 	}
 	if !artifactIDPattern.MatchString(artifact.ArtifactID) {

@@ -57,6 +57,9 @@ type Collector struct {
 	// MaxParallel bounds concurrent FFmpeg processes; values <= 0 mean
 	// defaultParallel.
 	MaxParallel int
+	// memCaches is the process-local L1 (otter-backed). It is lazily created
+	// only when caching is enabled, so --no-cache never allocates it.
+	memCaches memoryCaches
 }
 
 func New() *Collector {
@@ -159,6 +162,18 @@ func (c *Collector) Collect(ctx context.Context, opts Options) (model.Capability
 	}
 
 	if !opts.NoCache && !opts.Refresh {
+		key := fullKey(cachePath, fingerprint, opts.Installation.ID, opts.HelpTopic)
+		if fullStore, _ := c.memCaches.stores(); fullStore != nil {
+			if cached, ok := fullStore.Get(key); ok {
+				logger.Debug("capability L1 cache hit", "path", cachePath)
+				cached.CacheHit = true
+				if opts.Installation.FFplay == "" {
+					cached.Warnings = ensureWarning(cached.Warnings, newWarning(apperrors.W1001, "ffplay is missing", nil))
+				}
+				cached.Warnings = mergeWarnings(cached.Warnings, warnings)
+				return cached, nil
+			}
+		}
 		cached, ok, cacheWarnings := readCache(cachePath, fingerprint, specs, opts.HelpTopic, opts.Installation.ID)
 		warnings = mergeWarnings(warnings, cacheWarnings)
 		if ok {
@@ -168,6 +183,10 @@ func (c *Collector) Collect(ctx context.Context, opts Options) (model.Capability
 				cached.Warnings = ensureWarning(cached.Warnings, newWarning(apperrors.W1001, "ffplay is missing", nil))
 			}
 			cached.Warnings = mergeWarnings(cached.Warnings, warnings)
+			if fullStore, _ := c.memCaches.stores(); fullStore != nil {
+				// L1 memory-only Set cannot fail; best-effort by design.
+				_ = fullStore.Set(key, cached)
+			}
 			return cached, nil
 		}
 	}
@@ -199,6 +218,9 @@ func (c *Collector) Collect(ctx context.Context, opts Options) (model.Capability
 	if !opts.NoCache {
 		if writeWarning := writeCache(cachePath, set); writeWarning != nil {
 			set.Warnings = ensureWarning(set.Warnings, *writeWarning)
+		} else if fullStore, _ := c.memCaches.stores(); fullStore != nil {
+			// L1 memory-only Set cannot fail; best-effort by design.
+			_ = fullStore.Set(fullKey(cachePath, fingerprint, opts.Installation.ID, opts.HelpTopic), set)
 		}
 	}
 	return set, nil

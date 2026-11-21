@@ -15,7 +15,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -36,8 +35,7 @@ const (
 )
 
 var (
-	sha256Pattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
-	chunkSize     = 64 * 1024
+	chunkSize = 64 * 1024
 )
 
 // Options controls one download run.
@@ -47,7 +45,6 @@ type Options struct {
 	MaxRedirects int
 	Timeout      time.Duration
 	HTTPClient   *http.Client
-	Now          func() time.Time
 
 	// Warn receives non-fatal degradations. A release that ships no checksums
 	// file still verifies against the pinned sha256, but the second, independent
@@ -94,7 +91,7 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 		ctx = context.Background()
 	}
 	sha := strings.ToLower(strings.TrimSpace(release.AssetSHA256))
-	if !sha256Pattern.MatchString(sha) {
+	if !checksum.IsLowerHex64(sha) {
 		return model.Artifact{}, apperrors.New(apperrors.E4002, "asset sha256 is invalid").WithDetails(map[string]any{"asset_sha256": release.AssetSHA256})
 	}
 	name := strings.TrimSpace(release.AssetName)
@@ -186,10 +183,6 @@ func (d *Downloader) Fetch(ctx context.Context, release model.Release) (model.Ar
 }
 
 func (d *Downloader) record(targetDir string, release model.Release, finalPath, sha string) (model.Artifact, error) {
-	now := time.Now
-	if d.options.Now != nil {
-		now = d.options.Now
-	}
 	artifact := model.Artifact{
 		Schema:       model.ArtifactSchema,
 		ArtifactID:   "art-" + sha[:16],
@@ -199,7 +192,7 @@ func (d *Downloader) record(targetDir string, release model.Release, finalPath, 
 		AssetSHA256:  sha,
 		LocalPath:    finalPath,
 		Verified:     true,
-		DownloadedAt: now().UTC().Format(time.RFC3339),
+		DownloadedAt: time.Now().UTC().Format(time.RFC3339),
 		Warnings:     release.Warnings,
 	}
 	if err := writeArtifact(filepath.Join(targetDir, artifactFileName), artifact); err != nil {

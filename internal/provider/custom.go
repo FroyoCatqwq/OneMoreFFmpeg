@@ -13,6 +13,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/archive"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/checksum"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/lock"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
@@ -23,7 +24,6 @@ const CustomSchema = "onemoreffmpeg.providers/v1"
 
 var (
 	customIDPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,63}$`)
-	sha256Hex       = regexp.MustCompile(`^[0-9a-f]{64}$`)
 	licenseHints    = map[string]bool{"gpl": true, "lgpl": true, "nonfree": true, "custom": true}
 )
 
@@ -265,7 +265,7 @@ func validateCustom(entry Custom, existing []Custom) error {
 		}
 		// No SHA-256 pin here: digest comes from checksum.sha256 at resolve.
 	case "direct":
-		if !sha256Hex.MatchString(entry.SHA256) {
+		if !checksum.IsLowerHex64(entry.SHA256) {
 			return apperrors.New(apperrors.E3009, "custom provider requires a sha256 pin").WithDetails(map[string]any{"id": id})
 		}
 		if name := assetNameFromURL(entry.URL); name == "" {

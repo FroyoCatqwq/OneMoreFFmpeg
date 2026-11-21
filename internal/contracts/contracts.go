@@ -14,35 +14,12 @@ import (
 
 var (
 	codePattern       = regexp.MustCompile(`\bOMF-[EW][0-9]{4}\b`)
-	sha256Pattern     = regexp.MustCompile(`^[0-9a-f]{64}$`)
 	artifactIDPattern = regexp.MustCompile(`^art-[0-9a-f]{16}$`)
 )
 
-var knownCommands = map[string]struct{}{
-	"version":          {},
-	"detect":           {},
-	"validate":         {},
-	"capabilities":     {},
-	"provider.list":    {},
-	"provider.add":     {},
-	"resolve":          {},
-	"download":         {},
-	"install":          {},
-	"env.status":       {},
-	"env.set":          {},
-	"env.unset":        {},
-	"env.rollback":     {},
-	"doctor":           {},
-	"uninstall":        {},
-	"journal.list":     {},
-	"journal.rollback": {},
-	"update":           {},
-}
-
-// commandDataSchemas is the authoritative command -> allowed data.schema map.
-// It is shared by example validation, freeze tests and runtime result output so
-// a command can never emit a schema it is not contracted to emit.
-var CommandDataSchemas = map[string][]string{
+// commandDataSchemas is the single authoritative command -> allowed schema
+// registry. knownCommands is derived from it (no second list to drift).
+var commandDataSchemas = map[string][]string{
 	"version":          {model.VersionSchema},
 	"detect":           {model.DetectSchema},
 	"validate":         {model.ValidateSchema},
@@ -61,6 +38,26 @@ var CommandDataSchemas = map[string][]string{
 	"journal.list":     {model.JournalListSchema},
 	"journal.rollback": {model.JournalActionSchema},
 	"update":           {model.UpdateSchema},
+}
+
+// knownCommands is derived from the single registry above.
+var knownCommands = func() map[string]struct{} {
+	out := make(map[string]struct{}, len(commandDataSchemas))
+	for command := range commandDataSchemas {
+		out[command] = struct{}{}
+	}
+	return out
+}()
+
+// CommandDataSchemas returns a deep copy of the authoritative command ->
+// allowed schema registry. Both the map and every []string are copied so a
+// caller cannot mutate the frozen contract through the returned value.
+func CommandDataSchemas() map[string][]string {
+	out := make(map[string][]string, len(commandDataSchemas))
+	for command, schemas := range commandDataSchemas {
+		out[command] = append([]string(nil), schemas...)
+	}
+	return out
 }
 
 // ValidateCommand checks that a result command is part of the frozen CLI set.
@@ -86,7 +83,7 @@ func ValidateCommandData(command string, data any) error {
 		return apperrors.New(apperrors.E7003, "data is not a JSON object").WithCause(err.Error())
 	}
 	schema, _ := object["schema"].(string)
-	allowed := CommandDataSchemas[command]
+	allowed := commandDataSchemas[command]
 	for _, candidate := range allowed {
 		if schema == candidate {
 			return nil
@@ -131,7 +128,7 @@ func ValidateData(data any) error {
 	if !ok || schema == "" {
 		return apperrors.New(apperrors.E7003, "data.schema is required")
 	}
-	if _, ok := model.KnownDataSchemas[schema]; !ok {
+	if !model.IsKnownDataSchema(schema) {
 		return apperrors.New(apperrors.E7003, "unknown data.schema").WithDetails(map[string]any{"schema": schema})
 	}
 	return nil
@@ -184,7 +181,7 @@ func ValidateExample(path string) error {
 		if !ok || dataSchema == "" {
 			return apperrors.New(apperrors.E7003, "result.data.schema is required")
 		}
-		if _, ok := model.KnownDataSchemas[dataSchema]; !ok {
+		if !model.IsKnownDataSchema(dataSchema) {
 			return apperrors.New(apperrors.E7003, "unknown result.data.schema").WithDetails(map[string]any{"schema": dataSchema})
 		}
 		// The example must use a schema the command is actually allowed to emit.

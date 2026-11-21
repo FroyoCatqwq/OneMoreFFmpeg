@@ -84,7 +84,7 @@ func ParseChecksums(r io.Reader, assetName string) (string, error) {
 			continue
 		}
 		digest := strings.ToLower(line[:separator])
-		if len(digest) != 64 || !isLowerHex(digest) {
+		if !IsLowerHex64(digest) {
 			continue
 		}
 		file := strings.TrimLeft(line[separator:], " \t")
@@ -118,15 +118,6 @@ func isRelativeChecksumPath(file string) bool {
 	}
 	if cleaned == ".." || strings.HasPrefix(cleaned, ".."+string(filepath.Separator)) {
 		return false
-	}
-	return true
-}
-
-func isLowerHex(value string) bool {
-	for _, char := range value {
-		if (char < '0' || char > '9') && (char < 'a' || char > 'f') {
-			return false
-		}
 	}
 	return true
 }

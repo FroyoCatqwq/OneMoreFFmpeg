@@ -60,12 +60,25 @@ func (c *Collector) CollectList(ctx context.Context, opts Options, kind string) 
 		}
 		cachePath = filepath.Join(cacheDir, "list-"+kind+"-"+fingerprint+".json")
 		if !opts.Refresh {
+			key := listKey(cachePath, fingerprint, opts.Installation.ID, kind)
+			if _, listStore := c.memCaches.stores(); listStore != nil {
+				if cached, ok := listStore.Get(key); ok {
+					if opts.Installation.FFplay == "" {
+						cached.Warnings = ensureWarning(cached.Warnings, newWarning(apperrors.W1001, "ffplay is missing", nil))
+					}
+					return cached, nil
+				}
+			}
 			if cached, ok, cacheWarnings := readListCache(cachePath, kind, fingerprint); ok {
 				// A cached list must reflect the CURRENT trio state: ffplay may
 				// have gone missing after this list was cached. The full
 				// collector adds the same W1001 on a cache hit (see collect()).
 				if opts.Installation.FFplay == "" {
 					cached.Warnings = ensureWarning(cached.Warnings, newWarning(apperrors.W1001, "ffplay is missing", nil))
+				}
+				if _, listStore := c.memCaches.stores(); listStore != nil {
+					// L1 memory-only Set cannot fail; best-effort by design.
+					_ = listStore.Set(key, cached)
 				}
 				return cached, nil
 			} else {
@@ -111,6 +124,9 @@ func (c *Collector) CollectList(ctx context.Context, opts Options, kind string) 
 	if cachePath != "" {
 		if warning := writeListCache(cachePath, result); warning != nil {
 			result.Warnings = ensureWarning(result.Warnings, *warning)
+		} else if _, listStore := c.memCaches.stores(); listStore != nil {
+			// L1 memory-only Set cannot fail; best-effort by design.
+			_ = listStore.Set(listKey(cachePath, fingerprint, opts.Installation.ID, kind), result)
 		}
 	}
 	return result, nil

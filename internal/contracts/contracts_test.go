@@ -32,7 +32,8 @@ func TestValidateExamples(t *testing.T) {
 	// is how uninstall / journal-* / capability-list / release-catalog went
 	// unchecked until now. Require one example per frozen data schema instead of
 	// pinning a count that silently drifts.
-	covered := make(map[string]bool, len(model.KnownDataSchemas))
+	knownSchemas := model.KnownDataSchemas()
+	covered := make(map[string]bool, len(knownSchemas))
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
 	for _, entry := range entries {
@@ -52,7 +53,7 @@ func TestValidateExamples(t *testing.T) {
 		}
 	}
 	var missing []string
-	for schema := range model.KnownDataSchemas {
+	for schema := range knownSchemas {
 		if !covered[schema] {
 			missing = append(missing, schema)
 		}
@@ -60,7 +61,7 @@ func TestValidateExamples(t *testing.T) {
 	require.Empty(t, missing, "data schemas without an example: %v", missing)
 }
 
-// The command->schema map lives in production code (contracts.CommandDataSchemas) so the
+// The command->schema registry accessor lives in production code (contracts.CommandDataSchemas()) so the
 // runtime validator, golden examples and freeze tests cannot drift apart.
 func schemaAllowed(schemas []string, candidate string) bool {
 	for _, schema := range schemas {
@@ -75,7 +76,8 @@ func TestGoldenExamplesCoverEveryFrozenCommand(t *testing.T) {
 	dir := filepath.Join(repoRoot(t), "docs", "reference", "schemas", "examples")
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
-	seen := make(map[string]bool, len(contracts.CommandDataSchemas))
+	registry := contracts.CommandDataSchemas()
+	seen := make(map[string]bool, len(registry))
 	for _, entry := range entries {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
 			continue
@@ -93,12 +95,12 @@ func TestGoldenExamplesCoverEveryFrozenCommand(t *testing.T) {
 		if envelope.Schema != model.ResultSchema {
 			continue
 		}
-		allowed, known := contracts.CommandDataSchemas[envelope.Command]
+		allowed, known := registry[envelope.Command]
 		require.True(t, known, "unknown command in %s: %s", entry.Name(), envelope.Command)
 		require.True(t, schemaAllowed(allowed, envelope.Data.Schema), "command/schema mismatch in %s: %s", entry.Name(), envelope.Data.Schema)
 		seen[envelope.Command] = true
 	}
-	for command := range contracts.CommandDataSchemas {
+	for command := range registry {
 		require.True(t, seen[command], "frozen command has no golden example: %s", command)
 	}
 }
