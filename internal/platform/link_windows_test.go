@@ -25,7 +25,13 @@ func TestCreateLinkFallsBackToSymlink(t *testing.T) {
 
 	resolved, err := filepath.EvalSymlinks(link)
 	require.NoError(t, err)
-	require.Equal(t, target, resolved)
+	// EvalSymlinks returns the canonical path, which on Windows may use a
+	// different 8.3 form than the lexical target; compare file identity.
+	wantInfo, err := os.Stat(target)
+	require.NoError(t, err)
+	gotInfo, err := os.Stat(resolved)
+	require.NoError(t, err)
+	require.True(t, os.SameFile(wantInfo, gotInfo), "expected %q, resolved to %q", target, resolved)
 	body, err := os.ReadFile(filepath.Join(link, "marker.txt"))
 	require.NoError(t, err)
 	require.Equal(t, "ok", string(body))
@@ -43,7 +49,11 @@ func TestReplaceLinkReportsActualKind(t *testing.T) {
 
 	resolved, err := filepath.EvalSymlinks(link)
 	require.NoError(t, err)
-	require.Equal(t, target, resolved)
+	wantInfo, err := os.Stat(target)
+	require.NoError(t, err)
+	gotInfo, err := os.Stat(resolved)
+	require.NoError(t, err)
+	require.True(t, os.SameFile(wantInfo, gotInfo), "expected %q, resolved to %q", target, resolved)
 
 	other := filepath.Join(dir, "other")
 	require.NoError(t, os.Mkdir(other, 0o755))
@@ -52,5 +62,9 @@ func TestReplaceLinkReportsActualKind(t *testing.T) {
 	require.Contains(t, []platform.LinkKind{platform.LinkKindSymlink, platform.LinkKindJunction}, kind2)
 	resolved, err = filepath.EvalSymlinks(link)
 	require.NoError(t, err)
-	require.Equal(t, other, resolved)
+	wantInfo, err = os.Stat(other)
+	require.NoError(t, err)
+	gotInfo, err = os.Stat(resolved)
+	require.NoError(t, err)
+	require.True(t, os.SameFile(wantInfo, gotInfo), "expected %q, resolved to %q", other, resolved)
 }

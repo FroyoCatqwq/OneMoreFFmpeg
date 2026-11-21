@@ -20,9 +20,12 @@ Go 工具链要求 `*_test.go` 与被测包**同目录**（内部测试 `package
 | 路径 | 用途 |
 |---|---|
 | `test/e2e/test_cli_e2e.py` | CLI 基础命令（version/provider/download/install/env/journal/doctor） |
-| `test/e2e/test_cli_full_e2e.py` | 全命令 JSON 信封、capabilities 字段级解析、参数互斥 |
+| `test/e2e/test_cli_full_e2e.py` | JSON 信封与字段级解析、capabilities 9 类 `--only`、参数互斥 |
 | `test/e2e/test_env_real_e2e.py` | 环境变量真实修改（Linux shim/profile、Windows 注册表） |
-| `test/e2e/test_update_e2e.py` | 自更新命令（默认 dry-run 检查） |
+| `test/e2e/test_update_e2e.py` | 自更新命令（互斥组合、默认 dry-run 检查） |
+| `test/e2e/test_cli_directory_provider_e2e.py` | custom-URL directory 模式全链（latest/checksum/时间戳/nonfree/下载） |
+| `test/e2e/test_cli_network_errors_e2e.py` | 本地 HTTP 错误路径映射（404/500/checksum/超限） |
+| `test/e2e/test_cli_concurrency_e2e.py` | 并行只读命令与 capabilities 缓存并发安全 |
 | `test/e2e/robot/cli.robot` | Robot Framework CLI 流程 |
 | `test/e2e/bats/cli.bats` | Bats（Linux shell）流程 |
 | `test/e2e/conftest.py` / `pytest.ini` / `requirements.txt` | pytest 配置与 fixture |

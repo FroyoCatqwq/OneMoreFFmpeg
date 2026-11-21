@@ -22,6 +22,42 @@ func containedIn(root, candidate string) bool {
 	return !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
+// normalizeForCompare resolves the longest existing prefix of p so that
+// lexical paths and EvalSymlinks-produced paths use the same form. On Windows
+// a lexical t.TempDir() path (8.3 short name) and its EvalSymlinks result
+// (long name) otherwise look unrelated to filepath.Rel. Missing trailing
+// components are appended lexically; the returned path still points to the
+// same location and is safe for containment checks and equality comparisons.
+func normalizeForCompare(p string) string {
+	if p == "" {
+		return ""
+	}
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		return filepath.Clean(p)
+	}
+	current := abs
+	var missing []string
+	for {
+		if _, err := os.Lstat(current); err == nil {
+			resolved, err := filepath.EvalSymlinks(current)
+			if err != nil {
+				return filepath.Clean(abs)
+			}
+			for i := len(missing) - 1; i >= 0; i-- {
+				resolved = filepath.Join(resolved, missing[i])
+			}
+			return filepath.Clean(resolved)
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return filepath.Clean(abs)
+		}
+		missing = append(missing, filepath.Base(current))
+		current = parent
+	}
+}
+
 // Quarantine moves a managed installation aside so uninstall is reversible.
 func Quarantine(dataRoot, root, journalID string) (string, error) {
 	appsRoot := filepath.Join(dataRoot, "apps")
@@ -44,27 +80,34 @@ func Rollback(dataRoot string, record journal.Record) (string, error) {
 	if target == "" {
 		return "", apperrors.New(apperrors.E6005, "journal has no target")
 	}
-	appsRoot := filepath.Join(dataRoot, "apps")
+	// Normalize every journal path and the data root to one canonical form
+	// before any containment or equality check. InspectCurrent writes
+	// current_target via EvalSymlinks (long name on Windows), while target /
+	// quarantine come from the lexical data root (8.3 short name); comparing
+	// the two raw strings reports a false "outside the data root" (E6007).
+	nDataRoot := normalizeForCompare(dataRoot)
+	target = normalizeForCompare(target)
+	appsRoot := filepath.Join(nDataRoot, "apps")
 	if !containedIn(appsRoot, target) || !platform.ResolvedInside(appsRoot, target) {
 		return "", apperrors.New(apperrors.E6007, "journal target is outside apps").WithDetails(map[string]any{"target": target})
 	}
-	quarantine := record.Details["quarantine"]
-	currentTarget := record.Details["current_target"]
-	original := record.Details["quarantine_original"]
+	quarantine := normalizeForCompare(record.Details["quarantine"])
+	currentTarget := normalizeForCompare(record.Details["current_target"])
+	original := normalizeForCompare(record.Details["quarantine_original"])
 
 	// Every path that comes from a journal must be confined to the data root.
 	// Journals are ordinary files; trusting their strings let a tampered record
 	// move arbitrary directories into apps/ or point `current` anywhere. A
 	// purely lexical check is not enough: a symlink under apps/ can redirect an
 	// otherwise inside-looking path. Resolve symlinks before any mutation.
-	quarantineRoot := filepath.Join(dataRoot, "quarantine")
+	quarantineRoot := filepath.Join(nDataRoot, "quarantine")
 	if quarantine != "" && (!containedIn(quarantineRoot, quarantine) || !platform.ResolvedInside(quarantineRoot, quarantine)) {
 		return "", apperrors.New(apperrors.E6007, "journal quarantine path is outside the data root").WithDetails(map[string]any{"quarantine": quarantine})
 	}
 	if original != "" && (!containedIn(appsRoot, original) || !platform.ResolvedInside(appsRoot, original)) {
 		return "", apperrors.New(apperrors.E6007, "journal quarantine_original is outside apps").WithDetails(map[string]any{"original": original})
 	}
-	if currentTarget != "" && (!containedIn(dataRoot, currentTarget) || !platform.ResolvedInside(dataRoot, currentTarget)) {
+	if currentTarget != "" && (!containedIn(nDataRoot, currentTarget) || !platform.ResolvedInside(nDataRoot, currentTarget)) {
 		return "", apperrors.New(apperrors.E6007, "journal current_target is outside the data root").WithDetails(map[string]any{"current_target": currentTarget})
 	}
 	// No symlink may exist along any path we are about to create or move into.
@@ -74,7 +117,7 @@ func Rollback(dataRoot string, record journal.Record) (string, error) {
 	}
 	for _, guard := range []struct{ root, candidate string }{
 		{appsRoot, target}, {appsRoot, restoreTarget},
-		{quarantineRoot, quarantine}, {dataRoot, currentTarget},
+		{quarantineRoot, quarantine}, {nDataRoot, currentTarget},
 	} {
 		if guard.candidate != "" && !platform.NoSymlinkComponents(guard.root, guard.candidate) {
 			return "", apperrors.New(apperrors.E6007, "journal path contains a symbolic link").
@@ -100,7 +143,7 @@ func Rollback(dataRoot string, record journal.Record) (string, error) {
 			return "", apperrors.New(apperrors.E5005, "installation cannot be restored").WithCause(err.Error())
 		}
 		if currentTarget != "" {
-			if err := restoreCurrent(dataRoot, currentTarget, record.Details["current_kind"]); err != nil {
+			if err := restoreCurrent(nDataRoot, currentTarget, record.Details["current_kind"]); err != nil {
 				return "", err
 			}
 		}
@@ -127,15 +170,15 @@ func Rollback(dataRoot string, record journal.Record) (string, error) {
 		}
 		switch {
 		case record.Details["current_existed"] == "0":
-			if err := restoreCurrentState(dataRoot, "", model.CurrentMissing); err != nil {
+			if err := restoreCurrentState(nDataRoot, "", model.CurrentMissing); err != nil {
 				return "", err
 			}
 		case currentTarget != "" && currentTarget == target && restorePath != target:
-			if err := restoreCurrent(dataRoot, restorePath, record.Details["current_kind"]); err != nil {
+			if err := restoreCurrent(nDataRoot, restorePath, record.Details["current_kind"]); err != nil {
 				return "", err
 			}
 		case currentTarget != "" && currentTarget != target:
-			if err := restoreCurrent(dataRoot, currentTarget, record.Details["current_kind"]); err != nil {
+			if err := restoreCurrent(nDataRoot, currentTarget, record.Details["current_kind"]); err != nil {
 				return "", err
 			}
 		}

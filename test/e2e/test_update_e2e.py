@@ -25,8 +25,13 @@ def test_update_json_help_is_refused(cli):
     assert r.json()["code"] == "OMF-E1001"
 
 
-def test_apply_and_check_mutually_exclusive(cli):
-    r = cli.run("update", "--apply", "--check", "--json")
+@pytest.mark.parametrize("flags", [
+    ("--apply", "--check"),
+    ("--recover", "--apply"),
+    ("--recover", "--check"),
+])
+def test_update_flags_mutually_exclusive(cli, flags):
+    r = cli.run("update", *flags, "--json")
     assert r.returncode == 1
     assert r.json()["code"] == "OMF-E1001"
 

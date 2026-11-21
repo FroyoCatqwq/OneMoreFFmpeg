@@ -29,7 +29,16 @@ func TestValidateDirFindsBinSubdirectory(t *testing.T) {
 			ffmpegCheck = check.Detail
 		}
 	}
-	require.Equal(t, fake.FFmpegPath, ffmpegCheck)
+	// The detector reports canonical paths (EvalSymlinks); on Windows that
+	// can differ from the lexical t.TempDir() path via 8.3 short names.
+	// Compare by file identity instead of string equality.
+	require.NotEmpty(t, ffmpegCheck)
+	wantInfo, err := os.Stat(fake.FFmpegPath)
+	require.NoError(t, err)
+	gotInfo, err := os.Stat(ffmpegCheck)
+	require.NoError(t, err)
+	require.True(t, os.SameFile(wantInfo, gotInfo),
+		"expected ffmpeg at %q, report pointed to %q", fake.FFmpegPath, ffmpegCheck)
 }
 
 func TestValidateDirWithoutBinariesFails(t *testing.T) {

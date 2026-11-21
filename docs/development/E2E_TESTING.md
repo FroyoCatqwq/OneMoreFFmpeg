@@ -14,7 +14,7 @@ pwsh -NoProfile -Command '
   go build -trimpath -o dist/one-more-ffmpeg-windows-amd64.exe ./cmd/one-more-ffmpeg
   $env:OMF_BINARY = (Resolve-Path "dist/one-more-ffmpeg-windows-amd64.exe").Path
   uv run --python 3.14 --with-requirements test/e2e/requirements.txt `
-    pytest -c test/e2e/pytest.ini -n 2 -q test/e2e/test_cli_e2e.py test/e2e/test_cli_full_e2e.py test/e2e/test_env_real_e2e.py test/e2e/test_update_e2e.py
+    pytest -c test/e2e/pytest.ini -n 2 -q test/e2e/
   uv run --python 3.14 --with-requirements test/e2e/requirements.txt `
     robot --outputdir test/e2e/results/robot test/e2e/robot
 '
@@ -57,25 +57,28 @@ docker compose up --build --abort-on-container-exit --exit-code-from e2e-fresh
 ```
 
 `Dockerfile` 从 `mirror.gcr.io/library/golang:1.27-bookworm` 构建干净容器，安装 uv + Python 3.14，
-从零构建 CLI 并跑 go test + 四个 pytest 文件 + Robot + Bats；不挂载任何宿主数据目录，
+从零构建 CLI 并跑 go test + `test/e2e/` 下全部 pytest 文件 + Robot + Bats；不挂载任何宿主数据目录，
 用于证明仓库在全新环境可独立构建与测试。注意不要在 compose 中把 `/tmp` 挂成 tmpfs（默认 noexec 会让 `go test` 失败）。
 
 ## 5. 覆盖
 
 - version / 错误对象 / 未知命令 / `--in-detail-usage`；
 - 单类能力探测 `--only`；
-- 本地 HTTP 模拟的自定义 provider 资产（http/https）；
+- 本地 HTTP 模拟的 custom-URL **directory 模式**：`provider add --mode directory` → `resolve`（latest.txt / 时间戳 release-line / checksum 边界 / nonfree W1006）→ `download` 全链；
+- 本地 HTTP 网络错误：404/500 → `E3007`、checksum 重复/缺条目 → `E4002`、超长 checksum → `E4004`，并断言 stderr 无 JSON；
+- `test_cli_concurrency_e2e.py`：asyncio 并行只读命令（version/doctor/provider.list/detect/capabilities）无串扰、并发 capabilities 缓存安全；
 - uninstall → journal list → journal rollback 恢复安装目录；
-- provider list / provider add dry-run；
+- provider list / provider add（direct dry-run + directory apply）；
 - env status / doctor；
 - detect / validate / capabilities（临时编译 fake FFmpeg trio）；
 - install dry-run → apply → LICENSE/锁文件/current → env set dry-run → uninstall；
 - 非法 release 拒绝；
-- asyncio 并行只读命令；
-- Windows junction / Linux symlink 与 shim 路径差异由同一套 pytest 用例覆盖；
-- `test_cli_full_e2e.py`：全部 18 个冻结命令的 JSON 信封形状、stdout JSON-only（含 help/`--json` 冲突）、
+- `update` 三种互斥组合（apply+check、recover+apply、recover+check）；
+- Windows HKCU 注册表与 Linux shim/profile 的真实写入/恢复分别由 `test_env_real_e2e.py` 覆盖（平台专用，非同一套用例）；
+- `test_cli_full_e2e.py`：JSON 信封形状、stdout JSON-only（含 help/`--json` 冲突）、
   capabilities 字段级解析（版本/许可证/13 条命令/9 类列表/缓存命中与刷新）、9 种 `--only`、
-  参数互斥（`--release` + provider flags、`--only` + `--help-topic`）、各错误码退出码。
+  参数互斥（`--release` + provider flags、`--only` + `--help-topic`）、各错误码退出码。部分命令的完整 18 命令矩阵
+  由 `internal/contracts/freeze_test.go` 在 Go 层守护。
 
 所有测试使用独立临时 `ONE_MORE_FFMPEG_HOME`。`test_cli_e2e.py` / `test_cli_full_e2e.py` 中的 `env` 用例只测 dry-run；
 `test_env_real_e2e.py` 会真实写入：Linux 通过临时 `HOME` 隔离（shim/`.profile` 写在临时目录），

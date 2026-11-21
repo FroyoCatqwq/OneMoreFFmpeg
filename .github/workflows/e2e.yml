@@ -107,9 +107,9 @@ jobs:
           OMF_BINARY: ${{ github.workspace }}/${{ matrix.binary }}
         run: >-
           uv run --python ${{ env.PYTHON_VERSION }} --with-requirements test/e2e/requirements.txt
-          pytest -n auto --timeout=180 -v
+          pytest -c test/e2e/pytest.ini -n auto --timeout=180 -v
           --junitxml=test/e2e/results/pytest-junit.xml
-          test/e2e/test_cli_e2e.py test/e2e/test_cli_full_e2e.py test/e2e/test_env_real_e2e.py test/e2e/test_update_e2e.py
+          test/e2e/
 
       - name: Windows real HKCU env e2e
         if: runner.os == 'Windows'

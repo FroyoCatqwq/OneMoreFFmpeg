@@ -163,9 +163,9 @@ def main():
                    "mise trust mise.toml >/dev/null 2>&1 || true; ")
             run(client, env + "go test -count=1 ./...")
             uv = "uv run --python 3.14 --with-requirements test/e2e/requirements.txt"
-            run(client, env + uv + " pytest -c test/e2e/pytest.ini -n 2 -q "
-                "test/e2e/test_cli_e2e.py test/e2e/test_cli_full_e2e.py test/e2e/test_env_real_e2e.py "
-                "test/e2e/test_update_e2e.py")
+            # Directory discovery (pytest.ini testpaths) automatically picks
+            # up newly added e2e files without editing this list.
+            run(client, env + uv + " pytest -c test/e2e/pytest.ini -n 2 -q test/e2e/")
             run(client, env + uv + " robot --outputdir test/e2e/results/robot test/e2e/robot")
             run(client, env + "rm -rf /tmp/bats-core && git clone --depth 1 --branch v1.14.0 "
                 "https://github.com/bats-core/bats-core.git /tmp/bats-core >/dev/null 2>&1 && "

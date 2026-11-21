@@ -26,5 +26,17 @@ func TestScanExplicitRootUnderTmpIsNotExcluded(t *testing.T) {
 		func(dir, source string) { found = append(found, dir) },
 		func(model.DetectError) {}, &files)
 	require.NoError(t, err)
-	require.Contains(t, found, binDir)
+	// Paths may be reported in canonical (e.g. Windows 8.3 short-name)
+	// form; compare by file identity, not by literal string.
+	wantInfo, err := os.Stat(binDir)
+	require.NoError(t, err)
+	matched := false
+	for _, dir := range found {
+		gotInfo, statErr := os.Stat(dir)
+		if statErr == nil && os.SameFile(wantInfo, gotInfo) {
+			matched = true
+			break
+		}
+	}
+	require.True(t, matched, "expected %q in discovered roots, got %v", binDir, found)
 }
