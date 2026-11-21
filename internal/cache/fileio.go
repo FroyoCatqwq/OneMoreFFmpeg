@@ -5,13 +5,14 @@
 package cache
 
 import (
-	"bytes"
 	"encoding/json/v2"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/rogpeppe/go-internal/lockedfile"
+
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/fsatomic"
 )
 
 // ReadJSON reads and decodes a JSON file produced by WriteJSON. A missing
@@ -30,8 +31,8 @@ func ReadJSON(path string, dst any) error {
 
 // WriteJSON writes JSON to path under the SAME sidecar lock (<path>.lock) used
 // by ReadJSON, so readers and writers across processes exclude each other.
-// lockedfile.Write locks the file for the whole overwrite, eliminating the
-// prior bug where reader and writer used different lock files.
+// fsatomic.WriteLockedFile preserves lockedfile's whole-overwrite lock (it is
+// NOT a temp+rename atomic replacement).
 func WriteJSON(path string, value any, perm os.FileMode) error {
 	raw, err := json.Marshal(value)
 	if err != nil {
@@ -41,5 +42,5 @@ func WriteJSON(path string, value any, perm os.FileMode) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	return lockedfile.Write(path, bytes.NewReader(raw), perm)
+	return fsatomic.WriteLockedFile(path, raw, perm)
 }

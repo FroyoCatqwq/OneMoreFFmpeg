@@ -2,13 +2,12 @@ package install
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/fsatomic"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
-	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
 )
 
 const recordName = "install.json"
@@ -50,20 +49,11 @@ func writeLock(dir string, data model.InstallData) error {
 }
 
 func writeAtomic(path string, payload []byte) error {
-	temp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*.tmp")
-	if err != nil {
-		return apperrors.New(apperrors.E5009, "install metadata temp file cannot be created").WithCause(err.Error())
-	}
-	tempPath := temp.Name()
-	_, writeErr := temp.Write(payload)
-	closeErr := temp.Close()
-	if writeErr != nil || closeErr != nil {
-		_ = os.Remove(tempPath)
-		return apperrors.New(apperrors.E5009, "install metadata cannot be written").WithCause(fmt.Sprint(writeErr, closeErr))
-	}
-	if err := platform.RenamePath(tempPath, path); err != nil {
-		_ = os.Remove(tempPath)
-		return apperrors.New(apperrors.E5009, "install metadata cannot be committed").WithCause(err.Error())
+	// mode=0 keeps os.CreateTemp's historical 0600 permission (the old
+	// implementation never Chmod'ed the temp file). fsatomic maps all failures
+	// to E5009, matching this caller's contract.
+	if err := fsatomic.WriteFile(path, payload, 0); err != nil {
+		return apperrors.New(apperrors.E5009, "install metadata cannot be written").WithCause(err.Error())
 	}
 	return nil
 }

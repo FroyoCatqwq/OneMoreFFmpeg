@@ -105,6 +105,37 @@ func buildMountPointBuffer(substitute, printName string) []byte {
 	return buffer
 }
 
+// createOneLink creates a link at an exact (previously reserved) name.
+// os.Symlink and createJunction both fail if the name already exists, so a
+// racing process cannot steal the reserved name without detection.
+func createOneLink(link, target string, kind LinkTargetKind) error {
+	if kind == LinkTargetDir {
+		// Windows directory links require an existing directory target; a
+		// dangling directory symlink would behave as a FILE link under
+		// os.Symlink and silently break later directory resolution.
+		info, err := os.Stat(target)
+		if err != nil {
+			return apperrors.New(apperrors.E5009, "directory link target must exist").WithCause(err.Error()).
+				WithDetails(map[string]any{"reason": "junction_target_missing", "target": target})
+		}
+		if !info.IsDir() {
+			return apperrors.New(apperrors.E5009, "directory link target is not a directory").
+				WithDetails(map[string]any{"reason": "link_type_mismatch", "target": target})
+		}
+		return CreateLink(link, target) // junction first, then directory symlink
+	}
+	// LinkTargetFile: reject an existing directory target so the link kind
+	// cannot silently disagree with the caller's intent.
+	if info, err := os.Stat(target); err == nil && info.IsDir() {
+		return apperrors.New(apperrors.E5009, "file link target is a directory").
+			WithDetails(map[string]any{"reason": "link_type_mismatch", "target": target})
+	}
+	if err := os.Symlink(target, link); err != nil {
+		return apperrors.New(apperrors.E5004, "file symlink cannot be created").WithCause(err.Error())
+	}
+	return nil
+}
+
 // RemoveLink removes a link without following it.
 func RemoveLink(link string) error {
 	info, err := os.Lstat(link)

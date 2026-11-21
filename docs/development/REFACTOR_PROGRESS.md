@@ -97,6 +97,29 @@
 
 **验证**：netpolicy 覆盖两族 URL、二次校验、整链快照（original 篡改 via 无效）、off-by-one 0/1/2/Ceiling/Ceiling+1、nil 边界；httpfetch 覆盖参数契约、client 不修改、重定向串联、大小/非 2xx；`provider` 行为等价测试通过。
 
+## Phase 3：文件系统原语
+
+### PR-5 `pending` — fsatomic（普通文件 + 加锁写）
+
+**改动清单**
+1. 新建 `internal/fsatomic`：`WriteFile`（CreateTemp→Write→[Chmod]→Sync→Close→RenamePath→ParentDirSync，mode=0 保留 CreateTemp 的 0600）、`WriteLockedFile`（lockedfile.Write 跨进程锁写，**不是** temp+rename）、`ReserveFile`（返回 `*os.File` 句柄 + release，记录 FileInfo 身份，release 用 `Lstat + os.SameFile` 校验、路径消失返回 nil、所有权变化报 `E5009 ownership_changed` 且不删、`sync.Mutex + resolved + result` 缓存首次结果含首次失败）。
+2. 迁移 `install/record.go writeAtomic` → `fsatomic.WriteFile(path, payload, 0)`（保留历史 0600 语义，错误仍映射 E5009）。
+3. 迁移 `env/shell.go writeFileAtomic` → `fsatomic.WriteFile(path, payload, mode)`（保留显式 Chmod + MkdirAll）。
+4. 迁移 `journal/journal.go Write` 与 `cache/fileio.go WriteJSON` → `fsatomic.WriteLockedFile`（保留 sidecar 跨进程锁语义，错误仍映射 E6005 / 原 cache 行为）。
+5. **不迁**：download `.bak` 提交（唯一备份+并发判断）、selfupdate state（FileOps 注入边界）、current pointer（链接/fallback）；fixed `.tmp` 名问题记录为后续独立 PR（改 FileOps 接口会扩大注入面）。
+
+**依赖图变化**：`fsatomic → platform, errors`；`cache → fsatomic`；`journal → errors, fsatomic`；`install → fsatomic`；`env → fsatomic`；无环。
+
+### PR-5b `pending` — platform.ReserveLink（独立）
+
+**改动清单**
+1. `platform.LinkTargetKind`（File/Dir，零值参数错误 E7005）；`ReserveLink(dir, pattern, target, kind)` 用 reservePath 保证唯一名，`createOneLink` 平台特定实现（Unix symlink 忽略 kind/允许悬空；Windows File 拒绝已存在目录 target、Dir 要求 target 存在且为目录，Junction 优先回退目录 symlink）。
+2. `Lstat` 记录身份（不跟随链接），release 与 ReserveFile 同一语义（package 内私有 `linkReservation`，不共享 fsatomic 私有类型，PR-5b 可独立实施）。
+3. Windows 删除用 `os.Remove`，禁止 `RemoveAll`（防递归删除 target 内容）。
+4. **不夸大 TOCTOU**：仅在可信隔离目录提供常见误删防护。
+
+**验证**：双平台编译；Windows VM 上 fsatomic/platform/install/env/journal/cache 全部测试通过（含 Junction/目录链接/类型约束）；gofmt/vet/lint(0)/go test/fuzz x3/3 交叉编译/契约 freeze 全绿。
+
 ## Phase 1 退出条件核对
 
 - [x] 依赖图无环（`go list ./...` 无 cycle）

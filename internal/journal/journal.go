@@ -3,7 +3,6 @@
 package journal
 
 import (
-	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -15,9 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rogpeppe/go-internal/lockedfile"
-
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/fsatomic"
 )
 
 const Schema = "onemoreffmpeg.journal/v1"
@@ -83,9 +81,9 @@ func Write(dir string, record Record) error {
 		return apperrors.New(apperrors.E6005, "journal cannot be encoded").WithCause(err.Error())
 	}
 	path := filepath.Join(dir, record.ID+".json")
-	// lockedfile.Write performs an atomic, cross-process-safe write (temp file
-	// plus rename under a sidecar lock), replacing the hand-rolled temp+rename.
-	if err := lockedfile.Write(path, bytes.NewReader(payload), 0o600); err != nil {
+	// fsatomic.WriteLockedFile preserves the sidecar lock and cross-process
+	// overwrite semantics of lockedfile.Write (it is NOT a temp+rename write).
+	if err := fsatomic.WriteLockedFile(path, payload, 0o600); err != nil {
 		return apperrors.New(apperrors.E6005, "journal cannot be committed").WithCause(err.Error())
 	}
 	return nil

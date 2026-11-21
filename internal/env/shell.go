@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
-	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/fsatomic"
 )
 
 // --- PATH handling -------------------------------------------------------
@@ -183,29 +183,9 @@ func writeFileAtomic(path string, payload []byte, mode os.FileMode) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*.tmp")
-	if err != nil {
-		return err
-	}
-	tmpPath := tmp.Name()
-	_, writeErr := tmp.Write(payload)
-	closeErr := tmp.Close()
-	if writeErr != nil || closeErr != nil {
-		_ = os.Remove(tmpPath)
-		return fmt.Errorf("write temp file: %v %v", writeErr, closeErr)
-	}
-	if err := os.Chmod(tmpPath, mode); err != nil {
-		_ = os.Remove(tmpPath)
-		return err
-	}
-	// platform.RenamePath retries the Windows sharing violation a shell or
-	// antivirus can cause while the target is open; a bare os.Rename would turn
-	// that into a lost shim.
-	if err := platform.RenamePath(tmpPath, path); err != nil {
-		_ = os.Remove(tmpPath)
-		return err
-	}
-	return nil
+	// fsatomic.WriteFile uses platform.RenamePath internally (with the Windows
+	// sharing-violation retry) and applies the explicit mode before Sync.
+	return fsatomic.WriteFile(path, payload, mode)
 }
 
 // --- small helpers --------------------------------------------------------
