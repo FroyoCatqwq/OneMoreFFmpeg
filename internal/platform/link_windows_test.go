@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
 )
 
@@ -40,7 +39,7 @@ func TestReplaceLinkReportsActualKind(t *testing.T) {
 	link := filepath.Join(dir, "current")
 	kind, err := platform.ReplaceLink(link, target)
 	require.NoError(t, err)
-	require.Contains(t, []string{model.CurrentSymlink, model.CurrentJunction}, kind)
+	require.Contains(t, []platform.LinkKind{platform.LinkKindSymlink, platform.LinkKindJunction}, kind)
 
 	resolved, err := filepath.EvalSymlinks(link)
 	require.NoError(t, err)
@@ -50,7 +49,7 @@ func TestReplaceLinkReportsActualKind(t *testing.T) {
 	require.NoError(t, os.Mkdir(other, 0o755))
 	kind2, err := platform.ReplaceLink(link, other)
 	require.NoError(t, err)
-	require.Contains(t, []string{model.CurrentSymlink, model.CurrentJunction}, kind2)
+	require.Contains(t, []platform.LinkKind{platform.LinkKindSymlink, platform.LinkKindJunction}, kind2)
 	resolved, err = filepath.EvalSymlinks(link)
 	require.NoError(t, err)
 	require.Equal(t, other, resolved)

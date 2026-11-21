@@ -71,9 +71,15 @@ func switchCurrent(dataRoot, target string) (string, error) {
 	if _, err := os.Lstat(current); err == nil && !platform.IsLink(current) {
 		return "", apperrors.New(apperrors.E5004, "current exists and is not a managed link").WithDetails(map[string]any{"path": current})
 	}
-	kind, err := platform.ReplaceLink(current, target)
+	linkKind, err := platform.ReplaceLink(current, target)
 	if err == nil {
 		_ = os.Remove(filepath.Join(dataRoot, "current.pointer"))
+		// Map the platform-level link kind into the journal vocabulary at this
+		// package boundary; platform no longer depends on model.
+		kind := model.CurrentJunction
+		if linkKind == platform.LinkKindSymlink {
+			kind = model.CurrentSymlink
+		}
 		return kind, nil
 	}
 	// Last resort: remove any broken link, then use a pointer file.

@@ -13,26 +13,17 @@ import (
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 )
 
-var capabilityKinds = map[string]bool{
-	"muxers": true, "demuxers": true, "devices": true,
-	"decoders": true, "encoders": true, "filters": true,
-	"pixel_formats": true, "channel_layouts": true, "sample_formats": true,
-}
-
 // IsCapabilityKind reports whether kind is a supported single-list query.
-func IsCapabilityKind(kind string) bool { return capabilityKinds[kind] }
+// The authoritative list lives in model so contracts can validate without
+// importing this implementation package.
+func IsCapabilityKind(kind string) bool { return model.IsCapabilityKind(kind) }
 
 // CapabilityKinds returns the supported --only values in a stable order.
-func CapabilityKinds() []string {
-	return []string{
-		"muxers", "demuxers", "devices", "decoders", "encoders", "filters",
-		"pixel_formats", "channel_layouts", "sample_formats",
-	}
-}
+func CapabilityKinds() []string { return model.CapabilityKinds() }
 
 // CollectList runs only the FFmpeg command needed for one capability kind.
 func (c *Collector) CollectList(ctx context.Context, opts Options, kind string) (model.CapabilityListData, error) {
-	if !capabilityKinds[kind] {
+	if !model.IsCapabilityKind(kind) {
 		return model.CapabilityListData{}, apperrors.New(apperrors.E7005, "unsupported capability kind").WithDetails(map[string]any{"kind": kind, "allowed": CapabilityKinds()})
 	}
 	if ctx == nil {

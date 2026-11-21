@@ -4,24 +4,24 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
-	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 )
 
-// LinkKind returns the pointer kind produced by CreateLink on this platform.
-func LinkKind() string {
-	if runtime.GOOS == "windows" {
-		return model.CurrentJunction
-	}
-	return model.CurrentSymlink
-}
+// LinkKind identifies the kind of pointer produced by CreateLink on this
+// platform. The string values match the journal vocabulary; callers map them
+// to their own DTO constants at the package boundary.
+type LinkKind string
+
+const (
+	LinkKindJunction LinkKind = "directory_junction"
+	LinkKindSymlink  LinkKind = "symlink"
+)
 
 // ReplaceLink creates the new link first, then swaps it in, keeping a backup
 // so a failed swap restores the previous pointer. Temporary names are random
 // so concurrent processes cannot delete each other's staging links.
-func ReplaceLink(link, target string) (string, error) {
+func ReplaceLink(link, target string) (LinkKind, error) {
 	directory := filepath.Dir(link)
 	base := filepath.Base(link)
 	temp, err := reservePath(directory, base+".new-*")
@@ -57,11 +57,11 @@ func ReplaceLink(link, target string) (string, error) {
 }
 
 // createdKind reports the pointer kind actually produced for a link path.
-func createdKind(path string) string {
+func createdKind(path string) LinkKind {
 	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSymlink != 0 {
-		return model.CurrentSymlink
+		return LinkKindSymlink
 	}
-	return model.CurrentJunction
+	return LinkKindJunction
 }
 
 func reservePath(directory, pattern string) (string, error) {
