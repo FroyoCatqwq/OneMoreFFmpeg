@@ -75,6 +75,15 @@
 
 **验证**：gofmt / vet / go test ./... / golangci-lint 0 issues；契约 freeze（Frozen/Golden/Validate/JSON Schema）全部 PASS；`go list ./...` 无循环依赖。
 
+### PR-0a `9d112ac` — Windows 路径断言修复 + e2e 扩充（Phase 2 前置）
+
+**改动清单**
+1. **5 个 Windows 长/短名失败**：4 个测试断言改为 `os.SameFile` 文件身份比较（detect×2、platform×2）；第 5 个 `TestInstallRollbackRestoresPreviousVersion` 暴露**真实产品 bug**——`rollback.go` 把 `EvalSymlinks` 产出的 `current_target`（长名）与词法 data-root（8.3 短名）做 containment/相等比较，误报 E6007。新增 `normalizeForCompare`（最长存在前缀 + EvalSymlinks）统一所有 journal 路径形式，并用于 containment 与 `currentTarget == target` 判断。
+2. **e2e 扩充（无外网）**：新增 3 个 pytest 文件——`test_cli_directory_provider_e2e.py`（11 测试：directory 模式 latest/时间戳大小写/checksum 边界/nonfree W1006/下载全链）、`test_cli_network_errors_e2e.py`（5 个错误码映射 + stderr 无 JSON）、`test_cli_concurrency_e2e.py`（并行只读 + 缓存并发）；`test_update_e2e.py` 参数化三种互斥组合。
+3. **运行方式统一**：mise.toml / CI workflow / remote_linux.py / E2E_TESTING.md 的硬编码四文件改为 `test/e2e/` 目录发现（pytest.ini `testpaths` 已存在），新增 e2e 文件自动纳入；更新 test/README.md 文件表。
+
+**验证**：Windows VM 上 5 个失败测试全绿；本机 e2e 67 passed/4 skipped；Linux VM 69 passed/2 skipped；gofmt/vet/lint(0)/go test 全绿。
+
 ## Phase 1 退出条件核对
 
 - [x] 依赖图无环（`go list ./...` 无 cycle）
