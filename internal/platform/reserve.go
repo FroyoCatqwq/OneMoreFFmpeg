@@ -61,8 +61,10 @@ func ReserveLink(dir, pattern, target string, kind LinkTargetKind) (path string,
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", nil, apperrors.New(apperrors.E5009, "link reservation directory cannot be created").WithCause(err.Error())
 	}
-	// reservePath gives us a unique, non-existing name (it creates and removes
-	// a placeholder atomically). createOneLink then fails if a racer claims it.
+	// reservePath picks a random, currently-unused name (it creates and
+	// immediately removes a placeholder). createOneLink uses exclusive
+	// creation and fails if a racer claimed the name in between — there is no
+	// held placeholder, so this is NOT an atomic two-step reservation.
 	name, err := reservePath(dir, pattern)
 	if err != nil {
 		return "", nil, err

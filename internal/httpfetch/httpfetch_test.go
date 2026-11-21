@@ -69,6 +69,49 @@ func TestFetchLimitedInitialURLValidated(t *testing.T) {
 	require.Equal(t, errors.E3008, codeOf(t, err))
 }
 
+func TestFetchLimitedStrictInitialURLAndUA(t *testing.T) {
+	// Strict allows http only for loopback; a non-loopback http initial URL
+	// must be rejected before any I/O.
+	_, err := httpfetch.FetchLimited(context.Background(), &http.Client{},
+		"http://example.com/a", 1024, 1, netpolicy.StrictPolicy())
+	require.Error(t, err)
+	require.Equal(t, errors.E3008, codeOf(t, err))
+
+	var gotUA string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUA = r.Header.Get("User-Agent")
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+	_, err = httpfetch.FetchLimited(context.Background(), srv.Client(),
+		srv.URL+"/a", 1024, 1, netpolicy.CustomPolicy())
+	require.NoError(t, err)
+	require.Equal(t, "OneMoreFFmpeg", gotUA)
+}
+
+func TestFetchLimitedContextCancel(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := httpfetch.FetchLimited(ctx, srv.Client(), srv.URL+"/a", 1024, 1, netpolicy.CustomPolicy())
+	require.Error(t, err, "canceled context must fail before or during the request")
+}
+
+func TestFetchLimitedPreservesTransport(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+	tr := &http.Transport{}
+	client := &http.Client{Transport: tr}
+	_, err := httpfetch.FetchLimited(context.Background(), client, srv.URL+"/a", 1024, 1, netpolicy.CustomPolicy())
+	require.NoError(t, err)
+	require.Same(t, tr, client.Transport, "caller Transport must be untouched")
+}
+
 func TestFetchLimitedDoesNotMutateCallerClient(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("payload"))
@@ -124,7 +167,7 @@ func TestFetchLimitedChainsOriginalRedirectAndRespectsErrUseLastResponse(t *test
 	require.Equal(t, errors.E3007, codeOf(t, err), "last response is 302 -> non-2xx")
 }
 
-func TestFetchLimitedRedirectLimitAndDowngrade(t *testing.T) {
+func TestFetchLimitedRedirectLimit(t *testing.T) {
 	t.Run("redirect limit", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/next", http.StatusFound)

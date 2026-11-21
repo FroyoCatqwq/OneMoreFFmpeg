@@ -35,6 +35,13 @@ func fetchURL(ctx context.Context, rawURL string, maxRedirects int, timeout time
 	if maxRedirects <= 0 {
 		maxRedirects = 5
 	}
+	// config allows 0..20 for legacy reasons; netpolicy enforces a hard
+	// ceiling of 10. Clamp at this boundary so a historically valid config
+	// (11..20) does not start failing before any I/O. This is a registered
+	// adaptation in NETWORK_POLICY_MATRIX.md, not a new default.
+	if maxRedirects > netpolicy.MaxRedirectsCeiling {
+		maxRedirects = netpolicy.MaxRedirectsCeiling
+	}
 	if timeout <= 0 {
 		timeout = 30 * time.Second
 	}

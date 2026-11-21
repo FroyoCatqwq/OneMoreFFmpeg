@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/netpolicy"
 )
 
@@ -98,6 +99,35 @@ func TestCheckRedirectHopCount(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, fn(&http.Request{URL: mustURL(t, "http://example.com/1")}, nil))
 	})
+}
+
+func TestCheckRedirectCeilingBoundary(t *testing.T) {
+	p := netpolicy.CustomPolicy()
+	fn, err := p.CheckRedirect(netpolicy.MaxRedirectsCeiling, nil)
+	require.NoError(t, err)
+	// Ceiling hops are allowed: via length = max (hops = max-1).
+	via := make([]*http.Request, netpolicy.MaxRedirectsCeiling)
+	for i := range via {
+		via[i] = &http.Request{URL: mustURL(t, "http://example.com/hop")}
+	}
+	require.NoError(t, fn(&http.Request{URL: mustURL(t, "http://example.com/final")}, via),
+		"the Ceiling-th hop must be allowed")
+	// One more request (hops = Ceiling) must be rejected with E4003.
+	via = append(via, &http.Request{URL: mustURL(t, "http://example.com/hop")})
+	err = fn(&http.Request{URL: mustURL(t, "http://example.com/too-far")}, via)
+	require.Error(t, err)
+	typed, ok := apperrors.As(err)
+	require.True(t, ok)
+	require.Equal(t, apperrors.E4003, typed.Code)
+}
+
+func TestCheckRedirectOtherCallbackErrorReturnedVerbatim(t *testing.T) {
+	sentinel := errors.New("caller-specific stop")
+	p := netpolicy.CustomPolicy()
+	fn, err := p.CheckRedirect(2, func(_ *http.Request, _ []*http.Request) error { return sentinel })
+	require.NoError(t, err)
+	got := fn(&http.Request{URL: mustURL(t, "http://example.com/a")}, nil)
+	require.True(t, errors.Is(got, sentinel), "caller error must not be wrapped")
 }
 
 func TestCheckRedirectNilRequestNoPanic(t *testing.T) {

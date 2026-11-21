@@ -81,8 +81,9 @@ func Write(dir string, record Record) error {
 		return apperrors.New(apperrors.E6005, "journal cannot be encoded").WithCause(err.Error())
 	}
 	path := filepath.Join(dir, record.ID+".json")
-	// fsatomic.WriteLockedFile preserves the sidecar lock and cross-process
-	// overwrite semantics of lockedfile.Write (it is NOT a temp+rename write).
+	// fsatomic.WriteLockedFile is a cross-process locked overwrite under the
+	// <path>.lock sidecar (NOT a temp+rename atomic replacement; an unlocked
+	// reader may observe an in-progress write). Error mapping stays E6005.
 	if err := fsatomic.WriteLockedFile(path, payload, 0o600); err != nil {
 		return apperrors.New(apperrors.E6005, "journal cannot be committed").WithCause(err.Error())
 	}

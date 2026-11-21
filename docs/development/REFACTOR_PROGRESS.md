@@ -120,6 +120,21 @@
 
 **验证**：双平台编译；Windows VM 上 fsatomic/platform/install/env/journal/cache 全部测试通过（含 Junction/目录链接/类型约束）；gofmt/vet/lint(0)/go test/fuzz x3/3 交叉编译/契约 freeze 全绿。
 
+### Phase 2/3 第一轮审查修复（本轮）
+
+**Phase 2**
+- **H1（行为回归）**：config 合法 `max_redirects=11..20` 与 netpolicy 硬上限 10 冲突，导致 provider checksums 抓取在 I/O 前返回 E3007。修复：`provider/fetch.go` 在边界 clamp 到 `MaxRedirectsCeiling`（保持配置兼容，登记为策略适配），补 11/20 回归测试。
+- **M1**：`NETWORK_POLICY_MATRIX.md` 更新 off-by-one 语义（`len(via)-1`），补“max=1 恰好 2 请求、第 3 次拒绝”的精确计数测试。
+- **L1/L2**：netpolicy 补 Ceiling 边界（10 允许、11 拒绝 E4003）、其它 callback error 原样返回测试；httpfetch 补 Strict 初始 URL 拒绝、UA、ctx 取消、Transport 保留测试；provider 的名不副实 size 测试改为真正 4 MiB+1 超限验证 E4004，补 sticky HTTPS 降级测试。
+
+**Phase 3**
+- **M1**：`fsatomic.WriteFile` 删除未实现的 ParentDirSync 承诺，注释如实写明“无目录 fsync、不承诺崩溃持久性”。
+- **M2**：修正 Windows 原子替换夸大表述（同目录 rename、Windows best-effort、不跨卷、失败保留旧文件）。
+- **M3**：`WriteLockedFile` 返回原始 error（不再包装成 E5009），保持 cache/journal 的 cause 文本与错误链等价；journal 注释改为“locked overwrite, not atomic replace”。
+- **M4**：`ReserveFile` 的 release 接管句柄关闭（releaseOnce 内先 Close 再 Remove，错误用 errors.Join 汇总），消除 Windows 未关句柄导致 release 失败；补“未关句柄即 release”测试。
+- **L2**：`ReserveLink` 措辞从“atomic reservation”改为“random unique name + exclusive create”，诚实描述名称抢占窗口。
+- 核实 `docs/reference/PLATFORM_ENVIRONMENT.md`、`ENVIRONMENT.md` 当前无 journal “atomic replace” 误导表述（无需修改）。
+
 ## Phase 1 退出条件核对
 
 - [x] 依赖图无环（`go list ./...` 无 cycle）

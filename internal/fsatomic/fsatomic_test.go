@@ -81,6 +81,22 @@ func TestReserveFileLifecycle(t *testing.T) {
 	require.True(t, os.IsNotExist(err), "release must remove an unreferenced reservation")
 }
 
+func TestReserveFileReleaseClosesOpenHandle(t *testing.T) {
+	// On Windows an open handle prevents os.Remove; release must own the
+	// handle and close it before removing even if the caller forgot.
+	dir := t.TempDir()
+	path, f, release, err := fsatomic.ReserveFile(dir, "open-*.tmp")
+	require.NoError(t, err)
+	_, err = f.Write([]byte("data"))
+	require.NoError(t, err)
+	// intentionally do NOT close f
+	require.NoError(t, release())
+	_, err = os.Lstat(path)
+	require.True(t, os.IsNotExist(err))
+	_, err = f.Write([]byte("more"))
+	require.Error(t, err, "release must have closed the handle")
+}
+
 func TestReserveFileCommittedPathIsNotRemoved(t *testing.T) {
 	dir := t.TempDir()
 	path, f, release, err := fsatomic.ReserveFile(dir, "commit-*.tmp")

@@ -9,6 +9,7 @@ package fsatomic
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"sync"
@@ -19,19 +20,27 @@ import (
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/platform"
 )
 
-// WriteFile atomically replaces path with payload using a temp file in the
-// same directory (therefore the same volume). Execution order:
+// WriteFile replaces path with payload using a temp file created in the SAME
+// directory (therefore the same volume). Execution order:
 //
-//	CreateTemp -> Write -> [Chmod] -> Sync -> Close -> Rename -> ParentDirSync
+//	CreateTemp -> Write -> [Chmod] -> Sync -> Close -> RenamePath
 //
 // mode == 0 means "do not Chmod": the temp file keeps os.CreateTemp's 0600
-// mode. This preserves callers that historically relied on that default.
-// A non-zero mode is applied explicitly before Sync so the persisted data has
-// its final permissions.
+// mode. A non-zero mode is applied via Chmod before Sync (mode semantics, not
+// open-mode: umask does not further restrict it).
 //
-// ParentDirSync is best-effort: on platforms with directory fsync (Unix), a
-// failure is ignored (the rename already completed); Windows has no equivalent
-// and is skipped. This function does not promise crash durability.
+// Replacement semantics are deliberately conservative:
+//   - Unix: rename(2) within one filesystem atomically replaces the directory
+//     entry; readers see either the old or the new file, never a partial one.
+//   - Windows: platform.RenamePath uses os.Rename with retries for sharing
+//     violations; it does NOT promise the same atomicity on every filesystem.
+//   - No cross-volume replacement (the temp file is always same-directory).
+//   - If RenamePath fails, the previous target is left untouched.
+//
+// There is NO parent-directory fsync and NO crash-durability guarantee: a
+// successful return means the running system observes the new file, not that
+// a power loss would preserve it. Callers needing stronger guarantees must
+// handle that at a higher layer.
 //
 // Errors are returned as apperrors.E5009 with a cause; callers may re-map.
 func WriteFile(path string, payload []byte, mode os.FileMode) error {
@@ -75,11 +84,12 @@ func WriteFile(path string, payload []byte, mode os.FileMode) error {
 // using lockedfile.Write. It is a cross-process locked overwrite, NOT a
 // temp+rename atomic replacement; the two semantics are not interchangeable.
 // mode is passed through to lockedfile.Write.
+//
+// The underlying error is returned verbatim (no typed wrapper) so callers
+// keep the exact error chain and cause text they had before migration; the
+// caller maps it to its own domain code (e.g. journal -> E6005).
 func WriteLockedFile(path string, payload []byte, mode os.FileMode) error {
-	if err := lockedfile.Write(path, bytes.NewReader(payload), mode); err != nil {
-		return apperrors.New(apperrors.E5009, "locked write failed").WithCause(err.Error())
-	}
-	return nil
+	return lockedfile.Write(path, bytes.NewReader(payload), mode)
 }
 
 // reservation records the identity of a reserved resource and caches the
@@ -91,6 +101,7 @@ type reservation struct {
 	mu       sync.Mutex
 	path     string
 	info     os.FileInfo
+	file     *os.File // nil for link reservations; closed by releaseOnce
 	resolved bool
 	result   error
 }
@@ -104,7 +115,16 @@ func (r *reservation) releaseOnce(fn func() error) error {
 	if r.resolved {
 		return r.result
 	}
-	r.result = fn()
+	// Close the reserved handle first: on Windows an open handle makes the
+	// following os.Remove fail with a sharing violation. A caller that already
+	// closed it gets os.ErrClosed, which is benign here.
+	var closeErr error
+	if r.file != nil {
+		if err := r.file.Close(); err != nil && !errors.Is(err, os.ErrClosed) {
+			closeErr = err
+		}
+	}
+	r.result = errors.Join(closeErr, fn())
 	r.resolved = true
 	return r.result
 }

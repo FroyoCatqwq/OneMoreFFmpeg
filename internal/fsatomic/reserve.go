@@ -18,7 +18,9 @@ import (
 // Lifecycle:
 //  1. Create with O_CREATE|O_EXCL|O_RDWR via os.CreateTemp semantics.
 //  2. Record os.FileInfo as the identity of this reservation.
-//  3. Caller writes, then MUST f.Sync() and f.Close(), checking both errors.
+//  3. Caller writes, then SHOULD f.Sync() and may f.Close(), checking errors.
+//     release() owns the handle and closes it if still open (so a caller that
+//     forgets to Close cannot cause a Windows sharing violation).
 //  4. release() verifies identity via Lstat + os.SameFile:
 //     - path gone -> nil (caller renamed/moved it = committed);
 //     - identity changed -> E5009 ownership_changed, DO NOT delete;
@@ -26,9 +28,8 @@ import (
 //  5. release is idempotent: repeated calls return the cached first result,
 //     including a first failure. There is no silent success and no retry.
 //
-// On failure paths the caller must Close the handle before calling release
-// (especially on Windows, where an open handle prevents removal), and should
-// combine errors with errors.Join.
+// On failure paths the caller calls release(); any close error is joined with
+// the release error and reported together.
 func ReserveFile(dir, pattern string) (path string, f *os.File, release func() error, err error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", nil, nil, apperrors.New(apperrors.E5009, "reservation directory cannot be created").WithCause(err.Error())
@@ -44,7 +45,7 @@ func ReserveFile(dir, pattern string) (path string, f *os.File, release func() e
 		_ = os.Remove(path)
 		return "", nil, nil, apperrors.New(apperrors.E5009, "reservation identity cannot be read").WithCause(err.Error())
 	}
-	res := &reservation{path: path, info: info}
+	res := &reservation{path: path, info: info, file: tmp}
 
 	release = func() error {
 		return res.releaseOnce(func() error {
