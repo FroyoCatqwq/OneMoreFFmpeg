@@ -84,6 +84,19 @@
 
 **验证**：Windows VM 上 5 个失败测试全绿；本机 e2e 67 passed/4 skipped；Linux VM 69 passed/2 skipped；gofmt/vet/lint(0)/go test 全绿。
 
+## Phase 2：网络策略边界
+
+### PR-3a/PR-4 `pending` — netpolicy + httpfetch + 首个调用点迁移
+
+**前置产物**：[`NETWORK_POLICY_MATRIX.md`](NETWORK_POLICY_MATRIX.md) — 逐调用点策略矩阵（初始 URL / redirect / sticky HTTPS / 回调顺序 / 上限 / 错误码 / client 来源），作为迁移验收真相源。
+
+**改动清单**
+1. 新建 `internal/netpolicy`：封闭 `Policy`（未导出 `policyKind` 枚举，零值 fail closed）+ `StrictPolicy()`/`CustomPolicy()`；`Validate` 两族独立；`CheckRedirect` 实现"nil 检查 → `len(via)-1` 跳数 → 前置校验（Strict 先快照 sawHTTPS）→ original → 若 nil 则重查最终 URL + 整链"，`original` 非 nil 原样返回（含 `ErrUseLastResponse`）；非法 `maxRedirects` 返回 `(nil, typed error)` 不 clamp。
+2. 新建 `internal/httpfetch`：`FetchLimited(ctx, client, rawURL, maxBytes, maxRedirects, policy)` 显式参数；`MaxBytesCeiling = 8 MiB`；clone client 只覆盖 CheckRedirect（串联调用方原回调，项目策略先执行）；初始 URL 由 `policy.Validate` 校验；上限/非 2xx/超限 typed error。
+3. `provider/fetch.go` 迁移到 `netpolicy.CustomPolicy()` 做 URL 与 redirect 校验，**保持历史错误码**（redirect 超限 `E3007`、URL `E3008`、大小 `E4004`）与 sticky 初始 scheme 行为；`checksum.Fetch`/`latest.Read` 不迁（策略由调用方注入 client 决定，迁移会改变行为）；`download`/`selfupdate`/`github` 专属 client 不迁（大文件流 / 认证 / rate 语义不同）。
+
+**验证**：netpolicy 覆盖两族 URL、二次校验、整链快照（original 篡改 via 无效）、off-by-one 0/1/2/Ceiling/Ceiling+1、nil 边界；httpfetch 覆盖参数契约、client 不修改、重定向串联、大小/非 2xx；`provider` 行为等价测试通过。
+
 ## Phase 1 退出条件核对
 
 - [x] 依赖图无环（`go list ./...` 无 cycle）
