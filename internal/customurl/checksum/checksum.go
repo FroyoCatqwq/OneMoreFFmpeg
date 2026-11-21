@@ -17,6 +17,7 @@ import (
 	"time"
 	"unicode"
 
+	basechecksum "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/checksum"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 )
 
@@ -90,7 +91,7 @@ func Parse(data []byte, fileName string) (string, error) {
 			continue
 		}
 		digest := strings.ToLower(line[:idx])
-		if len(digest) != 64 || !isLowerHex(digest) {
+		if !basechecksum.IsLowerHex64(digest) {
 			continue
 		}
 		file := strings.TrimLeft(line[idx:], " \t")
@@ -115,14 +116,3 @@ func Parse(data []byte, fileName string) (string, error) {
 }
 
 const maxLineBytes = 1 << 20
-
-func isLowerHex(s string) bool {
-	for _, r := range s {
-		digit := r >= '0' && r <= '9'
-		lower := r >= 'a' && r <= 'f'
-		if !digit && !lower {
-			return false
-		}
-	}
-	return true
-}

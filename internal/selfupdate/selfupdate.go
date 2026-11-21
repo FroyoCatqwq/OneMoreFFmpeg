@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/checksum"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/logging"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/output"
@@ -46,7 +47,6 @@ type Options struct {
 	Client         *ggithub.Client
 	Dir            string // staging directory for the new binary
 	ProgressWriter io.Writer
-	Now            func() time.Time
 	FileOps        FileOps // injectable file operations; nil uses realFileOps
 	GitHubAPI      string  // override API base (empty uses api.github.com)
 	MaxAttempts    int     // GitHub API retry budget (0 uses default 3)
@@ -73,9 +73,6 @@ func (o Options) normalized() Options {
 	}
 	if o.GOARCH == "" {
 		o.GOARCH = runtime.GOARCH
-	}
-	if o.Now == nil {
-		o.Now = time.Now
 	}
 	return o
 }
@@ -138,7 +135,7 @@ func (o Options) Check(ctx context.Context) (*Update, error) {
 				continue
 			}
 			sum := strings.TrimPrefix(asset.Digest, "sha256:")
-			if len(sum) != 64 || !isHex64(sum) {
+			if !checksum.IsHex64(sum) {
 				return nil, apperrors.New(apperrors.E3007, "release asset has no valid sha256 digest").
 					WithDetails(map[string]any{"asset": name})
 			}
@@ -438,21 +435,6 @@ func isNewer(candidate, current string) bool {
 		}
 	}
 	return false
-}
-
-func isHex64(s string) bool {
-	if len(s) != 64 {
-		return false
-	}
-	for _, r := range s {
-		digit := r >= '0' && r <= '9'
-		lower := r >= 'a' && r <= 'f'
-		upper := r >= 'A' && r <= 'F'
-		if !digit && !lower && !upper {
-			return false
-		}
-	}
-	return true
 }
 
 func urlScheme(raw string) (string, string) {

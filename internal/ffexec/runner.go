@@ -4,8 +4,6 @@ package ffexec
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	stderrors "errors"
 	"fmt"
 	"os"
@@ -17,6 +15,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/checksum"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 )
 
@@ -100,11 +99,6 @@ func (b *limitedBuffer) Bytes() []byte {
 
 func (b *limitedBuffer) String() string {
 	return b.buf.String()
-}
-
-func sha256Hex(data []byte) string {
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
 }
 
 func envKey(key string) string {
@@ -240,8 +234,8 @@ func (r Runner) result(executable string, args []string, stdout, stderr *limited
 		Args:             append([]string(nil), args...),
 		Stdout:           stdout.String(),
 		Stderr:           stderr.String(),
-		StdoutSHA256:     sha256Hex(stdoutBytes),
-		StderrSHA256:     sha256Hex(stderrBytes),
+		StdoutSHA256:     checksum.SumHex(stdoutBytes),
+		StderrSHA256:     checksum.SumHex(stderrBytes),
 		StdoutTotalBytes: stdout.total,
 		StderrTotalBytes: stderr.total,
 		DurationMs:       duration.Milliseconds(),

@@ -16,6 +16,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/checksum"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/ffexec"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/logging"
@@ -423,5 +424,5 @@ func (c *Collector) capabilityFingerprint(installation model.Installation, topic
 		specKeys = append(specKeys, spec.Key)
 	}
 	parts = append(parts, "commands="+strings.Join(specKeys, "|"))
-	return sha256Hex([]byte(strings.Join(parts, "\n")))
+	return checksum.SumHex([]byte(strings.Join(parts, "\n")))
 }

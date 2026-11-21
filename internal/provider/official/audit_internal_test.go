@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/checksum"
 )
 
 func TestRulesPartialOverride(t *testing.T) {
@@ -29,7 +31,9 @@ func TestEnterpriseBaseStripsAPIV3(t *testing.T) {
 }
 
 func TestIsLowerHex(t *testing.T) {
-	require.True(t, isLowerHex("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"))
-	require.False(t, isLowerHex("0123456789ABCDEF0123456789abcdef0123456789abcdef0123456789abcdef"))
-	require.False(t, isLowerHex("short"))
+	// The digest check now uses the shared checksum primitive; keep the
+	// regression here so a future change cannot silently accept uppercase.
+	require.True(t, checksum.IsLowerHex64("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"))
+	require.False(t, checksum.IsLowerHex64("0123456789ABCDEF0123456789abcdef0123456789abcdef0123456789abcdef"))
+	require.False(t, checksum.IsLowerHex64("short"))
 }

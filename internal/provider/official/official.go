@@ -15,6 +15,7 @@ import (
 
 	gh "github.com/google/go-github/v93/github"
 
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/checksum"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
 )
@@ -186,20 +187,6 @@ func enterpriseBase(base string) string {
 	return strings.TrimRight(b, "/")
 }
 
-func isLowerHex(s string) bool {
-	if len(s) != 64 {
-		return false
-	}
-	for _, r := range s {
-		digit := r >= '0' && r <= '9'
-		lower := r >= 'a' && r <= 'f'
-		if !digit && !lower {
-			return false
-		}
-	}
-	return true
-}
-
 // Resolve queries the upstream latest release and returns a pinned model.Release.
 func (r *Resolver) Resolve(ctx context.Context, req Request) (model.Release, error) {
 	req, err := req.Normalize()
@@ -265,7 +252,7 @@ func (r *Resolver) Resolve(ctx context.Context, req Request) (model.Release, err
 			WithDetails(map[string]any{"asset": name, "release": rules.Tag})
 	}
 	digest := strings.TrimPrefix(chosen.GetDigest(), "sha256:")
-	if len(digest) != 64 || !isLowerHex(digest) {
+	if !checksum.IsLowerHex64(digest) {
 		return model.Release{}, apperrors.New(apperrors.E3008, "upstream asset has no valid sha256 digest").
 			WithDetails(map[string]any{"asset": name})
 	}

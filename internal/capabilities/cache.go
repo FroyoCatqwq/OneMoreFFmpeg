@@ -1,8 +1,6 @@
 package capabilities
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -103,9 +101,4 @@ func mergeWarnings(base, extra []model.Warning) []model.Warning {
 		out = ensureWarning(out, warning)
 	}
 	return out
-}
-
-func sha256Hex(data []byte) string {
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
 }

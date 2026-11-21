@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/checksum"
 	apperrors "github.com/FroyoCatqwq/OneMoreFFmpeg/internal/errors"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/ffexec"
 	"github.com/FroyoCatqwq/OneMoreFFmpeg/internal/model"
@@ -200,5 +201,5 @@ func buildFingerprint(root string, hashes map[string]string, version string) str
 		version = "unavailable"
 	}
 	parts = append(parts, "version="+version)
-	return sha256Hex([]byte(strings.Join(parts, "\n")))
+	return checksum.SumHex([]byte(strings.Join(parts, "\n")))
 }

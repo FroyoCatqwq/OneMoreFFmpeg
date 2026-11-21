@@ -160,11 +160,6 @@ func pathError(err error) (apperrors.Code, string) {
 	}
 }
 
-func sha256Hex(data []byte) string {
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
-}
-
 func versionFromOutput(output string) string {
 	match := versionPattern.FindStringSubmatch(output)
 	if len(match) < 2 {
