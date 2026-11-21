@@ -98,6 +98,6 @@ CGO_ENABLED=1 go test -race -count=1 ./internal/lock ./internal/cache ./internal
 - [x] race 基线已采集（Windows VM gcc 16.2 PASS；Linux VM PASS；本机无 gcc）
 - [x] Windows VM 环境已重建（Scoop mingw-winlibs + Go 1.27.4 + mise trusted + 依赖下载）
 - [ ] PR-0a 待修正 5 个 Windows 长/短名测试断言（已登记，非产品 bug）
-- [ ] 用户批准实施授权（当前 `Awaiting Implementation Approval`）
+- [x] 用户批准实施授权（2026-11-21；ADR 已更新为 `Approved for Implementation`）
 
-> 未满足最后两项前，不得启动 PR-1 及任何源码重构。
+> Phase 0 全部退出条件已满足；可从 Phase 1 开始按 PR 分阶段实施。

@@ -1,12 +1,12 @@
 # ADR-0004：轻量化 Modular Monolith 架构重构方案
 
-> **设计状态**：Proposed  
-> **实施授权**：Awaiting Implementation Approval（本 ADR 不授权修改源码）  
+> **设计状态**：Proposed → Accepted（用户已批准目标架构与迁移原则）
+> **实施授权**：**Approved for Implementation**（用户于 2026-11-21 明确批准；允许按本 ADR 分阶段修改源码）
 > **本轮修订**：2026-11-21（基于仓库源码与既有全项目审计材料复核）  
 > **当前架构**：[`../ARCHITECTURE.md`](../ARCHITECTURE.md)  
 > **既有详细审计记录**：[`../ARCHITECTURE_AUDIT.md`](../ARCHITECTURE_AUDIT.md)（如该文件已纳入仓库）
 
-> 状态说明：`Proposed` 只表示目标设计已形成；不代表已获实施批准。只有用户明确批准后，才可把实施授权改为 `Approved for Implementation` 并开始迁移。**本 ADR 当前不允许以“重构准备”为由顺手修改 Go 源码、测试、依赖或 CLI 契约。**
+> 状态说明：用户已明确批准目标架构与迁移原则，实施授权已更新为 `Approved for Implementation`。当前 Phase 0 基线已完成（见 [`REFACTOR_BASELINE.md`](REFACTOR_BASELINE.md)）；可从 Phase 1 开始按 PR 分阶段修改源码。**每个 PR 仍须遵守本 ADR 的边界、验收标准和单 PR 回滚要求。**
 
 ---
 
@@ -636,12 +636,12 @@ func ContextError(err error, timeoutCode, canceledCode Code) error
 
 ## 17. 批准状态
 
-设计状态：**Proposed**  
-实施授权：**Awaiting Implementation Approval**
+设计状态：**Accepted**（用户已批准目标架构与迁移原则）
+实施授权：**Approved for Implementation**（用户已批准开始源码实施）
 
-- [ ] 用户批准目标架构与迁移原则；
-- [ ] Phase 0 完成，当前 HEAD 和质量基线锁定；
-- [ ] 用户批准开始源码实施；
+- [x] 用户批准目标架构与迁移原则（2026-11-21）；
+- [x] Phase 0 完成，当前 HEAD `24a3f9fa860efb22378496dd6e44d7cc89bc4cb1` 和质量基线锁定（见 [`REFACTOR_BASELINE.md`](REFACTOR_BASELINE.md)）；
+- [x] 用户批准开始源码实施（2026-11-21）；
 - [ ] 每阶段完成后更新 As-Is / To-Be 依赖图和审计结论。
 
-**未批准前不得启动源码重构。** 本轮只准备架构文档与 ADR，没有修改 Go 源码、测试、go.mod、go.sum 或 CLI 契约。
+**授权范围**：可按第 13 节 Phase 1–6 分阶段修改源码；每个 PR 必须满足第 14 节验收标准，并保持 CLI JSON v1、错误码、安装布局与文件格式不变。
